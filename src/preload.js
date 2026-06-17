@@ -1,0 +1,23 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('lorekeeper', {
+  loadData: () => ipcRenderer.invoke('load-data'),
+  saveData: (data) => ipcRenderer.invoke('save-data', data),
+  exportFile: (opts) => ipcRenderer.invoke('export-file', opts),
+  importFile: () => ipcRenderer.invoke('import-file'),
+  importImage: () => ipcRenderer.invoke('import-image'),
+  importImages: () => ipcRenderer.invoke('import-images'),
+  readImagePath: (relPath) => ipcRenderer.invoke('read-image-path', relPath),
+  scanCompanions: () => ipcRenderer.invoke('scan-companions'),
+  scanLorebooks: () => ipcRenderer.invoke('scan-lorebooks'),
+  scanCollections: () => ipcRenderer.invoke('scan-collections'),
+  openFolder: (relPath) => ipcRenderer.invoke('open-folder', relPath),
+  getDataPath: () => ipcRenderer.invoke('get-data-path'),
+  saveCompanionJson: (folderName, data) => ipcRenderer.invoke('save-companion-json', { folderName, data }),
+  saveLorebookJson: (filename, data) => ipcRenderer.invoke('save-lorebook-json', { filename, data }),
+  saveCollectionJson: (filename, data) => ipcRenderer.invoke('save-collection-json', { filename, data }),
+  copyImageToFolder: (srcPath, destFolder, filename) => ipcRenderer.invoke('copy-image-to-folder', { srcPath, destFolder, filename }),
+  writeImageFromBase64: (opts) => ipcRenderer.invoke('write-image-from-base64', opts),
+  exportBackup: (opts) => ipcRenderer.invoke('export-backup', opts),
+  restoreBackup: () => ipcRenderer.invoke('restore-backup'),
+});

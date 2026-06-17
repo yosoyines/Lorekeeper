@@ -1,0 +1,11 @@
+lorekeeper-data.json
+Companions/
+Lorebooks/
+Collections/
+Worlds/
+Personas/
+node_modules/
+assets/
+*.ico
+*.png
+*.svg
