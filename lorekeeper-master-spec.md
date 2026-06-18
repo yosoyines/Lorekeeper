@@ -70,7 +70,6 @@ I:\Lorekeeper\
 | `writeImageFromBase64({base64, destFolder, filename})` | Write base64 to image file; checks dest exists first; returns `{relPath}` |
 | `exportBackup({worldId?})` | Create zip — full or per-world; returns `{success, size, path}` |
 | `exportPlatformZip({defaultName, files[]})` | Save dialog → zip pre-built JSON strings; returns `{success, size, path}` |
-| `exportPlatformZip({defaultName, files[]})` | Save dialog → zip pre-built JSON strings; returns `{success, size, path}` |
 | `restoreBackup()` | Open zip picker, extract files, return data for merge/replace |
 
 ---
@@ -385,53 +384,27 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 
 ## What's Next (Priority Order)
 
-### Immediate — features first, then polish
-Build out all remaining functionality before tackling UI consistency or standalone packaging.
-
-### Export to Markdown ✓
-Export clean `.md` files added to character (Export tab), lorebook (Edit/Export tabs), collection (Edit/Export tabs).
-- **Character sheet** ✓ — `# Display Name`, short desc, full desc, character card, advanced prompt, formatting instructions, scenarios, tags; preview in-app
-- **Lorebook** ✓ — `# Name`, each chapter as `## Title` + body; preview in-app
-- **Collection** ✓ — `# Name`, description, character list, tags
-- **Persona** — todo
-- **Template** — todo
-
-JSON export moved from topbar button into Export tab on each item.
-
 ### Image Tools
 - **Format converter** — convert any local image (PNG/JPG/WEBP/AVIF etc.) to a target format; useful for Saucepan which prefers AVIF; uses `sharp` npm package
 - **Paste & save** — paste image from clipboard → preview → save as a file to a chosen folder (Companions/CharName, Lorebooks, Collections, etc.); replaces manual screenshot workflow
-- **Cropper** — crop a local or pasted image to a target aspect ratio (3:4 portrait, 4:1 banner, 1:1 square); canvas-based UI; 16:9 dropped — Saucepan banners are actually 4:1
+- **Cropper** — crop a local or pasted image to a target aspect ratio (3:4 portrait, 4:1 banner, 1:1 square); canvas-based UI
 - **Image prompt generator** — Claude call using character name/description/tags to generate an image generation prompt; lives in character editor or right panel
 
-### New Tools
-- **Map generator** — region/landmark randomiser; output as text description or simple ASCII map (deferred — design TBD)
-- **Powers generator** ✓ — EsperTool: rolls ability type, tier, drawback, codename
-- **Hockey positions** ✓ — HockeyTool: rolls position, role description, handedness, character trait
-- **Swim strokes** ✓ — SwimTool: rolls stroke, event distance, stroke description, swimmer archetype
-
-### Tools (future) ✓ (partial)
-- Western Zodiac ✓ — WesternZodiacTool: rolls sign, element/modality, traits, shadow side, vibe
-- Chinese Zodiac ✓ — ChineseZodiacTool: rolls sign, element, years, traits, shadow side, vibe
-- Relationship dynamic generator — still todo
-
-Note: Esper powers use F–S rank letters (not named tiers). Tool icons must exist in Tabler 2.44.0 — `ti-files-diff` and `ti-waves` don't; replaced with `ti-scan` and `ti-send`.
-
-### Bigger features
-- **Relationship Map** ✓ — lives in right panel Map tab (expands panel to 640px); world picker; SVG canvas with draggable portrait+name nodes (uses `name` not `display_name`); labeled edges fixed to line midpoint; click line/label to open draggable edit popup (drag via ⠿ handle, reads actual DOM position to avoid jump); edit label or delete; saves to `data.relationships`; collection-aware character filter (same logic as WorldDetailPage — includes chars via world_id OR via collections belonging to that world)
+### Tools (remaining)
+- **Map generator** — region/landmark randomiser; output as text description or simple ASCII map (design TBD)
+- **Relationship dynamic generator**
 
 ### Once all features are done
 - **UI Overhaul** — consistent layout system across all pages (widths, padding, section headers, card styles, field spacing); audit Characters, Lorebook detail, Collection detail, World tabs, Batch Import, Settings, Tools, Dashboard checklists
 - **Global themes** — light/dark + accent color
 - **Colorblind mode** — deuteranopia, protanopia, tritanopia
-- **Standalone / Public Version** — configurable data path, strip Saucepan-specific stuff, packaged `.exe`, optional rename/theming
+- **Standalone / Public Version** — configurable data path, strip Saucepan-specific stuff, packaged `.exe`, optional rename/theming; README.md goes here
 
 ### Won't do
 - Per-world color theming
 - Age calculator in tools
 - Text stats in tools
 - Schedule page (replaced by dashboard calendar)
-- README.md
 
 ### Very long term
 - Android build
@@ -477,7 +450,6 @@ git push
 - Session 8: `EsperTool, HockeyTool, SwimTool — data tables + roll components in ToolsPanel`
 - Session 9: `WesternZodiacTool, ChineseZodiacTool; RelationshipsPage (SVG relationship map with draggable portrait nodes + labeled edges)`
 - Session 10: `Fix relationship map — collection-aware char filter (Gabriel), fixed label positions, draggable edit popup, correct icon replacements for Tabler 2.44, esper rank letters F–S`
-- Session 6: `Export to Markdown: CharExportTab, lorebook Edit/Export tabs, collection Edit/Export tabs`
 
 ### What goes in the repo
 | File | Tracked? |
@@ -510,14 +482,19 @@ Claude integration (right panel chat, full world context, API key from Settings)
 Fixed all Babel syntax errors, extracted ScanBadge/ScanTagChips, batch import tag chips
 
 ### Session 5 (June 18)
-Sidebar Export → Backup (wired to full zip); world topbar Export ZIP button (exportWorldPlatformZip — builds platform-ready stripped JSONs for all posted chars + public lorebooks/collections, packages into dated zip, stamps site_last_synced_at); exportPlatformZip IPC handler in main.js + preload.js
+Sidebar Export → Backup (wired to full zip); world topbar Export ZIP (exportWorldPlatformZip — platform-ready stripped JSONs for posted chars + public lorebooks/collections, packages into dated zip, stamps site_last_synced_at); exportPlatformZip IPC handler in main.js + preload.js
 
 ### Session 6 (June 18)
-Export to Markdown: CharExportTab component (JSON + MD with preview and field checklist), LoreExportPanel (JSON + MD with preview), CollExportPanel (JSON + MD), CollEditPanel; lorebook editor and collection detail get Edit/Export tab bars; all export components use CSS classes to avoid Babel double-brace issues; lore tabs use if/return pattern; CSS classes: .export-card, .export-panel, .export-row, .export-card-title/desc/meta, .export-field-ok/missing, .lore-tab-bar, .coll-tab-bar, .lore-tab-btn, .md-preview
+Export to Markdown: CharExportTab (JSON + MD + preview + field checklist), LoreExportPanel (JSON + MD + preview), CollExportPanel (JSON + MD), CollEditPanel; Edit/Export tab bars on lorebook and collection; all use CSS classes to avoid Babel double-brace issues; lore tabs use if/return pattern
 
-### Session 5 (June 18)
-Sidebar Export → Backup button (wired to full zip via exportBackup); world topbar Export ZIP (exportWorldPlatformZip — platform-ready stripped JSONs for posted chars + public lorebooks + public collections in a dated zip, stamps site_last_synced_at); new exportPlatformZip IPC handler in main.js + preload.js
+### Session 7 (June 19)
+Persona Export MD (topbar button: name, pronouns, description, linked lorebook); Template Export MD (button in TemplateEditor alongside Save: name, world, all non-empty fields)
 
+### Session 8 (June 19)
+EsperTool (ability type, F–S rank, drawback, codename), HockeyTool (position + role desc + handedness + trait), SwimTool (stroke + distance + description + swimmer archetype); all in ToolsPanel
 
-### Session 6 (June 18)
-Export to Markdown — CharExportTab component (JSON + MD with in-app preview, field checklist), lorebook editor Edit/Export tab bar (MD export with preview), collection detail Edit/Export tab bar (MD export); JSON export moved from topbar into Export tabs on all three
+### Session 9 (June 19)
+WesternZodiacTool (sign, element/modality, traits, shadow, vibe), ChineseZodiacTool (sign, element, years, traits, shadow, vibe); RelationshipsPage in right panel Map tab (640px expanded); SVG canvas, draggable portrait nodes, fixed edge labels, draggable edit popup
+
+### Session 10 (June 19)
+Relationship map fixes: collection-aware char filter (matches WorldDetailPage logic), fixed label drag removed, draggable edit popup with getBoundingClientRect fix, transparent hit area on edges, correct Tabler 2.44 icons (ti-scan/ti-send)
