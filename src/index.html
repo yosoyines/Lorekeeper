@@ -5375,47 +5375,103 @@ function HelpPage() {
 
       <HelpSection title="Dashboard" icon="ti-layout-dashboard">
         <P>The dashboard is your daily workflow hub.</P>
-        <P><B>Calendar</B> — Shows scheduled characters (purple chips) and posted dates (green ✓). Click any day to expand it. Click again or click outside to close.</P>
-        <P><B>Schedule from calendar</B> — Click a day → click the Schedule button → search and pick a character. Only shows draft/ready characters without a future date already set.</P>
-        <P><B>Site Checklist</B> — Shows characters/lorebooks/collections you've edited since last exporting them. To clear an item: go to it → Export → upload to site. The item disappears once exported.</P>
-        <P><B>Lorekeeper Checklist</B> — Pre-export validation. Only flags items that are public or have been public. Fix the listed issues before uploading.</P>
-        <P><B>Drafts in Progress</B> — All draft characters with missing field indicators. Green ✓ means all required fields are filled.</P>
-        <HelpTip text="Required fields for export: name, display name, short description, full description, card, 5+ tags, portrait, portrait UUID, portrait slots, scenarios." />
+        <P><B>Calendar</B> — Shows scheduled characters (purple chips) and posted dates (green ✓). Click any day to expand it and see what is scheduled. Click a day to open the scheduler and add characters.</P>
+        <P><B>Today Banner</B> — Characters scheduled for today with a Mark Posted button. Marking posted stamps the posted date and moves them off the calendar.</P>
+        <P><B>Upcoming</B> — Next 5 scheduled characters with their dates and readiness status.</P>
+        <P><B>Release Cycle</B> — A rotating world queue. Set the order in which you cycle through worlds. The next world up is shown here.</P>
+        <P><B>Site Checklist</B> — Characters, lorebooks, and collections edited since last export. Clear an item by exporting it and uploading it to the site.</P>
+        <P><B>Lorekeeper Checklist</B> — Pre-export validation for public items. Flags missing fields, missing portrait UUIDs, etc.</P>
+        <P><B>Drafts in Progress</B> — All draft characters with a visual indicator for missing required fields.</P>
+        <HelpTip text="Required for export: name, display name, short description, full description, card, 5+ tags, portrait, portrait UUID, portrait slots, scenarios." />
       </HelpSection>
 
       <HelpSection title="Characters" icon="ti-users">
-        <P>Each character has 12 tabs. The most important ones for export:</P>
-        <P><B>Identity</B> — Name, display name, tags (max 25; content warning tags don't count toward the cap), fandom tags (max 3).</P>
-        <P><B>Portraits</B> — Up to 10 portrait slots. Each needs a platform Image ID (UUID from the site) before export will work correctly.</P>
-        <P><B>Schedule</B> — Set status (draft/ready/posted), schedule dates, and posted date.</P>
-        <P><B>Lorebook Entry</B> — If your world has a lorebook template set up, fill in the character's entry here and save it directly to the world lorebook.</P>
-        <HelpTip text="Export strips all app-only fields automatically. Images export as UUID references only — make sure portrait UUIDs are set first." />
+        <P>Each character has 13 tabs. The most important for export:</P>
+        <P><B>Identity</B> — Name, display name, short description (max 140 chars), world, tags (max 25; content warning tags don't count toward the cap), fandom tags (max 3).</P>
+        <P><B>Character Card</B> — The system prompt / card. Supports markdown. Use the macro reference panel (collapse arrow below the label) for Saucepan macros like {'{{user}}'} and {'{{char}}'}.</P>
+        <P><B>Portraits</B> — Up to 10 portrait slots. Each portrait needs a platform Image ID (UUID from the site) for export. Paste the UUID in the field below each portrait.</P>
+        <P><B>Schedule</B> — Set status (draft / ready / posted), schedule dates, and posted dates.</P>
+        <P><B>Lorebook Entry</B> — If a lorebook template is set up for the world, fill in the character's entry and save it directly to the world lorebook.</P>
+        <P><B>Export</B> — Export as platform-ready JSON (stripped of app-only fields) or as a Markdown sheet (name, descriptions, card, advanced prompt, scenarios, tags).</P>
+        <HelpTip text="Export JSON strips all app-only fields automatically. Images export as UUID references only — make sure portrait UUIDs are set first." />
+      </HelpSection>
+
+      <HelpSection title="Worlds" icon="ti-world">
+        <P>Each world groups characters, lorebooks, collections, and gallery images together.</P>
+        <P><B>Characters / Lorebooks / Collections tabs</B> — Browse and manage content in this world. Characters from other worlds that belong to a collection in this world also appear here.</P>
+        <P><B>Gallery tab</B> — All images associated with this world.</P>
+        <P><B>World Info tab</B> — Edit world name, description, tags, banner image, notes, plot archetypes (for the Plot tool), and lorebook templates.</P>
+        <P><B>Export ZIP</B> — The Export ZIP button in the topbar packages all posted characters + public lorebooks + public collections for this world into a dated zip file, stripped of app-only fields and ready to upload. Stamps site_last_synced_at on everything exported.</P>
+        <HelpTip text="Right-click a world in the sidebar to pin it, export it, or access it quickly." />
       </HelpSection>
 
       <HelpSection title="Lorebooks" icon="ti-book">
-        <P>Lorebooks hold your world lore as chapters. Each chapter is a text entry.</P>
-        <P><B>Access level</B> — Set to Public when you're ready to upload. Private lorebooks don't appear in the Lorekeeper Checklist.</P>
-        <P><B>Definition protection</B> — Use Copy Protection (recommended). Avoid Open.</P>
-        <P><B>Image ID</B> — The UUID from the site after uploading your cover image. Required for export.</P>
-        <P><B>Auto-save filename</B> — Set a filename (e.g. <Code>MyLorebook.json</Code>) and Lorekeeper will auto-save the lorebook to <Code>Lorebooks\</Code> on every edit.</P>
+        <P>Lorebooks hold world lore as chapters. Each chapter is a titled text entry.</P>
+        <P><B>Edit tab</B> — Add, reorder, and edit chapters. Set access level, definition protection, image ID, and auto-save filename.</P>
+        <P><B>Export tab</B> — Export as platform-ready JSON or as a Markdown document (all chapters as ## headings).</P>
+        <P><B>Access level</B> — Set to Public when ready to upload. Private lorebooks are excluded from the Site Checklist and world Export ZIP.</P>
+        <P><B>Definition protection</B> — Copy Protection is recommended. Avoid Open.</P>
+        <P><B>Auto-save filename</B> — Set a filename (e.g. <Code>MyLorebook.json</Code>) and Lorekeeper auto-saves the lorebook to <Code>Lorebooks\</Code> on every edit.</P>
         <HelpTip text="Standalone lorebooks (no world) are accessible from the Lorebooks page in the sidebar." />
       </HelpSection>
 
       <HelpSection title="Collections" icon="ti-folders">
         <P>Collections group characters together on the site.</P>
-        <P>Edit a collection's name, description, tags, and banner from the world Collections tab or the top-level Collections page.</P>
-        <P><B>Image ID</B> — Required for site export. Upload banner to site first, then paste the UUID.</P>
-        <P><B>Auto-save filename</B> — Same as lorebooks — set a filename to enable auto-saving.</P>
+        <P><B>Edit tab</B> — Name, description, tags, world, auto-save filename, and character picker.</P>
+        <P><B>Export tab</B> — Export as platform-ready JSON or as a Markdown document (name, description, character list, tags).</P>
+        <P><B>Character picker</B> — Add or remove characters from the collection. Characters from any world can be added.</P>
+        <P><B>Access level</B> — Set to Public to include the collection in world Export ZIPs.</P>
+        <HelpTip text="A character can belong to multiple collections across different worlds — this is intentional. Collections are the mechanism for cross-world grouping." />
+      </HelpSection>
+
+      <HelpSection title="Personas" icon="ti-masks-theater">
+        <P>Personas are your player characters — independent of worlds, used across roleplay.</P>
+        <P>Each persona has a name, pronouns, description, portrait, and an optional linked lorebook.</P>
+        <P>The <B>Export MD</B> button in the topbar exports a markdown sheet with name, pronouns, description, and linked lorebook name.</P>
+      </HelpSection>
+
+      <HelpSection title="Templates (character creation)" icon="ti-template">
+        <P>Character templates pre-fill fields when creating a new character.</P>
+        <P>Global templates are available everywhere. World templates only appear when creating a character in that world.</P>
+        <P>Supported fields: display name format, short/full description, card, formatting, advanced prompt, tags, fandom tags, access level, spicy flags, temperature, and more.</P>
+        <P>The <B>Export MD</B> button in the template editor exports a reference sheet with all non-empty fields.</P>
+        <HelpTip text="Use {{name}} in the Display Name Format field — it gets replaced with the character's actual name on creation." />
       </HelpSection>
 
       <HelpSection title="Lorebook Templates (per-world)" icon="ti-template">
-        <P>Lorebook templates let you define a structured format for character entries in a shared world lorebook — e.g. a hockey player profile for all team members.</P>
+        <P>Lorebook templates let you define a structured format for character entries in a world lorebook — e.g. a hockey player profile for all team members.</P>
         <HelpStep n={1} text="Go to the world → World Info tab → Lorebook Templates section."/>
-        <HelpStep n={2} text="Click New template. Give it a name, pick the target lorebook, set a chapter title template (e.g. {{CHARACTER NAME}} | POSITION | ROLE), and paste your template text."/>
+        <HelpStep n={2} text="Click New template. Give it a name, pick the target lorebook, set a chapter title template (e.g. CHARACTER NAME | POSITION | ROLE), and paste the template text."/>
         <HelpStep n={3} text="Use {{CHARACTER NAME}} for the character's name in uppercase, and {{CHAR}} for normal case."/>
         <HelpStep n={4} text="Open any character in that world → Lorebook Entry tab. The template appears pre-filled with their name."/>
         <HelpStep n={5} text="Edit the chapter title and fill in the template body, then click Save to Lorebook."/>
         <HelpTip text="Saving updates the existing chapter if one already exists for that character (matched by character ID, not title)." />
+      </HelpSection>
+
+      <HelpSection title="Relationship Map" icon="ti-circles-relation">
+        <P>The Map tab in the right panel (expand with the toggle button in the topbar) shows a visual relationship map for a world.</P>
+        <P><B>Nodes</B> — Each character in the world appears as a portrait circle. Drag nodes to reposition them. The layout resets when you switch worlds.</P>
+        <P><B>Drawing connections</B> — Click <B>+ connect</B> under a character, then click another character. A prompt asks for a relationship label (e.g. rivals, lovers, siblings).</P>
+        <P><B>Editing connections</B> — Click a line or its label to open the edit popup at the bottom of the panel. Drag the popup by the ⠿ handle to move it out of the way. Edit the label or delete the connection.</P>
+        <P><B>Reset layout</B> — Re-runs the auto-layout grid if nodes drift off-screen.</P>
+        <HelpTip text="Characters that belong to this world via a collection (not just world_id) also appear — cross-world characters like shared cast members show up correctly." />
+      </HelpSection>
+
+      <HelpSection title="Tools panel" icon="ti-tool">
+        <P>Open the Tools tab in the right panel.</P>
+        <P><B>Height</B> — Convert cm ↔ ft/in. Click result to copy.</P>
+        <P><B>Names</B> — Generate names by gender. International pool.</P>
+        <P><B>Physicals</B> — Roll eyes, hair, and build separately or all at once.</P>
+        <P><B>Nationality</B> — Filter by region. Shows language and currency.</P>
+        <P><B>Color</B> — HSL sliders + 6 harmony modes. Click swatches to copy hex.</P>
+        <P><B>Text Diff</B> — Paste two versions of a text to highlight what changed.</P>
+        <P><B>Personality</B> — Roll Literary Archetype, MBTI, Jungian, and Attachment Style.</P>
+        <P><B>Plot</B> — Roll from 100 global archetypes, or filter to world-specific ones added in World Info.</P>
+        <P><B>Esper Powers</B> — Rolls an ability type, rank (F through S), drawback, and codename for an esper character.</P>
+        <P><B>Hockey</B> — Rolls a position, role description, handedness, and character trait for a hockey player.</P>
+        <P><B>Swim</B> — Rolls a stroke, event distance, stroke description, and swimmer archetype.</P>
+        <P><B>Western Zodiac</B> — Rolls a sun sign with element, modality, traits, shadow side, and vibe.</P>
+        <P><B>Chinese Zodiac</B> — Rolls a sign with element, reference years, traits, shadow side, and vibe.</P>
       </HelpSection>
 
       <HelpSection title="Batch Import" icon="ti-file-import">
@@ -5426,82 +5482,65 @@ function HelpPage() {
         <HelpTip text="Items marked 'local newer' are skipped — your local edits won't be overwritten. Images alongside JSONs are automatically linked as image_relpath." />
       </HelpSection>
 
-      <HelpSection title="Image Storage Audit" icon="ti-photo-scan">
-        <P>Keeps your images stored as local files instead of base64 blobs in the JSON.</P>
-        <P><B>Rescan images</B> — Scans folders for image files and links them to existing items. Use this after dropping images into Lorebooks\ or Collections\ manually.</P>
-        <P><B>Audit base64</B> — Finds items still storing images as base64. Shows what file they'd be written to.</P>
-        <P><B>Migrate</B> — Writes base64 images to local files, sets image_relpath, clears the base64. Won't create duplicates.</P>
-      </HelpSection>
-
-      <HelpSection title="Backup & Restore" icon="ti-archive">
-        <P>Found at the bottom of the Batch Import page. Requires <Code>adm-zip</Code> npm package.</P>
-        <P><B>Export full backup</B> — Creates a zip of everything: data JSON + all image folders.</P>
-        <P><B>Per-world export</B> — Zips only that world's characters, lorebooks, collections, and images.</P>
-        <P><B>Restore</B> — Pick a zip file. Global backup does a full replace; world backup merges the world back in without touching other worlds.</P>
-        <HelpTip text="Always do a full backup before a restore, just in case." />
-      </HelpSection>
-
-      <HelpSection title="Templates (character creation)" icon="ti-template">
-        <P>Character templates pre-fill fields when creating a new character.</P>
-        <P>Global templates are available everywhere. World templates only appear when creating a character in that world.</P>
-        <P>Supported fields: display name format, short/full description, card, formatting, tags, fandom tags, access level, spicy flags, temperature, and more.</P>
-        <HelpTip text="Use {{name}} in the Display Name Format field — it gets replaced with the character's name on creation." />
-      </HelpSection>
-
-      <HelpSection title="Tools panel" icon="ti-tool">
-        <P>Open the Tools tab in the right panel (toggle button in the top bar).</P>
-        <P><B>Height</B> — Convert cm ↔ ft/in. Click result to copy.</P>
-        <P><B>Names</B> — Generate names by gender. International pool.</P>
-        <P><B>Physicals</B> — Roll eyes, hair, build separately or all at once.</P>
-        <P><B>Nationality</B> — Filter by region. Shows language and currency.</P>
-        <P><B>Color</B> — HSL sliders + 6 harmony modes. Click swatches to copy hex.</P>
-        <P><B>Text Diff</B> — Paste two versions of a text to see what changed.</P>
-        <P><B>Personality</B> — Roll Literary Archetype, MBTI, Jungian, and Attachment Style. Roll all for a full character seed.</P>
-        <P><B>Plot</B> — Roll from 100 global plot archetypes, or filter to world-specific ones you've added in World Info.</P>
-      </HelpSection>
-
       <HelpSection title="Auto-save to disk" icon="ti-device-floppy">
         <P>Characters, lorebooks, and collections can auto-save to <Code>I:\Lorekeeper\</Code> on every edit.</P>
         <P>Set a <B>Folder Name</B> on a character (Settings tab) and it saves to <Code>Companions\FolderName\character.json</Code>.</P>
-        <P>Set a <B>Lorebook Filename</B> on a lorebook (sidebar) and it saves to <Code>Lorebooks\filename.json</Code>.</P>
-        <P>Same for collections via <B>Collections Filename</B>.</P>
-        <P>New items auto-get a filename from their name. Clear it to disable auto-save.</P>
-        <HelpTip text="Auto-saved files have app-only fields stripped — they're clean platform-format JSONs ready to upload." />
+        <P>Set a <B>Lorebook Filename</B> on a lorebook and it saves to <Code>Lorebooksilename.json</Code>.</P>
+        <P>Set a <B>Collections Filename</B> on a collection and it saves to <Code>Collectionsilename.json</Code>.</P>
+        <P>New items get a filename auto-generated from their name. Clear the field to disable auto-save.</P>
+        <HelpTip text="Auto-saved files have app-only fields stripped — they are clean platform-format JSONs ready to upload." />
+      </HelpSection>
+
+      <HelpSection title="Image Storage Audit" icon="ti-photo-scan">
+        <P>Keeps images stored as local files instead of base64 blobs in the data JSON.</P>
+        <P><B>Rescan images</B> — Scans folders for image files and links them to existing items. Use after dropping images into <Code>Lorebooks\</Code> or <Code>Collections\</Code> manually.</P>
+        <P><B>Audit base64</B> — Finds items still storing images as base64 and shows what file they would be written to.</P>
+        <P><B>Migrate</B> — Writes base64 images to local files, sets image_relpath, clears the base64. Will not create duplicates.</P>
+      </HelpSection>
+
+      <HelpSection title="Backup & Restore" icon="ti-archive">
+        <P>Found at the bottom of the Batch Import page.</P>
+        <P><B>Backup (sidebar)</B> — Creates a full zip of everything: data JSON + all image folders. Same as the Backup button in the sidebar footer.</P>
+        <P><B>Per-world backup</B> — Zips only that world's characters, lorebooks, collections, and images.</P>
+        <P><B>Export ZIP (world topbar)</B> — Platform-ready zip of posted characters + public lorebooks + collections, stripped of app-only fields. This is what you upload to Saucepan, not the full backup.</P>
+        <P><B>Restore</B> — Pick a zip. A full backup replaces everything; a world backup merges that world back in without touching others.</P>
+        <HelpTip text="Always do a full backup before a restore." />
       </HelpSection>
 
       <HelpSection title="Settings" icon="ti-settings">
-        <P>Found in the sidebar — second from last, above Help.</P>
-        <P><B>Font size</B> — changes the base font size across the whole app immediately. No restart needed.</P>
-        <P><B>Theme and colorblind mode</B> — coming in a future update.</P>
-        <P><B>Data file</B> — shows where your data is stored and lets you open the folder directly.</P>
+        <P><B>Font size</B> — Changes the base font size across the whole app immediately.</P>
+        <P><B>Claude API key</B> — Required for the Claude panel. See the Claude AI section below.</P>
+        <P><B>Model</B> — Claude model to use. Sonnet 4.6 (default) is the best balance of quality and cost. Haiku 4.5 is faster and cheaper.</P>
+        <P><B>Autosave debounce</B> — How long to wait after a keystroke before saving. Default 600ms.</P>
+        <P><B>Data file</B> — Shows where data is stored. Click to open the folder.</P>
+        <P><B>Theme and colorblind mode</B> — Coming in a future update.</P>
       </HelpSection>
 
       <HelpSection title="Claude AI assistant" icon="ti-sparkles">
         <P>The Claude tab in the right panel gives you an AI writing assistant that knows your full world context.</P>
         <P><B>What it knows:</B> the current world's lorebooks (full chapter text), collections, all characters in the world, and all filled fields of the character you're editing.</P>
         <P><B>Chat resets</B> when you switch to a different character or world. Copy anything useful before switching.</P>
-        <HelpTip text="Click any suggested prompt on the empty chat screen to pre-fill it. Or just type naturally — 'write a short description for this character', 'suggest scenarios based on the card', etc." />
+        <HelpTip text="Click any suggested prompt on the empty chat screen to pre-fill it. Or just type — 'write a short description for this character', 'suggest scenarios based on the card', etc." />
         <div style={{marginTop:8,padding:'10px 12px',background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.25)',borderRadius:'var(--r)',fontSize:12,color:'var(--amber)',lineHeight:1.7}}>
-          <strong style={{display:'block',marginBottom:4}}>⚠ API key required — it is NOT included with Claude.ai Pro</strong>
-          Claude.ai Pro (this chat) and the Anthropic API are separate products with separate billing.<br/>
-          To use the Claude panel in Lorekeeper you need API credits from <strong>console.anthropic.com</strong>.
+          <strong style={{display:'block',marginBottom:4}}>⚠ API key required — not included with Claude.ai Pro</strong>
+          Claude.ai Pro and the Anthropic API are separate products with separate billing.<br/>
+          To use the Claude panel you need API credits from <strong>console.anthropic.com</strong>.
         </div>
         <div style={{marginTop:8,fontSize:12,color:'var(--text3)',lineHeight:1.8}}>
-          <strong style={{color:'var(--text)',display:'block',marginBottom:4}}>Setup steps:</strong>
-          <HelpStep n={1} text="Go to console.anthropic.com and create an account (separate from claude.ai)"/>
-          <HelpStep n={2} text="Add credits — minimum $5. There is no free tier currently."/>
+          <strong style={{color:'var(--text)',display:'block',marginBottom:4}}>Setup:</strong>
+          <HelpStep n={1} text="Go to console.anthropic.com and create an account (separate from claude.ai)."/>
+          <HelpStep n={2} text="Add credits — minimum $5. There is no free tier."/>
           <HelpStep n={3} text="Go to API Keys → Create Key. Copy the key (starts with sk-ant-)."/>
           <HelpStep n={4} text="In Lorekeeper → Settings → Claude API → paste the key → Save."/>
         </div>
-        <P><B>Cost estimate:</B> Sonnet 4.6 (default) costs roughly $0.05–0.15 per conversation depending on how much lore you have loaded. Haiku 4.5 is ~10x cheaper but less capable. Switch models in Settings.</P>
-        <HelpTip text="$5 of credits goes a long way for occasional use. If you only use it for writing help on specific characters rather than chatting constantly, it should last a while." />
+        <P><B>Cost estimate:</B> Sonnet 4.6 costs roughly $0.05–0.15 per conversation depending on world size. Haiku 4.5 is ~10× cheaper but less capable.</P>
       </HelpSection>
 
       <HelpSection title="GitHub backup" icon="ti-brand-github">
-        <P>The source files (index.html, main.js, preload.js) are tracked in a private GitHub repo. Your data files are never committed.</P>
+        <P>The source files (index.html, main.js, preload.js) are tracked in a private GitHub repo. Data files are never committed.</P>
         <P>After each session, run in <Code>I:\Lorekeeper\</Code>:</P>
         <div style={{background:'var(--bg3)',borderRadius:'var(--r)',padding:'10px 14px',fontFamily:'monospace',fontSize:12,color:'var(--text)',marginTop:6,marginBottom:6,lineHeight:1.8}}>
-          git add src/<br/>
+          git add src/ lorekeeper-master-spec.md<br/>
           git commit -m "Brief description"<br/>
           git push
         </div>
