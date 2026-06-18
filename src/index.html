@@ -281,11 +281,12 @@ function App() {
   // Autosave to disk on every change
   useEffect(() => {
     clearTimeout(saveTimer.current);
+    const debounceMs = (data.settings?.autosave_debounce || 600);
     saveTimer.current = setTimeout(() => {
       window.lorekeeper.saveData(data).then(ok => {
         if (ok) { setSaved(true); setTimeout(() => setSaved(false), 1500); }
       });
-    }, 600);
+    }, debounceMs);
   }, [data]);
 
   // keep selectedChar/World in sync after updates
@@ -735,7 +736,7 @@ function MacroReference() {
             <div style={{fontSize:10,color:'var(--text3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:5}}>{group}</div>
             <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
               {items.map(([macro,desc])=>(
-                <button key={macro} onClick={()=>copy(macro)} title={desc} style={{background:copied===macro?'var(--accent-dim)':'var(--bg2)',border:`1px solid ${copied===macro?'var(--accent2)':'var(--border)'}`,color:copied===macro?'var(--accent)':'var(--text2)',padding:'3px 8px',borderRadius:4,fontSize:11,cursor:'pointer',fontFamily:'monospace',transition:'all 0.15s'}}>
+                <button key={macro} onClick={()=>copy(macro)} title={desc} style={{background:copied===macro?'var(--accent-dim)':'var(--bg2)',border:copied===macro?'1px solid var(--accent2)':'1px solid var(--border)',color:copied===macro?'var(--accent)':'var(--text2)',padding:'3px 8px',borderRadius:4,fontSize:11,cursor:'pointer',fontFamily:'monospace',transition:'all 0.15s'}}>
                   {copied===macro?'✓ copied':macro}
                 </button>
               ))}
@@ -1523,7 +1524,7 @@ function ColorTool() {
           <div style={{width:40,height:40,borderRadius:6,background:color,border:'1px solid rgba(255,255,255,0.15)',flexShrink:0}}/>
           <div style={{flex:1}}>
             <input value={hexInput||color} onChange={e=>handleHexInput(e.target.value)}
-              style={{width:'100%',background:'var(--bg2)',border:`1px solid ${hexErr?'var(--red)':'var(--border)'}`,color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none',fontFamily:'monospace'}}/>
+              style={{width:'100%',background:'var(--bg2)',border:hexErr?'1px solid var(--red)':'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none',fontFamily:'monospace'}}/>
             <div style={{fontSize:9,color:'var(--text3)',marginTop:2}}>HSL {hue}° {sat}% {lit}%</div>
           </div>
           <button className="btn" style={{padding:'4px 8px',fontSize:10}} onClick={()=>{copyHex(color);setHexInput('');}}><i className="ti ti-copy" style={{fontSize:10}}></i></button>
@@ -2237,7 +2238,7 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
             <strong>{c.display_name||c.name}</strong> is scheduled for today
             {getNote(c.id,todayStr)&&<span style={{color:'var(--text3)',marginLeft:6}}>· {getNote(c.id,todayStr)}</span>}
           </div>
-          <button className="btn primary" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch)ch.status='posted';})}>Mark posted</button>
+          <button className="btn primary" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch){ch.status='posted';if(!ch.posted_dates)ch.posted_dates=[];const today=new Date().toISOString().split('T')[0];if(!ch.posted_dates.includes(today))ch.posted_dates.push(today);}})}>Mark posted</button>
           <button className="btn" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>setSelectedChar(c)}>Reschedule</button>
           <button style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',padding:'0 4px',fontSize:16}} onClick={()=>setDismissed(d=>[...d,c.id])}>×</button>
         </div>
@@ -2452,7 +2453,7 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
 
           {/* Lorekeeper Checklist */}
           {(()=>{
-            const Tag=({ok,label})=><span style={{fontSize:10,padding:'1px 5px',borderRadius:3,background:ok?'rgba(110,231,183,0.12)':'rgba(251,191,36,0.12)',color:ok?'#6ee7b7':'var(--amber)',border:`1px solid ${ok?'rgba(110,231,183,0.25)':'rgba(251,191,36,0.3)'}`}}>{ok?'✓ ':''}{label}</span>;
+            const Tag=({ok,label})=><span style={{fontSize:10,padding:'1px 5px',borderRadius:3,background:ok?'rgba(110,231,183,0.12)':'rgba(251,191,36,0.12)',color:ok?'#6ee7b7':'var(--amber)',border:ok?'1px solid rgba(110,231,183,0.25)':'1px solid rgba(251,191,36,0.3)'}}>{ok?'✓ ':''}{label}</span>;
             const items=[];
             // Characters: posted with no posted date
             data.characters.filter(c=>c.status==='posted'&&(c.posted_dates||[]).length===0).forEach(c=>{
@@ -2653,7 +2654,7 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
                     d.lorebooks.splice(toIdx,0,moved);
                   });
                 }}
-                style={{background:'var(--bg2)',border:`1px solid ${selectedLore?.id===l.id?'var(--accent2)':'var(--border)'}`,borderRadius:'var(--r)',padding:'7px 14px',cursor:'grab',fontSize:13,color:selectedLore?.id===l.id?'var(--accent)':'var(--text2)',display:'flex',flexDirection:'column',gap:4,minWidth:140,transition:'border-color 0.15s'}}
+                style={{background:'var(--bg2)',border:selectedLore?.id===l.id?'1px solid var(--accent2)':'1px solid var(--border)',borderRadius:'var(--r)',padding:'7px 14px',cursor:'grab',fontSize:13,color:selectedLore?.id===l.id?'var(--accent)':'var(--text2)',display:'flex',flexDirection:'column',gap:4,minWidth:140,transition:'border-color 0.15s'}}
                 onClick={()=>setSelectedLore(l)}>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
                   <i className="ti ti-grip-vertical" style={{fontSize:12,color:'var(--text3)',flexShrink:0}}></i>
@@ -2713,7 +2714,7 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
               <CollectionCharPicker coll={selectedColl} data={data} update={update} setSelectedChar={setSelectedChar} />
             </div>
           ) : (
-            <div className="coll-grid">{worldColls.map(c=>{const count=data.characters.filter(ch=>(ch.collections||[]).includes(c.id)||(c.companions||[]).includes(ch.id)).length; const bannerImg=c.image_data||world.image; return <div key={c.id} className="coll-card" onClick={()=>setSelectedColl(c)}><div className="coll-banner" style={{backgroundImage:bannerImg?`url(${bannerImg})`:'none',backgroundSize:'cover',backgroundPosition:'center'}}>{!bannerImg&&<i className="ti ti-folders" style={{fontSize:24,color:'var(--teal)',opacity:0.5}}></i>}</div><div className="coll-card-body"><h3>{c.name}</h3><p>{c.definition||'No description.'}</p><div className="coll-count">{count} characters</div>{(c.tags||[]).length>0&&<div className="char-tags" style={{marginTop:6}}>{(c.tags||[]).slice(0,5).map(t=><span key={t} className="tag">{t}</span>)}</div>}<button className="btn" style={{marginTop:8,fontSize:11,padding:'3px 8px'}} onClick={e=>{e.stopPropagation();exportColl(c);}}><i className="ti ti-download"></i>Export</button></div></div>;})}</div>
+            <div className="coll-grid">{worldColls.map(c=>{const count=data.characters.filter(ch=>(ch.collections||[]).includes(c.id)||(c.companions||[]).includes(ch.id)).length; const bannerImg=c.image_data||world.image; return <div key={c.id} className="coll-card" onClick={()=>setSelectedColl(c)}><div className="coll-banner" style={{backgroundImage:bannerImg?'url('+bannerImg+')'  :'none',backgroundSize:'cover',backgroundPosition:'center'}}>{!bannerImg&&<i className="ti ti-folders" style={{fontSize:24,color:'var(--teal)',opacity:0.5}}></i>}</div><div className="coll-card-body"><h3>{c.name}</h3><p>{c.definition||'No description.'}</p><div className="coll-count">{count} characters</div>{(c.tags||[]).length>0&&<div className="char-tags" style={{marginTop:6}}>{(c.tags||[]).slice(0,5).map(t=><span key={t} className="tag">{t}</span>)}</div>}<button className="btn" style={{marginTop:8,fontSize:11,padding:'3px 8px'}} onClick={e=>{e.stopPropagation();exportColl(c);}}><i className="ti ti-download"></i>Export</button></div></div>;})}</div>
           )}
         </div>
       )}
@@ -2978,7 +2979,7 @@ function CollectionPicker({charData,data,updChar,update}) {
                 {colls.map(c=>{
                   const linked=isLinked(c);
                   const fromPlatform=(c.companions||[]).includes(charData.id)&&!(charData.collections||[]).includes(c.id);
-                  return <div key={c.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:linked?'var(--accent-dim)':'var(--bg3)',border:`1px solid ${linked?'var(--accent2)':'var(--border)'}`,borderRadius:'var(--r)',marginBottom:4,cursor:fromPlatform?'default':'pointer',transition:'all 0.15s',opacity:fromPlatform?0.7:1}} onClick={()=>!fromPlatform&&toggle(c)}>
+                  return <div key={c.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:linked?'var(--accent-dim)':'var(--bg3)',border:linked?'1px solid var(--accent2)':'1px solid var(--border)',borderRadius:'var(--r)',marginBottom:4,cursor:fromPlatform?'default':'pointer',transition:'all 0.15s',opacity:fromPlatform?0.7:1}} onClick={()=>!fromPlatform&&toggle(c)}>
                     <i className={`ti ${linked?'ti-folder-filled':'ti-folder'}`} style={{color:linked?'var(--accent)':'var(--text3)',fontSize:16,flexShrink:0}}></i>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:13,fontWeight:500,color:linked?'var(--accent)':'var(--text)'}}>{c.name}</div>
@@ -2993,7 +2994,7 @@ function CollectionPicker({charData,data,updChar,update}) {
               <div style={{fontSize:11,color:'var(--text3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>No World</div>
               {noWorld.map(c=>{
                 const linked=isLinked(c);
-                return <div key={c.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:linked?'var(--accent-dim)':'var(--bg3)',border:`1px solid ${linked?'var(--accent2)':'var(--border)'}`,borderRadius:'var(--r)',marginBottom:4,cursor:'pointer'}} onClick={()=>toggle(c)}>
+                return <div key={c.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:linked?'var(--accent-dim)':'var(--bg3)',border:linked?'1px solid var(--accent2)':'1px solid var(--border)',borderRadius:'var(--r)',marginBottom:4,cursor:'pointer'}} onClick={()=>toggle(c)}>
                   <i className={`ti ${linked?'ti-folder-filled':'ti-folder'}`} style={{color:linked?'var(--accent)':'var(--text3)',fontSize:16}}></i>
                   <span style={{fontSize:13,color:linked?'var(--accent)':'var(--text)'}}>{c.name}</span>
                   {linked&&<i className="ti ti-check" style={{color:'var(--accent)',fontSize:16,marginLeft:'auto'}}></i>}
@@ -3299,7 +3300,7 @@ function CharDetailPage({char,data,update,initialTab,onBack}) {
                       <div style={{fontSize:11,color:'var(--text3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>{wname}</div>
                       {lores.map(l=>{
                         const linked=(charData.linked_lorebooks||[]).includes(l.id);
-                        return <div key={l.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:linked?'var(--accent-dim)':'var(--bg3)',border:`1px solid ${linked?'var(--accent2)':'var(--border)'}`,borderRadius:'var(--r)',marginBottom:4,cursor:'pointer',transition:'all 0.15s'}} onClick={()=>updChar(c=>{if(!c.linked_lorebooks)c.linked_lorebooks=[];if(c.linked_lorebooks.includes(l.id)){c.linked_lorebooks=c.linked_lorebooks.filter(x=>x!==l.id);}else{c.linked_lorebooks.push(l.id);}})}>
+                        return <div key={l.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:linked?'var(--accent-dim)':'var(--bg3)',border:linked?'1px solid var(--accent2)':'1px solid var(--border)',borderRadius:'var(--r)',marginBottom:4,cursor:'pointer',transition:'all 0.15s'}} onClick={()=>updChar(c=>{if(!c.linked_lorebooks)c.linked_lorebooks=[];if(c.linked_lorebooks.includes(l.id)){c.linked_lorebooks=c.linked_lorebooks.filter(x=>x!==l.id);}else{c.linked_lorebooks.push(l.id);}})}>
                           {l.image_data?<img src={l.image_data} alt={l.name} style={{width:32,height:32,borderRadius:4,objectFit:'cover',flexShrink:0}}/>:<i className="ti ti-book" style={{fontSize:18,color:linked?'var(--accent)':'var(--text3)',flexShrink:0}}></i>}
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontSize:13,fontWeight:500,color:linked?'var(--accent)':'var(--text)'}}>{l.name}</div>
@@ -3818,6 +3819,22 @@ function ImageMigrationPanel({data, update}) {
 }
 
 
+
+function ScanBadge({isNew, localNewer, upToDate}) {
+  if(isNew) return <span style={{fontSize:10,color:'var(--accent)',background:'var(--accent-dim)',border:'1px solid var(--accent2)',padding:'2px 6px',borderRadius:4}}>new</span>;
+  if(localNewer) return <span style={{fontSize:10,color:'var(--amber)',background:'rgba(251,191,36,0.1)',border:'1px solid rgba(251,191,36,0.3)',padding:'2px 6px',borderRadius:4}}>local newer ↑</span>;
+  if(upToDate) return <span style={{fontSize:10,color:'var(--text3)',background:'var(--bg3)',border:'1px solid var(--border)',padding:'2px 6px',borderRadius:4}}>up to date</span>;
+  return <span style={{fontSize:10,color:'var(--green)',background:'rgba(110,231,183,0.1)',border:'1px solid rgba(110,231,183,0.2)',padding:'2px 6px',borderRadius:4}}>update ↓</span>;
+}
+
+function ScanTagChips({tags}) {
+  if(!tags||tags.length===0) return null;
+  return <div style={{display:'flex',flexWrap:'wrap',gap:3,marginTop:3}}>
+    {tags.slice(0,5).map(t=><span key={t} style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:CW_TAGS.has(t)?'rgba(239,68,68,0.12)':'var(--accent-dim)',color:CW_TAGS.has(t)?'#fca5a5':'var(--accent)',border:CW_TAGS.has(t)?'1px solid rgba(239,68,68,0.3)':'1px solid var(--accent2)'}}>{t}</span>)}
+    {tags.length>5&&<span style={{fontSize:9,color:'var(--text3)'}}>+{tags.length-5}</span>}
+  </div>;
+}
+
 function BatchImportHelp() {
   const [open, setOpen] = useState(false);
   return <div style={{position:'relative'}}>
@@ -4099,18 +4116,14 @@ function BatchImportPage({data,update}) {
           const isNew=!existing;
           const localNewer=!isNew&&localTime>importTime&&localTime>0;
           const upToDate=!isNew&&!localNewer&&Math.abs(localTime-importTime)<1000;
-          const badge=isNew
-            ?<span style={{fontSize:10,color:'var(--accent)',background:'var(--accent-dim)',border:'1px solid var(--accent2)',padding:'2px 6px',borderRadius:4}}>new</span>
-            :localNewer
-            ?<span style={{fontSize:10,color:'var(--amber)',background:'rgba(251,191,36,0.1)',border:'1px solid rgba(251,191,36,0.3)',padding:'2px 6px',borderRadius:4}}>local newer ↑</span>
-            :upToDate
-            ?<span style={{fontSize:10,color:'var(--text3)',background:'var(--bg3)',border:'1px solid var(--border)',padding:'2px 6px',borderRadius:4}}>up to date</span>
-            :<span style={{fontSize:10,color:'var(--green)',background:'rgba(110,231,183,0.1)',border:'1px solid rgba(110,231,183,0.2)',padding:'2px 6px',borderRadius:4}}>update ↓</span>;
-          return <div key={id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:'var(--bg2)',border:`1px solid ${localNewer?'rgba(251,191,36,0.3)':'var(--border)'}`,borderRadius:'var(--r)',marginBottom:6,opacity:upToDate?0.6:1}}>
+          return <div key={id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:'var(--bg2)',border:localNewer?'1px solid rgba(251,191,36,0.3)':'1px solid var(--border)',borderRadius:'var(--r)',marginBottom:6,opacity:upToDate?0.6:1}}>
             {item.thumbnail&&<img src={item.thumbnail} style={{width:40,height:40,borderRadius:4,objectFit:'cover',flexShrink:0}}/>}
-            <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:'var(--text)'}}>{item.jsonData?.name||item.filename}</div></div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:500,color:'var(--text)'}}>{item.jsonData?.name||item.filename}</div>
+              <ScanTagChips tags={item.jsonData?.tags}/>
+            </div>
             <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-              {badge}
+              <ScanBadge isNew={isNew} localNewer={localNewer} upToDate={upToDate}/>
               <WorldSelect id={id}/>
             </div>
           </div>;
@@ -4127,18 +4140,14 @@ function BatchImportPage({data,update}) {
           const isNew=!existing;
           const localNewer=!isNew&&localTime>importTime&&localTime>0;
           const upToDate=!isNew&&!localNewer&&Math.abs(localTime-importTime)<1000;
-          const badge=isNew
-            ?<span style={{fontSize:10,color:'var(--accent)',background:'var(--accent-dim)',border:'1px solid var(--accent2)',padding:'2px 6px',borderRadius:4}}>new</span>
-            :localNewer
-            ?<span style={{fontSize:10,color:'var(--amber)',background:'rgba(251,191,36,0.1)',border:'1px solid rgba(251,191,36,0.3)',padding:'2px 6px',borderRadius:4}}>local newer ↑</span>
-            :upToDate
-            ?<span style={{fontSize:10,color:'var(--text3)',background:'var(--bg3)',border:'1px solid var(--border)',padding:'2px 6px',borderRadius:4}}>up to date</span>
-            :<span style={{fontSize:10,color:'var(--green)',background:'rgba(110,231,183,0.1)',border:'1px solid rgba(110,231,183,0.2)',padding:'2px 6px',borderRadius:4}}>update ↓</span>;
-          return <div key={id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:'var(--bg2)',border:`1px solid ${localNewer?'rgba(251,191,36,0.3)':'var(--border)'}`,borderRadius:'var(--r)',marginBottom:6,opacity:upToDate?0.6:1}}>
+          return <div key={id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:'var(--bg2)',border:localNewer?'1px solid rgba(251,191,36,0.3)':'1px solid var(--border)',borderRadius:'var(--r)',marginBottom:6,opacity:upToDate?0.6:1}}>
             <i className="ti ti-book" style={{fontSize:18,color:'var(--amber)',flexShrink:0}}></i>
-            <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:500,color:'var(--text)'}}>{item.jsonData?.name||item.filename}</div></div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:500,color:'var(--text)'}}>{item.jsonData?.name||item.filename}</div>
+              <ScanTagChips tags={item.jsonData?.tags}/>
+            </div>
             <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-              {badge}
+              <ScanBadge isNew={isNew} localNewer={localNewer} upToDate={upToDate}/>
               <WorldSelect id={id}/>
             </div>
           </div>;
@@ -4157,21 +4166,15 @@ function BatchImportPage({data,update}) {
           const localNewer=!isNew&&localTime>importTime;
           const upToDate=!isNew&&localTime===importTime;
           const updateAvail=!isNew&&importTime>localTime;
-          const badge=isNew
-            ?<span style={{fontSize:10,color:'var(--accent)',background:'var(--accent-dim)',border:'1px solid var(--accent2)',padding:'2px 6px',borderRadius:4}}>new</span>
-            :localNewer
-            ?<span style={{fontSize:10,color:'var(--amber)',background:'rgba(251,191,36,0.1)',border:'1px solid rgba(251,191,36,0.3)',padding:'2px 6px',borderRadius:4}} title='Local edits are newer — will be skipped'>local newer ↑</span>
-            :upToDate
-            ?<span style={{fontSize:10,color:'var(--text3)',background:'var(--bg3)',border:'1px solid var(--border)',padding:'2px 6px',borderRadius:4}}>up to date</span>
-            :<span style={{fontSize:10,color:'var(--green)',background:'rgba(110,231,183,0.1)',border:'1px solid rgba(110,231,183,0.2)',padding:'2px 6px',borderRadius:4}}>update ↓</span>;
-          return <div key={id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:'var(--bg2)',border:`1px solid ${localNewer?'rgba(251,191,36,0.3)':'var(--border)'}`,borderRadius:'var(--r)',marginBottom:6,opacity:upToDate?0.6:1}}>
+          return <div key={id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:'var(--bg2)',border:localNewer?'1px solid rgba(251,191,36,0.3)':'1px solid var(--border)',borderRadius:'var(--r)',marginBottom:6,opacity:upToDate?0.6:1}}>
             {item.thumbnail?<img src={item.thumbnail} style={{width:40,height:40,borderRadius:4,objectFit:'cover',flexShrink:0}}/>:<div style={{width:40,height:40,borderRadius:4,background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><i className="ti ti-user" style={{color:'var(--text3)'}}></i></div>}
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:13,fontWeight:500,color:'var(--text)'}}>{item.jsonData?.display_name||item.jsonData?.name||item.folderName}</div>
               <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>{item.imageFiles.length} images · {(()=>{if(!item.jsonData?.updated_at)return 'no date';const t=new Date(item.jsonData.updated_at);return isNaN(t.getTime())?'no date':t.toLocaleDateString();})()}</div>
+              <ScanTagChips tags={item.jsonData?.tags}/>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-              {badge}
+              <ScanBadge isNew={isNew} localNewer={localNewer} upToDate={upToDate}/>
               <WorldSelect id={id}/>
             </div>
           </div>;
@@ -4449,7 +4452,14 @@ function SettingsPage({data, update}) {
           </div>
         </Field>
         <Field label="Auto-save debounce" hint="How quickly changes are saved to disk after you stop typing.">
-          <ComingSoon text="Adjustable debounce (currently 600ms)"/>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+            {[[300,'Fast (300ms)'],[600,'Normal (600ms)'],[1000,'Slow (1s)'],[2000,'Very slow (2s)']].map(([v,l])=>(
+              <button key={v} className={`btn${(data.settings?.autosave_debounce||600)===v?' primary':''}`}
+                style={{fontSize:11,flex:1,justifyContent:'center'}}
+                onClick={()=>update(d=>{if(!d.settings)d.settings={};d.settings.autosave_debounce=v;})}>{l}</button>
+            ))}
+          </div>
+          <div style={{fontSize:11,color:'var(--text3)',marginTop:6}}>Currently: {data.settings?.autosave_debounce||600}ms after you stop typing</div>
         </Field>
       </Section>
 
