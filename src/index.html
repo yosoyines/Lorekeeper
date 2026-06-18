@@ -201,9 +201,9 @@
   .empty h3 { font-size: 15px; color: var(--text2); margin-bottom: 6px; }
   .empty p { font-size: 13px; }
   .coll-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
-  .coll-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rl); overflow: hidden; cursor: pointer; transition: border-color 0.15s; }
-  .coll-card:hover { border-color: var(--border2); }
-  .coll-banner { height: 60px; background: linear-gradient(135deg, rgba(45,212,191,0.2), rgba(167,139,250,0.2)); display: flex; align-items: center; justify-content: center; }
+  .coll-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rl); overflow: hidden; cursor: pointer; transition: border-color 0.15s, transform 0.1s; }
+  .coll-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+  .coll-banner { height: 80px; background: linear-gradient(135deg, rgba(45,212,191,0.2), rgba(167,139,250,0.2)); display: flex; align-items: center; justify-content: center; }
   .coll-card-body { padding: 12px; }
   .coll-card-body h3 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
   .coll-card-body p { font-size: 12px; color: var(--text3); line-height: 1.5; }
@@ -280,6 +280,7 @@ function App() {
   const [selectedWorld, setSelectedWorld] = useState(null);
   const [selectedChar, setSelectedChar] = useState(null);
   const [charInitialTab, setCharInitialTab] = useState(null);
+  const [initialCollId, setInitialCollId] = useState(null);
   const [selectedLore, setSelectedLore] = useState(null);
   const [worldTab, setWorldTab] = useState('characters');
   const [modal, setModal] = useState(null);
@@ -701,10 +702,10 @@ function App() {
           <div className="content" style={{flex:1}}>
             {page==='dashboard'&&<DashboardPage calCells={calCells} calYear={calYear} calMonth={calMonth} today={today} selDay={selDay} setSelDay={setSelDay} charsOnDay={charsOnDay} postedOnDay={postedOnDay} calDate={calDate} setCalDate={setCalDate} upcoming={upcoming} data={data} update={update} setSelectedChar={(c,tab)=>{setSelectedChar(c);if(tab)setCharInitialTab(tab);else setCharInitialTab(null);setPage('char');}} setSelectedLore={(l)=>{setSelectedLore(l);setPage('lore');}} setSelectedWorld={(w,tab)=>{setSelectedWorld(w);if(tab)setWorldTab(tab);setPage('world');}} />}
             {page==='worlds'&&<WorldsPage data={data} setSelectedWorld={w=>{setSelectedWorld(w);setWorldTab('characters');setPage('world');}} setModal={setModal} />}
-            {page==='world'&&selectedWorld&&<WorldDetailPage world={selectedWorld} tab={worldTab} setTab={setWorldTab} worldChars={worldChars} worldLores={worldLores} worldColls={worldColls} worldGallery={worldGallery} setSelectedChar={c=>{setSelectedChar(c);setPage('char');}} setSelectedLore={setSelectedLore} selectedLore={selectedLore} update={update} setModal={setModal} exportChar={exportChar} exportLore={exportLore} exportColl={exportColl} setPage={setPage} setSelectedWorld={setSelectedWorld} data={data} />}
+            {page==='world'&&selectedWorld&&<WorldDetailPage world={selectedWorld} tab={worldTab} setTab={setWorldTab} worldChars={worldChars} worldLores={worldLores} worldColls={worldColls} worldGallery={worldGallery} setSelectedChar={c=>{setSelectedChar(c);setPage('char');}} setSelectedLore={setSelectedLore} selectedLore={selectedLore} update={update} setModal={setModal} exportChar={exportChar} exportLore={exportLore} exportColl={exportColl} setPage={setPage} setSelectedWorld={setSelectedWorld} data={data} initialCollId={initialCollId} clearInitialCollId={()=>setInitialCollId(null)} />}
             {page==='characters'&&<CharactersPage data={data} setSelectedChar={c=>{setSelectedChar(c);setPage('char');}} />}
             {page==='lorebooks'&&<AllLorebooksPage data={data} update={update} setSelectedWorld={w=>{setSelectedWorld(w);setWorldTab('lorebooks');setPage('world');}} setSelectedLore={l=>{setSelectedLore(l);setPage('lore');}} exportLore={exportLore} />}
-            {page==='collections'&&<AllCollectionsPage data={data} update={update} setSelectedWorld={w=>{setSelectedWorld(w);setWorldTab('collections');setPage('world');}} exportColl={exportColl} />}
+            {page==='collections'&&<AllCollectionsPage data={data} update={update} openColl={(col)=>{const w=data.worlds.find(x=>x.id===col.world_id);if(w){setSelectedWorld(w);setWorldTab('collections');setInitialCollId(col.id);setPage('world');}else{setSelectedWorld(null);setWorldTab('collections');setInitialCollId(col.id);setPage('world');}}} exportColl={exportColl} />}
             {page==='settings'&&<SettingsPage data={data} update={update}/>}
             {page==='help'&&<HelpPage/>}
             {page==='lore'&&selectedLore&&<StandaloneLorePage lorebook={selectedLore} data={data} update={update} exportLore={exportLore} onBack={()=>{setPage('lorebooks');setSelectedLore(null);}} />}
@@ -3052,7 +3053,7 @@ function WorldsPage({data,setSelectedWorld,setModal}) {
   );
 }
 
-function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worldGallery,setSelectedChar,setSelectedLore,selectedLore,update,setModal,exportChar,exportLore,exportColl,setPage,setSelectedWorld,data}) {
+function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worldGallery,setSelectedChar,setSelectedLore,selectedLore,update,setModal,exportChar,exportLore,exportColl,setPage,setSelectedWorld,data,initialCollId,clearInitialCollId}) {
   const tabs=[['characters','ti-users','Characters'],['lorebooks','ti-book','Lorebooks'],['collections','ti-folders','Collections'],['gallery','ti-photo','Gallery'],['info','ti-info-circle','World Info']];
   const handleBannerUpload=async()=>{
     const _r=await window.lorekeeper.importImage();
@@ -3065,6 +3066,13 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
   const handleGalleryUpload=async()=>{const _r=await window.lorekeeper.importImage();if(_r)update(d=>{d.gallery.push({id:uuid(),world_id:world.id,name:'image',data:_r.base64});});};
   const [selectedColl,setSelectedColl]=useState(null);
   const [collTab,setCollTab]=useState('edit');
+  React.useEffect(()=>{
+    if(initialCollId){
+      const c=worldColls.find(x=>x.id===initialCollId);
+      if(c){setSelectedColl(c);setCollTab('edit');}
+      if(clearInitialCollId) clearInitialCollId();
+    }
+  },[initialCollId]);
   const updColl=(fn)=>update(d=>{
     const c=d.collections.find(x=>x.id===selectedColl?.id);
     if(!c)return;
@@ -3529,31 +3537,40 @@ function AllLorebooksPage({data,update,setSelectedWorld,setSelectedLore,exportLo
   return (
     <div>
       <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-        <button className={`btn ${filter==='all'?'primary':''}`} onClick={()=>setFilter('all')}>All ({data.lorebooks.length})</button>
-        <button className={`btn ${filter==='none'?'primary':''}`} onClick={()=>setFilter('none')}>Standalone ({data.lorebooks.filter(l=>!l.world_id).length})</button>
+        <button className={"btn "+(filter==='all'?'primary':'')} onClick={()=>setFilter('all')}>All ({data.lorebooks.length})</button>
+        <button className={"btn "+(filter==='none'?'primary':'')} onClick={()=>setFilter('none')}>Standalone ({data.lorebooks.filter(l=>!l.world_id).length})</button>
         {worlds.map(w=>{
           const count=data.lorebooks.filter(l=>l.world_id===w.id).length;
           if(count===0) return null;
-          return <button key={w.id} className={`btn ${filter===w.id?'primary':''}`} onClick={()=>setFilter(w.id)}>{w.emoji?w.emoji+' ':''}{w.name} ({count})</button>;
+          return <button key={w.id} className={"btn "+(filter===w.id?'primary':'')} onClick={()=>setFilter(w.id)}>{w.emoji?w.emoji+' ':''}{w.name} ({count})</button>;
         })}
       </div>
       {lorebooks.length===0?<div className="empty"><i className="ti ti-book"></i><h3>No lorebooks</h3></div>:
-      <div style={{display:'flex',flexDirection:'column',gap:8}}>
+      <div className="chars-grid">
         {lorebooks.map(l=>{
           const w=data.worlds.find(x=>x.id===l.world_id);
-          return <div key={l.id} style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:'14px 16px',display:'flex',alignItems:'center',gap:12,cursor:'pointer'}} onClick={()=>openLorebook(l)}>
-            {(l.image_data||l.image_relpath)?<ImgFromPath src={l.image_data||l.image_relpath} alt={l.name} style={{width:48,height:48,borderRadius:6,objectFit:'cover',flexShrink:0}}/>:<div style={{width:48,height:48,borderRadius:6,background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><i className="ti ti-book" style={{fontSize:22,color:'var(--amber)'}}></i></div>}
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:14,fontWeight:600,color:'var(--text)'}}>{l.name}</div>
-              <div style={{fontSize:12,color:'var(--text3)',marginTop:2,display:'flex',gap:8,alignItems:'center'}}>
-                {w?<span>{w.emoji?w.emoji+' ':''}{w.name}</span>:<span style={{color:'var(--accent)',fontSize:11}}>Standalone</span>}
-                <span>·</span><span>{(l.content||[]).length} chapters</span>
-                <span>·</span><span style={{color:l.access_level==='public'?'#6ee7b7':'var(--text3)'}}>{l.access_level||'private'}</span>
+          const imgSrc=l.image_relpath||l.image_data||null;
+          return (
+            <div key={l.id} className="char-card" onClick={()=>openLorebook(l)}>
+              <div className="char-portrait">
+                {imgSrc
+                  ?<ImgFromPath src={imgSrc} alt={l.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+                  :<i className="ti ti-book" style={{fontSize:32,color:'var(--amber)'}}></i>
+                }
               </div>
-              {(l.tags||[]).length>0&&<div className="char-tags" style={{marginTop:4}}>{l.tags.slice(0,5).map(t=><span key={t} className="tag">{t}</span>)}</div>}
+              <div className="char-card-body">
+                <div className="char-name">{l.name}</div>
+                <div className="char-display">
+                  {w?<span>{w.emoji?w.emoji+' ':''}{w.name}</span>:<span style={{color:'var(--accent)',fontSize:11}}>Standalone</span>}
+                </div>
+                <div className="char-tags">
+                  <span className={"status-badge status-"+(l.access_level==='public'?'posted':'draft')}>{l.access_level||'private'}</span>
+                  <span className="tag" style={{color:'var(--text3)'}}>{(l.content||[]).length} ch.</span>
+                  {(l.tags||[]).slice(0,3).map(t=><span key={t} className="tag">{t}</span>)}
+                </div>
+              </div>
             </div>
-            <button className="btn" style={{padding:'5px 10px',fontSize:12,flexShrink:0}} onClick={e=>{e.stopPropagation();exportLore(l);}}><i className="ti ti-download"></i></button>
-          </div>;
+          );
         })}
       </div>}
     </div>
@@ -4391,7 +4408,7 @@ function PersonasPage({data,setSelectedPersona}) {
     <div className="chars-grid">
       {personas.map(p=>(
         <div key={p.id} className="char-card" onClick={()=>setSelectedPersona(p)}>
-          <div className="char-portrait">{p.image?.data?<img src={p.image.data} alt={p.name}/>:<i className="ti ti-masks-theater"></i>}</div>
+          <div className="char-portrait">{(p.image?.data||p.image_relpath)?<ImgFromPath src={p.image?.data||p.image_relpath} alt={p.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<i className="ti ti-masks-theater"></i>}</div>
           <div className="char-card-body">
             <div className="char-name">{p.name}</div>
             {p.pronouns&&<div className="char-display">{p.pronouns}</div>}
@@ -5550,47 +5567,43 @@ function HelpPage() {
   );
 }
 
-function AllCollectionsPage({data,update,setSelectedWorld,exportColl}) {
+function AllCollectionsPage({data,update,openColl,exportColl}) {
   const [filter,setFilter]=useState('all');
   const worlds=data.worlds;
   const collections=filter==='all'?data.collections:filter==='none'?data.collections.filter(c=>!c.world_id):data.collections.filter(c=>c.world_id===filter);
-  const openColl=(col)=>{
-    const w=data.worlds.find(x=>x.id===col.world_id);
-    if(w) setSelectedWorld(w);
-  };
   return (
     <div>
       <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-        <button className={`btn ${filter==='all'?'primary':''}`} onClick={()=>setFilter('all')}>All ({data.collections.length})</button>
-        <button className={`btn ${filter==='none'?'primary':''}`} onClick={()=>setFilter('none')}>Standalone ({data.collections.filter(c=>!c.world_id).length})</button>
+        <button className={"btn "+(filter==='all'?'primary':'')} onClick={()=>setFilter('all')}>All ({data.collections.length})</button>
+        <button className={"btn "+(filter==='none'?'primary':'')} onClick={()=>setFilter('none')}>Standalone ({data.collections.filter(c=>!c.world_id).length})</button>
         {worlds.map(w=>{
           const count=data.collections.filter(c=>c.world_id===w.id).length;
           if(count===0) return null;
-          return <button key={w.id} className={`btn ${filter===w.id?'primary':''}`} onClick={()=>setFilter(w.id)}>{w.emoji?w.emoji+' ':''}{w.name} ({count})</button>;
+          return <button key={w.id} className={"btn "+(filter===w.id?'primary':'')} onClick={()=>setFilter(w.id)}>{w.emoji?w.emoji+' ':''}{w.name} ({count})</button>;
         })}
       </div>
       {collections.length===0?<div className="empty"><i className="ti ti-folders"></i><h3>No collections</h3></div>:
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:12}}>
+      <div className="coll-grid">
         {collections.map(col=>{
           const w=data.worlds.find(x=>x.id===col.world_id);
           const charCount=data.characters.filter(c=>(c.collections||[]).includes(col.id)||(col.companions||[]).includes(c.id)).length;
-          const img=col.image_data||(w?.image)||null;
-          return <div key={col.id} style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',overflow:'hidden',cursor:'pointer'}} onClick={()=>openColl(col)}>
-            <div style={{height:80,background:'var(--bg3)',overflow:'hidden',position:'relative',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              {img?<img src={img} alt={col.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<i className="ti ti-folders" style={{fontSize:28,color:'var(--accent)',opacity:0.4}}></i>}
-              <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(15,14,19,0.7) 0%,transparent 60%)'}}></div>
-              <div style={{position:'absolute',bottom:8,left:12,fontSize:13,fontWeight:600,color:'#fff'}}>{col.name}</div>
-            </div>
-            <div style={{padding:'10px 12px'}}>
-              <div style={{fontSize:12,color:'var(--text3)',marginBottom:6,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                {w?<span>{w.emoji?w.emoji+' ':''}{w.name}</span>:<span style={{color:'var(--accent)',fontSize:11}}>Standalone</span>}
-                {' · '}{charCount} characters
+          const img=col.image_data||col.image_relpath||(w?.image)||null;
+          return (
+            <div key={col.id} className="coll-card" onClick={()=>openColl(col)}>
+              <div className="coll-banner" style={{backgroundImage:img?'url('+img+')':'none',backgroundSize:'cover',backgroundPosition:'center'}}>
+                {!img&&<i className="ti ti-folders" style={{fontSize:24,color:'var(--teal)',opacity:0.5}}></i>}
               </div>
-              {col.definition&&<div style={{fontSize:11,color:'var(--text3)',marginBottom:6,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{col.definition}</div>}
-              {(col.tags||[]).length>0&&<div className="char-tags" style={{marginBottom:8}}>{col.tags.slice(0,4).map(t=><span key={t} className="tag">{t}</span>)}</div>}
-              <button className="btn" style={{padding:'4px 10px',fontSize:11}} onClick={e=>{e.stopPropagation();exportColl(col);}}><i className="ti ti-download"></i>Export</button>
+              <div className="coll-card-body">
+                <h3>{col.name}</h3>
+                <div style={{fontSize:11,color:'var(--text3)',marginBottom:4}}>
+                  {w?<span>{w.emoji?w.emoji+' ':''}{w.name}</span>:<span style={{color:'var(--accent)'}}>Standalone</span>}
+                  {' · '}{charCount} characters
+                </div>
+                {col.definition&&<p style={{WebkitLineClamp:2,WebkitBoxOrient:'vertical',display:'-webkit-box',overflow:'hidden'}}>{col.definition}</p>}
+                {(col.tags||[]).length>0&&<div className="char-tags" style={{marginTop:6}}>{col.tags.slice(0,4).map(t=><span key={t} className="tag">{t}</span>)}</div>}
+              </div>
             </div>
-          </div>;
+          );
         })}
       </div>}
     </div>
