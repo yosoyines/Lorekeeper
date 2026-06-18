@@ -493,9 +493,9 @@ function App() {
 
   // Parse date string safely in local time (avoid UTC off-by-one)
   const parseLocalDate=(sd)=>{ const p=sd.split('T')[0].split('-'); return new Date(+p[0],+p[1]-1,+p[2]); };
-  const charsOnDay=(d)=>data.characters.filter(c=>c.schedule_dates&&c.schedule_dates.some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;}));
-  const postedOnDay=(d)=>data.characters.filter(c=>(c.posted_dates||[]).some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;}));
-  const upcoming=data.characters.filter(c=>c.schedule_dates&&c.schedule_dates.length>0).flatMap(c=>c.schedule_dates.map(d=>({char:c,date:parseLocalDate(d)}))).filter(x=>x.date>=new Date(today.getFullYear(),today.getMonth(),today.getDate())).sort((a,b)=>a.date-b.date).slice(0,10);
+  const charsOnDay=(d)=>data.characters.filter(c=>c.status!=='posted'&&c.schedule_dates&&c.schedule_dates.some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;}));
+  const postedOnDay=(d)=>data.characters.filter(c=>{const hasPostedDate=(c.posted_dates||[]).some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;});const isPostedAndScheduled=c.status==='posted'&&(c.schedule_dates||[]).some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;});return hasPostedDate||isPostedAndScheduled;});
+  const upcoming=data.characters.filter(c=>c.status!=='posted'&&c.schedule_dates&&c.schedule_dates.length>0).flatMap(c=>c.schedule_dates.map(d=>({char:c,date:parseLocalDate(d)}))).filter(x=>x.date>=new Date(today.getFullYear(),today.getMonth(),today.getDate())).sort((a,b)=>a.date-b.date).slice(0,10);
 
   const navTo=(p)=>{setPage(p);setSelectedWorld(null);setSelectedChar(null);setSelectedLore(null);setSelectedPersona(null);};
 
@@ -2202,7 +2202,7 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
   const [schedPicker,setSchedPicker]=useState(null); // cellDateStr when open
   const [schedSearch,setSchedSearch]=useState('');
   const selChars=selDay?charsOnDay(selDay):[];
-  const todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
   const [dismissed,setDismissed]=useState([]);
   const [showCycle,setShowCycle]=useState(false);
   const todayReady=data.characters.filter(c=>c.status==='ready'&&(c.schedule_dates||[]).some(d=>d.split('T')[0]===todayStr)&&!dismissed.includes(c.id));
@@ -2238,7 +2238,7 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
             <strong>{c.display_name||c.name}</strong> is scheduled for today
             {getNote(c.id,todayStr)&&<span style={{color:'var(--text3)',marginLeft:6}}>· {getNote(c.id,todayStr)}</span>}
           </div>
-          <button className="btn primary" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch){ch.status='posted';if(!ch.posted_dates)ch.posted_dates=[];const today=new Date().toISOString().split('T')[0];if(!ch.posted_dates.includes(today))ch.posted_dates.push(today);}})}>Mark posted</button>
+          <button className="btn primary" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch){ch.status='posted';if(!ch.posted_dates)ch.posted_dates=[];const t=new Date();const td=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');if(!ch.posted_dates.includes(td))ch.posted_dates.push(td);}})}>Mark posted</button>
           <button className="btn" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>setSelectedChar(c)}>Reschedule</button>
           <button style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',padding:'0 4px',fontSize:16}} onClick={()=>setDismissed(d=>[...d,c.id])}>×</button>
         </div>
