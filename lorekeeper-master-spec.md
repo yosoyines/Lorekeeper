@@ -1,13 +1,13 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 19, 2026 (session 14)**
+**Last updated: June 19, 2026 (session 15)**
 
 ---
 
 ## Platform & Stack
 - **Runtime:** Electron (desktop app, Windows)
-- **Renderer:** Single HTML file — React 18.2.0, Babel standalone 7.23.10, Tabler Icons 2.44.0 (all pinned)
-- **Data:** Auto-saves to `I:\Lorekeeper\lorekeeper-data.json` (debounce configurable in Settings)
-- **Images:** Stored as `image_relpath` file paths relative to `I:\Lorekeeper\` — NOT base64 in JSON
+- **Renderer:** Single HTML file — React 18.2.0, Babel standalone 7.23.10, Tabler Icons 2.44.0 (all pinned — do not change, newer Tabler breaks Electron)
+- **Data:** Auto-saves to `I:\Lorekeeper\lorekeeper-data.json`; async write, debounce configurable in Settings
+- **Images:** Stored as `image_relpath` file paths relative to `I:\Lorekeeper\` — NOT base64 in JSON (legacy base64 fields still read for backward compatibility)
 - **Launch:** `start-silent.vbs` (no terminal); `start.bat` for debugging
 - **npm packages:** `adm-zip` (backup/restore)
 - **Repository:** Private GitHub repo at Ine's account (set up June 2026)
@@ -30,37 +30,37 @@ I:\Lorekeeper\
     icon.ico / icon.png / icon.svg
   Companions\
     CharacterName\
-      character.json      ← auto-saved on every edit if companion_folder is set
+      character.json      <- auto-saved on every edit if companion_folder is set
       portrait.avif ...
   Lorebooks\
-    lorebook.json         ← auto-saved on every edit if lorebook_filename is set
+    lorebook.json         <- auto-saved on every edit if lorebook_filename is set
     cover.jpg
   Collections\
-    collection.json       ← auto-saved on every edit if collection_filename is set
+    collection.json       <- auto-saved on every edit if collection_filename is set
     banner.jpg
   Worlds\
-    WorldName.jpg         ← world banners
+    WorldName.jpg         <- world banners
   Personas\
-    PersonaName.jpg       ← persona portraits
+    PersonaName.jpg       <- persona portraits
   node_modules\
     adm-zip\
 ```
 
 ---
 
-## IPC Methods (preload.js → main.js)
+## IPC Methods (preload.js -> main.js)
 | Method | Description |
 |---|---|
 | `loadData()` | Load lorekeeper-data.json |
-| `saveData(data)` | Save lorekeeper-data.json |
-| `exportFile({defaultName, content})` | Save dialog → write JSON |
-| `importFile()` | Open dialog → read JSON string |
-| `importImage()` | Open dialog → returns `{base64, srcPath}` |
-| `importImages()` | Multi-select → returns `[{name, base64, srcPath}]` |
-| `readImagePath(relPath)` | Read `I:\Lorekeeper\{relPath}` → base64 |
-| `scanCompanions()` | Scan `Companions\` → folder results with JSON + image list |
-| `scanLorebooks()` | Scan `Lorebooks\` → JSON results + `imageRelPath` if image found alongside JSON |
-| `scanCollections()` | Scan `Collections\` → JSON + thumbnail + `imageRelPath` |
+| `saveData(data)` | Async write to lorekeeper-data.json (compact JSON, no pretty-print) |
+| `exportFile({defaultName, content})` | Save dialog -> write JSON |
+| `importFile()` | Open dialog -> read JSON string |
+| `importImage()` | Open dialog -> returns `{base64, srcPath}` |
+| `importImages()` | Multi-select -> returns `[{name, base64, srcPath}]` |
+| `readImagePath(relPath)` | Read `I:\Lorekeeper\{relPath}` -> base64 |
+| `scanCompanions()` | Scan `Companions\` -> folder results with JSON + image list |
+| `scanLorebooks()` | Scan `Lorebooks\` -> JSON results + `imageRelPath` if image found alongside JSON |
+| `scanCollections()` | Scan `Collections\` -> JSON + thumbnail + `imageRelPath` |
 | `openFolder(relPath)` | Open in Windows Explorer |
 | `getDataPath()` | Returns full path to data file |
 | `saveCompanionJson(folderName, data)` | Write to `Companions\FolderName\character.json`; strips app-only fields |
@@ -69,7 +69,7 @@ I:\Lorekeeper\
 | `copyImageToFolder(srcPath, destFolder, filename)` | Copy image locally; skips if already in Lorekeeper folder or dest exists; returns `{relPath, base64}` |
 | `writeImageFromBase64({base64, destFolder, filename})` | Write base64 to image file; checks dest exists first; returns `{relPath}` |
 | `exportBackup({worldId?})` | Create zip — full or per-world; returns `{success, size, path}` |
-| `exportPlatformZip({defaultName, files[]})` | Save dialog → zip pre-built JSON strings; returns `{success, size, path}` |
+| `exportPlatformZip({defaultName, files[]})` | Save dialog -> zip pre-built JSON strings; returns `{success, size, path}` |
 | `restoreBackup()` | Open zip picker, extract files, return data for merge/replace |
 
 ---
@@ -80,7 +80,8 @@ I:\Lorekeeper\
 ```js
 { worlds:[], characters:[], lorebooks:[], collections:[],
   gallery:[], notes:'', personas:[], templates:[],
-  release_cycle:[], schedule_notes:{}, lorebook_templates:[], settings:{} }
+  release_cycle:[], schedule_notes:{}, lorebook_templates:[],
+  relationships:[], settings:{} }
 ```
 
 ### World
@@ -88,7 +89,7 @@ I:\Lorekeeper\
 - `image` — base64 (legacy); `image_relpath` — `Worlds\WorldName.ext`
 - `emoji` — single emoji shown in sidebar
 - `pinned` — sorts first everywhere
-- `notes` — per-world freeform scratchpad
+- `notes` — per-world freeform scratchpad (shared between World Info tab and right-panel Notes tab)
 - `plot_archetypes[]` — custom plot archetype strings for the Plot tool
 
 ### Character
@@ -140,10 +141,13 @@ I:\Lorekeeper\
 ### Lorebook Template (per-world entry templates)
 - `id`, `world_id`, `name`, `title_template`, `template_text`, `lorebook_id`
 
+### Relationship (relationship map edges)
+- `id`, `worldId`, `charA`, `charB` (character IDs), `label` (free text, e.g. "rivals", "siblings")
+
 ### Settings
 - `anthropic_api_key` — for Claude panel
 - `claude_model` — default `claude-sonnet-4-6`
-- `font_size` — `'small'` | `'normal'` | `'large'` | `'xlarge'`
+- `font_size` — `'small'` | `'normal'` | `'large'` | `'xlarge'` — applied globally to `document.documentElement.style.fontSize`
 - `autosave_debounce` — ms; default 600
 
 ---
@@ -157,51 +161,53 @@ I:\Lorekeeper\
 
 ## Navigation (Sidebar)
 - **Dashboard** — calendar, today banner, upcoming, release cycle, site checklist, lorekeeper checklist, drafts in progress
-- **Worlds** — world card grid; click → WorldDetailPage (Characters/Lorebooks/Collections/Gallery/World Info tabs)
-- **Characters** — all characters, filter by world; click → CharDetailPage (13 tabs)
-- **Lorebooks** — all lorebooks, filter by world or Standalone; click → LorePage (Chapters/Settings/Export tabs)
-- **Collections** — all collections, filter by world or Standalone; click → CollPage (Edit/Export tabs)
-- **Personas** — player characters; click → PersonaDetailPage (char-detail layout)
-- **Templates** — global and per-world character creation templates; tpl-card list
+- **Worlds** — world card grid; click -> WorldDetailPage (Characters/Lorebooks/Collections/Gallery/World Info tabs)
+- **Characters** — all characters, filter by world; click -> CharDetailPage (13 tabs)
+- **Lorebooks** — all lorebooks, filter by world or Standalone; click -> LorePage (Chapters/Settings/Export tabs)
+- **Collections** — all collections, filter by world or Standalone; click -> CollPage (Edit/Export tabs)
+- **Personas** — player characters, independent from worlds; click -> PersonaDetailPage
+- **Templates** — global and per-world character creation templates; card list grouped by world
 - **Batch Import** — scan folders, import, image audit, backup/restore
-- **Settings** — API key, model, font size (applied globally), debounce, theme/colorblind (placeholders)
+- **Settings** — API key, model, font size (applied globally), debounce, theme/colorblind (placeholders); full-width layout
 - **Help** — 15 collapsible sections covering all features
-- **Worlds list** — pinned first, emoji icon, right-click → pin/unpin
+- **Worlds list** — pinned first, emoji icon, right-click -> pin/unpin
 - **Sidebar collapse** — icons only mode; footer has Import + Backup buttons
-- **Logo** — clickable → Dashboard
+- **Logo** — clickable -> Dashboard
 
-### Detail Pages (full-page, all use char-detail layout)
-- **CharDetailPage** — 260px sidebar (portrait, UUID, banner, quick info, tags) + main (13 tabs)
-- **LorePage** — 260px sidebar (cover image, image ID, quick info) + main (Chapters / Settings / Export)
-- **CollPage** — 260px sidebar (banner image, quick info) + main (Edit / Export)
-- **PersonaDetailPage** — 260px sidebar (portrait, quick info) + main (Profile tab)
+### Detail Pages
+All four content-type detail pages share the same `char-detail` layout: a 260px left sidebar (image, quick info, tags) plus a main content area on the right with a tab bar.
+- **CharDetailPage** — sidebar (portrait, platform image UUID, banner, quick info, tags) + main (13 tabs: Identity, Full Description, Character Card, Formatting, Example Dialogue, Scenarios, Portraits, Lorebooks, Collections, Settings, Schedule, Lorebook Entry, Export)
+- **LorePage** — sidebar (cover image, image ID, quick info) + main (Chapters, Settings, Export)
+- **CollPage** — sidebar (banner image, quick info) + main (Edit, Export)
+- **PersonaDetailPage** — sidebar (portrait, quick info) + main (Profile)
 
-### Navigation helpers (App level)
-- `openChar(c, tab?)` — sets selectedChar + selectedWorld + page='char'
-- `openLore(l)` — sets selectedLore + selectedWorld + page='lore'
-- `openColl(c)` — sets selectedColl + selectedWorld + page='collection'
-All three helpers set selectedWorld automatically so the right panel Notes tab always shows the correct world.
+### Navigation helpers (defined in App)
+- `openChar(c, tab?)` — sets selectedChar, sets selectedWorld to the character's world if not already set, navigates to `page='char'`
+- `openLore(l)` — same pattern for lorebooks, `page='lore'`
+- `openColl(c)` — same pattern for collections, `page='collection'`
+
+All three exist so that opening any item — from the dashboard, quick find, a card grid, or anywhere else — always loads the correct world context, which the right-panel Notes tab depends on.
 
 ### Right Panel (toggle button in top bar)
-- **Notes** — world notes (synced with World Info tab) or global scratchpad; auto-saves
-- **Tools** — 13 tools (Height, Names, Physicals, Nationality, Color, Text Diff, Personality, Plot, Esper Powers, Hockey, Swim, Western Zodiac, Chinese Zodiac)
+- **Notes** — world notes (synced with World Info tab's Notes field) or global scratchpad when no world is active; auto-saves
+- **Tools** — see Tools Panel section below
 - **Claude** — AI chat assistant with full world context
-- **Map** — Relationship map (SVG canvas, 640px expanded); draggable portrait nodes; labeled edges; per-world filter
+- **Map** — Relationship Map; panel expands to 640px while this tab is active
 
 ---
 
 ## World Detail (sub-tabs)
-**Characters · Lorebooks · Collections · Gallery · World Info**
+**Characters - Lorebooks - Collections - Gallery - World Info**
 
-**Characters** — home-world chars + chars in world's collections (cross-world)
+**Characters** — card grid; home-world chars + chars belonging via the world's collections (cross-world membership)
 
-**Lorebooks** — tab per lorebook with thumbnail; chapter editor with markdown preview; sidebar: cover image, image ID, short desc, tags (TagSelector), access level, definition protection, lorebook filename, export, delete
+**Lorebooks** — card grid (cover image, name, access badge, chapter count, tags); click opens full-page LorePage
 
-**Collections** — card grid → detail view; editable name/desc/tags (TagSelector)/world/image/filename; character picker
+**Collections** — card grid (banner, name, description preview, tags); click opens full-page CollPage
 
-**Gallery** — all world images; hover shows: name, dimensions (W×H px), full Windows path (click to copy), extension badge
+**Gallery** — all world images; hover shows name, dimensions (WxH px), full Windows path (click to copy), extension badge
 
-**World Info** — name, description, tags, emoji, banner upload, lorebook templates, plot archetypes, delete world
+**World Info** — full-width form: banner upload, name + emoji (side by side), short description, tags, lorebook templates, plot archetypes, notes, delete world
 
 ---
 
@@ -218,15 +224,16 @@ All three helpers set selectedWorld automatically so the right panel Notes tab a
 10. **Settings** — access level, temperature %, spicy flags, booleans, companion_folder
 11. **Schedule** — status (draft/ready/posted), schedule dates, posted date
 12. **Lorebook Entry** — fill world lorebook template for this character; save directly to lorebook
+13. **Export** — Export JSON (platform-ready, stripped) and Export MD (sheet with descriptions, card, prompt, scenarios, tags) with in-app preview and a field-completeness checklist
 
 ---
 
 ## TagSelector Component
 - 540-tag list with descriptions, search + browse by category
-- CW tags shown in red with ⚠ badge, excluded from 25-tag cap
+- CW tags shown in red with warning badge, excluded from 25-tag cap
 - Freeform custom tags supported
 - Click outside to close
-- Wired to: Character Identity tab, Template editor, Lorebook sidebar, Collection detail view
+- Wired to: Character Identity tab, Template editor, LoreSettingsTab, CollSettingsTab
 - Tag chips in Batch Import scan results (all three types) with CW highlighting via `ScanTagChips` component
 
 ---
@@ -241,7 +248,7 @@ All three helpers set selectedWorld automatically so the right panel Notes tab a
 
 ## Batch Import
 1. Place files in `Companions\`, `Lorebooks\`, `Collections\`
-2. **Scan Folders** — finds JSONs + images; badge: **new** / **update ↓** / **local newer ↑** / **up to date**
+2. **Scan Folders** — finds JSONs + images; badge: **new** / **update** / **local newer** / **up to date**
 3. Auto-links characters to collections via `companions[]`
 4. Sets `companion_folder`, `lorebook_filename`, `collection_filename`, `image_relpath` from scan
 5. Tag chips shown per item with CW highlighting
@@ -252,25 +259,27 @@ All three helpers set selectedWorld automatically so the right panel Notes tab a
 - **Migrate** — writes to files, sets `image_relpath`, clears base64; no duplicates
 
 ### Backup & Restore
-- Full zip backup + per-world zip export
+- Full zip backup + per-world zip export — these are app backups for disaster recovery, NOT for uploading to Saucepan
+- World **Export ZIP** (in world topbar) — platform-ready zip of posted characters + public lorebooks + public collections, stripped of app-only fields, stamps `site_last_synced_at`; this is what gets uploaded to Saucepan
 - Restore: global = full replace, world = smart merge
 - Requires `adm-zip` (`npm install adm-zip` in `I:\Lorekeeper\`)
 
 ---
 
 ## Auto-Save to Disk
-- Characters → `Companions\{folder}\character.json`
-- Lorebooks → `Lorebooks\{filename}.json`
-- Collections → `Collections\{filename}.json`
+- Characters -> `Companions\{folder}\character.json`
+- Lorebooks -> `Lorebooks\{filename}.json`
+- Collections -> `Collections\{filename}.json`
 - New items auto-get folder/filename from name (sanitized, no trailing underscores); clearable to opt out
 - `updated_at` stamped on every edit
+- Writes happen async (`fs.promises.writeFile`) and are debounced (default 600ms) to avoid disk thrashing during typing
 
 ---
 
 ## Image System
 - All uploads copied to local folder via `copyImageToFolder`; stores `image_relpath`
-- `ImgFromPath` + `ResolvedImg` components handle relPath and base64
-- `ResolvedImg` fires `onDims` callback for gallery dimensions
+- `ImgFromPath` component resolves both relPath (via `readImagePath` IPC) and base64 data URIs
+- `RelPortrait` (relationship map) does the same resolution for SVG `<image>` elements
 - Supported formats: jpg, jpeg, png, gif, webp, avif
 - Export strips all base64
 
@@ -280,7 +289,7 @@ All three helpers set selectedWorld automatically so the right panel Notes tab a
 **Characters:** `display_name`, `name`, `short_description`, `full_description`, `card`, `tags[]` (min 5), `image.id`, `portraits[]`, `starting_scenarios[]`
 Strips: `world_id`, `status`, `schedule_dates`, `posted_dates`, `collections`, `linked_lorebooks`, `companion_folder`, `site_last_synced_at`, `lorebook_entry_text`, `lorebook_entry_title`, all base64
 
-**Lorebooks:** `image_id` (mandatory), `tags[]` (mandatory), `definition_protection` ≠ open
+**Lorebooks:** `image_id` (mandatory), `tags[]` (mandatory), `definition_protection` != open
 Strips: `world_id`, `lorebook_filename`, `image_data`, `image_relpath`, `selected_chapter_index`, `site_last_synced_at`
 
 **Collections:** `image.id` (mandatory), `tags[]` (mandatory), `definition` (mandatory)
@@ -289,10 +298,11 @@ Strips: `world_id`, `collection_filename`, `image_data`, `image_relpath`, `site_
 ---
 
 ## Dashboard
+*(intentionally untouched during the UI overhaul — out of scope until explicitly revisited)*
 
 ### Calendar
 - Monday-start; overflow cells navigate months; click outside/re-click to deselect
-- Purple chips = scheduled; green ✓ chips = posted (current month only, matched by posted_dates)
+- Purple chips = scheduled; green checkmark chips = posted (current month only, matched by posted_dates)
 - Expanded day: scheduled chars + note input + Schedule button
 
 ### Today Banner
@@ -302,8 +312,8 @@ Strips: `world_id`, `collection_filename`, `image_data`, `image_relpath`, `site_
 ### Site Checklist
 - Shows items edited since last export: characters (status=posted), lorebooks/collections (has_been_public)
 - Condition: `updated_at > site_last_synced_at` AND `site_last_synced_at` exists
-- Export button stamps `site_last_synced_at` → item disappears from list
-- `?` help button explains the 4-step workflow
+- Export button stamps `site_last_synced_at` -> item disappears from list
+- Help button explains the 4-step workflow
 
 ### Lorekeeper Checklist
 - Characters: posted with no `posted_dates`
@@ -312,7 +322,7 @@ Strips: `world_id`, `collection_filename`, `image_data`, `image_relpath`, `site_
 - Only flags public or previously-public items
 
 ### Drafts in Progress
-- All draft characters; missing-field amber tags; green ✓ ready when all filled
+- All draft characters; missing-field amber tags; green checkmark when all filled
 
 ### Upcoming Panel + Release Cycle
 - Next scheduled characters; configurable world posting order; drag to reorder
@@ -324,14 +334,29 @@ Strips: `world_id`, `collection_filename`, `image_data`, `image_relpath`, `site_
 Separate from character creation templates. Used to create structured lorebook chapters.
 
 **Setup (once per world):**
-1. World → World Info → Lorebook Templates → New template
+1. World -> World Info -> Lorebook Templates -> New template
 2. Set name, chapter title template (e.g. `{{CHARACTER NAME}} | POSITION | ROLE`), body template, target lorebook
 3. Use `{{CHARACTER NAME}}` (uppercase) and `{{CHAR}}` (normal case) as placeholders
 
 **Per character:**
-1. Character editor → Lorebook Entry tab
+1. Character editor -> Lorebook Entry tab
 2. Template pre-fills with character's name; edit title + body
 3. Save to Lorebook — creates or updates chapter (matched by `char_id`, never duplicates)
+
+---
+
+## Relationship Map
+
+Lives in the right panel's **Map** tab (panel expands to 640px while active).
+
+- **World picker** at the top — relationships are scoped per world
+- **Character filter** matches `WorldDetailPage` logic: home `world_id` OR membership via a collection that belongs to the world (so cross-world cast members like Gabriel in Swim Team + Dom/Sub Verse appear correctly)
+- **Nodes** — portrait (resolved via `RelPortrait`) + name (uses `name`, not `display_name`); freely draggable; auto-arranged in a grid whenever the world changes or the character list changes
+- **Drawing a connection** — click "+ connect" under a character, then click another; a modal prompts for a label (e.g. "rivals", "siblings")
+- **Editing a connection** — click the line or its label pill to open an edit popup; the popup is draggable via a grip handle (uses `getBoundingClientRect()` on mousedown so it doesn't jump on first drag); edit the label text or delete the relationship
+- **Labels are fixed** to the line midpoint — they are not independently draggable (this was tried and reverted; only the edit popup is draggable)
+- **Reset layout** button re-runs the auto-grid if nodes drift off-screen
+- Data stored in `data.relationships[]`
 
 ---
 
@@ -351,15 +376,16 @@ Right panel Claude tab — full AI chat with world-aware context.
 - Suggested prompts on empty state; copy button on every response
 - Enter to send, Shift+Enter for newline
 - Uses model from Settings (default `claude-sonnet-4-6`)
-- API key from Settings → Claude API; amber nudge if not set
+- API key from Settings -> Claude API; amber nudge if not set
 - CSP allows `https:` so API calls work from Electron
 
 ---
 
 ## Settings Page
+Full-width layout (no max-width cap).
 
 **Claude API** — API key (show/hide, save), model selector (Sonnet/Opus/Haiku)
-**Appearance** — Font size (Small/Normal/Large/XLarge, applies immediately); Theme placeholder; Colorblind mode placeholder
+**Appearance** — Font size (Small/Normal/Large/XLarge, applies immediately and globally via `document.documentElement.style.fontSize`); Theme placeholder; Colorblind mode placeholder
 **Data** — Data file path + Open Folder; Auto-save debounce (Fast 300ms / Normal 600ms / Slow 1s / Very Slow 2s)
 **About** — Version info, deps, link to console.anthropic.com
 
@@ -369,30 +395,48 @@ Right panel Claude tab — full AI chat with world-aware context.
 
 | Tool | Icon | Description |
 |---|---|---|
-| Height | ti-ruler | cm ↔ ft/in bidirectional; click to copy |
-| Names | ti-user-circle | Masc/Fem/Neutral/Any; international pool |
-| Physicals | ti-sparkles | Eyes, Hair, Build; roll individually or all |
-| Nationality | ti-world | 100+ nationalities; region filter; languages + currency |
-| Color | ti-palette | HSL sliders + 6 harmony modes; click swatches to copy hex |
-| Text Diff | ti-scan | Word-level diff; green/red highlights; added/removed counts |
-| Personality | ti-brain | Literary Archetypes (77), MBTI (16), Jungian (13), Attachment Styles (4); Roll All + Copy All |
-| Plot | ti-books | 100 global archetypes + per-world custom pool; filter global/world/any |
-| Esper Powers | ti-sparkles | Rolls ability type, F–S rank, drawback, codename |
-| Hockey | ti-trophy | Rolls position, role description, handedness, character trait |
-| Swim | ti-send | Rolls stroke, event distance, stroke description, swimmer archetype |
-| Western Zodiac | ti-stars | Rolls sun sign: element/modality, traits, shadow side, vibe |
-| Chinese Zodiac | ti-yin-yang | Rolls sign: element, reference years, traits, shadow side, vibe |
+| Height | `ti-ruler` | cm <-> ft/in bidirectional; click to copy |
+| Names | `ti-user-circle` | Masc/Fem/Neutral/Any; international pool |
+| Physicals | `ti-sparkles` | Eyes, Hair, Build; roll individually or all |
+| Nationality | `ti-world` | 100+ nationalities; region filter; languages + currency |
+| Color | `ti-palette` | HSL sliders + 6 harmony modes; click swatches to copy hex |
+| Text Diff | `ti-scan` | Word-level diff; green/red highlights; added/removed counts |
+| Personality | `ti-brain` | Literary Archetypes (77), MBTI (16), Jungian (13), Attachment Styles (4); Roll All + Copy All |
+| Plot | `ti-books` | 100 global archetypes + per-world custom pool; filter global/world/any |
+| Esper Powers | `ti-sparkles` | Rolls ability type, rank (F-S), drawback, codename |
+| Hockey | `ti-trophy` | Rolls position, role description, handedness, character trait |
+| Swim | `ti-send` | Rolls stroke, event distance, description, swimmer archetype |
+| Western Zodiac | `ti-stars` | Rolls sun sign: element/modality, traits, shadow side, vibe |
+| Chinese Zodiac | `ti-yin-yang` | Rolls sign: element, reference years, traits, shadow side, vibe |
 
-Note: All icons must exist in Tabler Icons 2.44.0 (pinned). `ti-files-diff` and `ti-waves` do NOT exist in 2.44.
+**Icon constraint:** every icon must exist in Tabler Icons 2.44.0 (pinned version). Confirmed NOT in 2.44: `ti-files-diff`, `ti-waves` — caused blank icons when used.
 
 ---
 
 ## Help System
 
-- Help page in sidebar — 15 collapsible sections (fully updated session 11)
+- Help page in sidebar — 15 collapsible sections, kept current with the app
 - Sections: Dashboard, Characters, Worlds, Lorebooks, Collections, Personas, Templates, Lorebook Templates, Relationship Map, Tools Panel, Batch Import, Auto-save, Image Storage Audit, Backup & Restore, Settings, Claude AI, GitHub backup
 - Each has plain explanations, numbered steps, tip callouts
-- Inline `?` buttons: Site Checklist, Batch Import, Lorebook Entry tab, Lorebook Templates manager
+- Inline help buttons: Site Checklist, Batch Import, Lorebook Entry tab, Lorebook Templates manager
+
+---
+
+## Babel Standalone Gotchas (hard-won, do not relitigate)
+These caused repeated regressions across sessions — treat as fixed rules:
+- **Never** put `style={{...}}` inside a ternary or `&&` conditional's JSX consequent — Babel standalone reliably fails to parse it. Use a CSS class instead, or extract the conditional content to its own component.
+- **Never** put a literal backslash in a JSX string (e.g. a Windows path) — Babel misreads it as a regex/escape sequence. Build the string outside JSX with a `BS = String.fromCharCode(92)` constant and plain string concatenation (see `loreHint`, `charFolderHint` helper functions), then just reference the result in JSX.
+- **Multi-line JSX as a ternary consequent** needs parens around the JSX block — bare `{cond?<div>...</div>:null}` spanning many lines can still fail; when in doubt, extract to a named component and call it as `{cond?<MyComponent/>:null}`.
+- Apostrophes inside single-quoted JS strings need to become double-quoted strings instead of escaping.
+- Double-curly-brace syntax appearing in literal JSX text (e.g. documentation about macro syntax) must be wrapped as a string literal expression, not typed directly into JSX text.
+- Use `if(tab==='x') return (...)` pattern instead of nesting deep ternaries when a component has 2+ mutually exclusive views — more reliable than ternaries with multi-line JSX.
+
+---
+
+## Performance Notes
+- `update(fn)` clones the entire `data` tree before mutating (so React detects the change and undo-safety is preserved). This used `JSON.parse(JSON.stringify(d))` originally, which was slow enough to cause visible lag while typing (e.g. in the Notes textarea) once the character count grew past ~40. Switched to `structuredClone(d)` — same semantics, meaningfully faster, no string round-trip.
+- `saveData` in `main.js` switched from `fs.writeFileSync` (synchronous, blocks the main process) with pretty-printed JSON to `fs.promises.writeFile` (async) with compact JSON (no `null, 2`).
+- If typing lag returns as the dataset keeps growing, the next lever is restructuring `update()` to avoid cloning the *entire* tree for small, localized field changes (e.g. per-collection update functions instead of one global clone-and-mutate).
 
 ---
 
@@ -405,7 +449,7 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 
 ### Image Tools
 - **Format converter** — convert any local image (PNG/JPG/WEBP/AVIF etc.) to a target format; useful for Saucepan which prefers AVIF; uses `sharp` npm package
-- **Paste & save** — paste image from clipboard → preview → save as a file to a chosen folder (Companions/CharName, Lorebooks, Collections, etc.); replaces manual screenshot workflow
+- **Paste & save** — paste image from clipboard -> preview -> save as a file to a chosen folder (Companions/CharName, Lorebooks, Collections, etc.); replaces manual screenshot workflow
 - **Cropper** — crop a local or pasted image to a target aspect ratio (3:4 portrait, 4:1 banner, 1:1 square); canvas-based UI
 - **Image prompt generator** — Claude call using character name/description/tags to generate an image generation prompt; lives in character editor or right panel
 
@@ -413,9 +457,9 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 - **Map generator** — region/landmark randomiser; output as text description or simple ASCII map (design TBD)
 - **Relationship dynamic generator**
 
-### UI Overhaul (in progress)
-Major consistency pass done. Remaining polish items:
-- **CharDetailPage** — 145 inline styles; structurally fine, worth a cleanup pass later
+### UI Overhaul (mostly done)
+Consistency pass complete across list pages, detail pages, and World Info/Settings. Remaining:
+- **CharDetailPage** — has the most inline styles of any component (it's the oldest and most complex); structurally fine, worth a cleanup pass later when there's time, not urgent
 - **Global themes** — light/dark + accent color
 - **Colorblind mode** — deuteranopia, protanopia, tritanopia
 - **Standalone / Public Version** — configurable data path, strip Saucepan-specific stuff, packaged `.exe`, optional rename/theming; README.md goes here
@@ -459,78 +503,43 @@ git commit -m "Brief description of what changed"
 git push
 ```
 
-### Commit messages by session
-- Session 1: `Core app: batch import, dashboard, calendar, lorebooks, collections, backup`
-- Session 2: `TagSelector, personality/plot tools, nationality/color/diff tools, site checklist`
-- Session 3: `Claude integration, lorebook templates, help page, settings, tag suggestions`
-- Session 4: `Fix Babel syntax errors, ScanBadge/ScanTagChips, batch import tag chips`
-- Session 5: `Sidebar Backup button, world Export ZIP (platform-ready stripped JSONs)`
-- Session 6: `Export to Markdown — CharExportTab, LoreExportPanel, CollExportPanel, CollEditPanel; tab bars on lorebook and collection detail`
-- Session 7: `Persona + Template Export MD buttons`
-- Session 8: `EsperTool, HockeyTool, SwimTool — data tables + roll components in ToolsPanel`
-- Session 9: `WesternZodiacTool, ChineseZodiacTool; RelationshipsPage (SVG relationship map with draggable portrait nodes + labeled edges)`
-- Session 10: `Fix relationship map — collection-aware char filter (Gabriel), fixed label positions, draggable edit popup, correct icon replacements for Tabler 2.44, esper rank letters F–S`
-- Session 11: `LorePage full-page (char-detail layout: cover sidebar + Chapters/Settings/Export tabs), world lorebooks tab card grid, AllLorebooksPage card grid, openLore/openChar helpers, notes panel world fix`
-- Session 12: `CollPage full-page (char-detail layout: image sidebar + Edit/Export tabs), world collections tab card grid, openColl helper, CollSettingsTab, unified navigation pattern across all content types`
-- Session 13: `UI consistency pass — tpl-card/tpl-section/tpl-editor CSS, PersonaDetailPage tab bar chrome, World Info tab CSS classes, portrait cards 200px, world/coll banners 80px, filter buttons cleaned, font size applied globally via App-level useEffect`
-- Session 14: `Settings page full-width, World Info tab full-width (removed max-width cap), font size fixed (sets document.documentElement.style.fontSize directly), Notes field added to World Info tab`
-
 ### What goes in the repo
 | File | Tracked? |
 |---|---|
-| `src/index.html` | ✓ |
-| `src/main.js` | ✓ |
-| `src/preload.js` | ✓ |
-| `start-silent.vbs` | ✓ |
-| `start.bat` | ✓ |
-| `.gitignore` | ✓ |
-| `lorekeeper-master-spec.md` | ✓ |
-| `lorekeeper-data.json` | ✗ personal data |
-| `Companions/` `Lorebooks/` `Collections/` `Worlds/` `Personas/` | ✗ personal data |
-| `node_modules/` | ✗ too large |
+| `src/index.html` | yes |
+| `src/main.js` | yes |
+| `src/preload.js` | yes |
+| `start-silent.vbs` | yes |
+| `start.bat` | yes |
+| `.gitignore` | yes |
+| `lorekeeper-master-spec.md` | yes |
+| `lorekeeper-data.json` | no — personal data |
+| `Companions/` `Lorebooks/` `Collections/` `Worlds/` `Personas/` | no — personal data |
+| `node_modules/` | no — too large |
 
 ---
 
-## What's Built ✓
+## Session Log
 
-### Session 1 (June 17)
-Core app structure, world/character/lorebook/collection/persona management, auto-save to disk, image system (relpath), batch import with timestamp badges, dashboard (calendar, today banner, release cycle, drafts in progress, lorekeeper checklist), character templates, backup/restore (adm-zip), tools (height, names, physicals), markdown preview, drag to reorder (portraits, scenarios, release cycle), sidebar collapse, quick find (Ctrl+K)
+| # | Date | Summary |
+|---|---|---|
+| 1 | Jun 17 | Core app: worlds/characters/lorebooks/collections/personas, auto-save to disk, image relpath system, batch import with badges, dashboard, character templates, backup/restore, basic tools, markdown preview, drag-reorder, sidebar collapse, quick find |
+| 2 | Jun 18 | Collections top-level page, TagSelector (540 tags + 21 CW), tag templates, world tag suggestions, personality/plot/nationality/color/diff tools, site checklist, custom HSL color picker |
+| 3 | Jun 18 | Claude integration, lorebook entry templates, help page (13 sections), Settings page, auto-fill folder/filename on creation |
+| 4 | Jun 18 | Fixed all Babel syntax errors; extracted ScanBadge/ScanTagChips; batch import tag chips |
+| 5 | Jun 18 | Sidebar Export -> Backup; world topbar Export ZIP (platform-ready stripped JSONs); `exportPlatformZip` IPC handler |
+| 6 | Jun 18 | Export to Markdown for characters/lorebooks/collections (CharExportTab, LoreExportPanel, CollExportPanel); Edit/Export tab bars |
+| 7 | Jun 19 | Persona + Template Export MD buttons |
+| 8 | Jun 19 | EsperTool, HockeyTool, SwimTool added to Tools panel |
+| 9 | Jun 19 | WesternZodiacTool, ChineseZodiacTool; RelationshipsPage (SVG map, draggable nodes, labeled edges) added to right panel Map tab |
+| 10 | Jun 19 | Relationship map fixes: collection-aware character filter, draggable edit popup, correct Tabler 2.44 icons, esper ranks changed to F-S letters |
+| 11 | Jun 19 | LorePage full-page (replaces inline LoreboookEditor): char-detail layout with Chapters/Settings/Export tabs; world lorebooks tab -> card grid; `openLore`/`openChar` navigation helpers |
+| 12 | Jun 19 | CollPage full-page (replaces inline collection detail): char-detail layout with Edit/Export tabs; world collections tab -> card grid; `openColl` helper; navigation pattern now unified across all four content types |
+| 13 | Jun 19 | UI consistency pass: TemplatesPage/TemplateEditor CSS classes, PersonaDetailPage tab bar chrome, World Info tab CSS classes, portrait cards bumped to 200px, world/collection banners aligned to 80px, filter buttons cleaned of emoji+counts |
+| 14 | Jun 19 | Settings and World Info tabs made full-width (removed max-width caps); font size fix — now applied globally via App-level effect setting `document.documentElement.style.fontSize` directly (previous version set an unused CSS variable); Notes field added to World Info tab |
+| 15 | Jun 19 | Performance fix for Notes/text-field lag: `update()` switched from `JSON.parse(JSON.stringify())` to `structuredClone()`; `main.js` `saveData` switched from sync to async write with compact (non-pretty-printed) JSON; spec fully reviewed and cleaned up — removed duplicate/out-of-order entries, added Relationship Map section, added Babel Gotchas reference section, added Performance Notes section |
 
-### Session 2 (June 18)
-Collections top-level page, TagSelector with 540 Saucepan tags + 21 CW tags, tag templates, world tag suggestions ("Common in this world"), personality tool (Literary/MBTI/Jungian/Attachment), plot tool (100 global + per-world custom), nationality/color/text diff tools, site checklist (updated_at vs site_last_synced_at), export stamps site_last_synced_at, standalone lorebook navigation fix, personas render fix, image audit improvements, custom dark-mode HSL color picker
+---
 
-### Session 3 (June 18)
-Claude integration (right panel chat, full world context, API key from Settings), lorebook entry templates (per-world, title + body template, save to lorebook by char_id), help page (13 collapsible sections) + inline ? buttons, Settings page (API key, model, font size, debounce, theme/colorblind placeholders), auto-fill folder/filename on new character creation, TagSelector wired to lorebook sidebar + collection detail view
-
-### Session 4 (June 18)
-Fixed all Babel syntax errors, extracted ScanBadge/ScanTagChips, batch import tag chips
-
-### Session 5 (June 18)
-Sidebar Export → Backup (wired to full zip); world topbar Export ZIP (exportWorldPlatformZip — platform-ready stripped JSONs for posted chars + public lorebooks/collections, packages into dated zip, stamps site_last_synced_at); exportPlatformZip IPC handler in main.js + preload.js
-
-### Session 6 (June 18)
-Export to Markdown: CharExportTab (JSON + MD + preview + field checklist), LoreExportPanel (JSON + MD + preview), CollExportPanel (JSON + MD), CollEditPanel; Edit/Export tab bars on lorebook and collection; all use CSS classes to avoid Babel double-brace issues; lore tabs use if/return pattern
-
-### Session 7 (June 19)
-Persona Export MD (topbar button: name, pronouns, description, linked lorebook); Template Export MD (button in TemplateEditor alongside Save: name, world, all non-empty fields)
-
-### Session 8 (June 19)
-EsperTool (ability type, F–S rank, drawback, codename), HockeyTool (position + role desc + handedness + trait), SwimTool (stroke + distance + description + swimmer archetype); all in ToolsPanel
-
-### Session 9 (June 19)
-WesternZodiacTool (sign, element/modality, traits, shadow, vibe), ChineseZodiacTool (sign, element, years, traits, shadow, vibe); RelationshipsPage in right panel Map tab (640px expanded); SVG canvas, draggable portrait nodes, fixed edge labels, draggable edit popup
-
-### Session 10 (June 19)
-Relationship map fixes: collection-aware char filter (matches WorldDetailPage logic), fixed label drag removed, draggable edit popup with getBoundingClientRect fix, transparent hit area on edges, correct Tabler 2.44 icons (ti-scan/ti-send)
-
-### Session 11 (June 19)
-LorePage full-page layout (char-detail: cover image sidebar + Chapters/Settings/Export tabs replacing LoreboookEditor inline); world lorebooks tab replaced with chars-grid card grid; AllLorebooksPage already cards, now navigates to LorePage; openLore() App helper sets selectedWorld; notes panel world fix; quickfind wired to openLore
-
-### Session 12 (June 19)
-CollPage full-page layout (char-detail: image sidebar + Edit/Export tabs); CollSettingsTab (name/description/world/access/tags/filename/char-picker); world collections tab replaced with coll-grid card grid; openColl() App helper; selectedColl state moved to App level; AllCollectionsPage navigates directly to CollPage; quickfind wired to openColl
-
-### Session 13 (June 19)
-UI consistency pass: TemplatesPage → tpl-card/tpl-section/TplCard component; TemplateEditor → tpl-editor/tpl-hint CSS; PersonaDetailPage → tab bar chrome (single Profile tab); World Info tab → world-info-tab/field-row/plot-tag/delete-zone; portrait cards 200px; world/coll banners aligned to 80px; filter buttons stripped of emoji+counts; BS/loreHint/charFolderHint constants for backslash path rendering
-
-### Session 14 (June 19)
-Settings page full-width (removed maxWidth:600); World Info tab full-width (removed max-width cap); font size now applied globally via App-level useEffect (sets document.documentElement.style.fontSize directly, was broken); Notes field added to World Info tab (syncs with right-panel Notes); spec updated: navigation, tools table, help sections, session log
+## What's Built
+Full feature list — see sections above for details on each. Chronological build order is in the Session Log table.
