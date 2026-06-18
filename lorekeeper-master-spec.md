@@ -1,5 +1,5 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 19, 2026 (session 10)**
+**Last updated: June 19, 2026 (session 12)**
 
 ---
 

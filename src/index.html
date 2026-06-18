@@ -119,7 +119,7 @@
   .chars-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
   .char-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rl); overflow: hidden; cursor: pointer; transition: border-color 0.15s, transform 0.1s; }
   .char-card:hover { border-color: var(--border2); transform: translateY(-1px); }
-  .char-portrait { height: 120px; background: var(--bg3); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .char-portrait { height: 200px; background: var(--bg3); display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .char-portrait i { font-size: 40px; color: var(--text3); }
   .char-portrait img { width: 100%; height: 100%; object-fit: cover; }
   .char-card-body { padding: 12px; }
@@ -172,6 +172,7 @@
   .export-field-missing { color:var(--text3); }
   .export-panel { display:flex; flex-direction:column; gap:16px; max-width:600px; padding:8px 0; }
   .export-row { display:flex; gap:8px; margin-top:8px; }
+  .field-hint { font-size:11px; color:var(--text3); margin-top:4px; }
   .lore-tab-bar { display:flex; border-bottom:1px solid var(--border); margin-bottom:0; }
   .coll-tab-bar { display:flex; border-bottom:1px solid var(--border); margin-bottom:16px; }
   .lore-tab-btn { padding:8px 18px; font-size:12px; font-weight:600; background:none; border:none; border-bottom:2px solid transparent; color:var(--text3); cursor:pointer; transition:color 0.15s; }
@@ -265,6 +266,9 @@
 <script type="text/babel">
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 const uuid = () => ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
+const BS = String.fromCharCode(92);
+const loreHint = (filename) => "I:" + BS + "Lorekeeper" + BS + "Lorebooks" + BS + filename;
+const charFolderHint = (folder) => "Saves to: I:" + BS + "Lorekeeper" + BS + "Companions" + BS + folder + BS + "character.json";
 const now = () => new Date().toISOString();
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -279,6 +283,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedWorld, setSelectedWorld] = useState(null);
   const [selectedChar, setSelectedChar] = useState(null);
+  const [selectedColl, setSelectedColl] = useState(null);
   const [charInitialTab, setCharInitialTab] = useState(null);
   const [initialCollId, setInitialCollId] = useState(null);
   const [selectedLore, setSelectedLore] = useState(null);
@@ -338,8 +343,9 @@ function App() {
   const goSearch = (r) => {
     setSearchQ(''); setShowSearch(false);
     if(r.type==='world') { setSelectedWorld(r.obj); setWorldTab('characters'); setPage('world'); }
-    if(r.type==='char') { setSelectedChar(r.obj); setPage('char'); }
-    if(r.type==='lore') { const w=data.worlds.find(x=>x.id===r.obj.world_id); setSelectedWorld(w); setSelectedLore(r.obj); setWorldTab('lorebooks'); setPage('world'); }
+    if(r.type==='char') { openChar(r.obj); }
+    if(r.type==='lore') { openLore(r.obj); }
+    if(r.type==='collection') { openColl(r.obj); }
   };
 
   const importJSON = async () => {
@@ -578,6 +584,31 @@ function App() {
   const upcoming=data.characters.filter(c=>c.status!=='posted'&&c.schedule_dates&&c.schedule_dates.length>0).flatMap(c=>c.schedule_dates.map(d=>({char:c,date:parseLocalDate(d)}))).filter(x=>x.date>=new Date(today.getFullYear(),today.getMonth(),today.getDate())).sort((a,b)=>a.date-b.date).slice(0,10);
 
   const navTo=(p)=>{setPage(p);setSelectedWorld(null);setSelectedChar(null);setSelectedLore(null);setSelectedPersona(null);};
+  const openColl=(c)=>{
+    setSelectedColl(c);
+    if(c.world_id){
+      const w=data.worlds.find(x=>x.id===c.world_id);
+      if(w&&(!selectedWorld||selectedWorld.id!==c.world_id)) setSelectedWorld(w);
+    }
+    setPage('collection');
+  };
+  const openLore=(l)=>{
+    setSelectedLore(l);
+    if(l.world_id){
+      const w=data.worlds.find(x=>x.id===l.world_id);
+      if(w&&(!selectedWorld||selectedWorld.id!==l.world_id)) setSelectedWorld(w);
+    }
+    setPage('lore');
+  };
+  const openChar=(c,tab)=>{
+    setSelectedChar(c);
+    if(tab) setCharInitialTab(tab); else setCharInitialTab(null);
+    if(c.world_id && (!selectedWorld || selectedWorld.id!==c.world_id)){
+      const w=data.worlds.find(x=>x.id===c.world_id);
+      if(w) setSelectedWorld(w);
+    }
+    setPage('char');
+  };
 
   const worldChars=selectedWorld?data.characters.filter(c=>{
     if(c.world_id===selectedWorld.id) return true;
@@ -644,6 +675,7 @@ function App() {
           {page==='characters'&&<h1>All Characters</h1>}
           {page==='lorebooks'&&<h1>All Lorebooks</h1>}
           {page==='lore'&&selectedLore&&<h1>{selectedLore.name}</h1>}
+          {page==='collection'&&selectedColl&&<h1>{selectedColl.name}</h1>}
           {page==='char'&&selectedChar&&<h1>{selectedChar.display_name||selectedChar.name}</h1>}
           {page==='batch'&&<h1>Batch Import</h1>}
           {page==='personas'&&!selectedPersona&&<h1>Personas</h1>}
@@ -694,21 +726,24 @@ function App() {
               <button className="btn" onClick={importJSON}><i className="ti ti-refresh"></i>Update from JSON</button>
               <button className="btn danger" onClick={()=>setModal({type:'confirm-delete-char',char:selectedChar})}><i className="ti ti-trash"></i>Delete</button>
             </>}
+            {page==='lore'&&selectedLore&&<button className="btn danger" onClick={()=>{if(window.confirm("Delete "+selectedLore.name+"? This cannot be undone.")){update(d=>{d.lorebooks=d.lorebooks.filter(x=>x.id!==selectedLore.id);});setSelectedLore(null);setPage('lorebooks');}}}><i className="ti ti-trash"></i>Delete</button>}
+            {page==='collection'&&selectedColl&&<button className="btn danger" onClick={()=>{if(window.confirm("Delete "+selectedColl.name+"? This cannot be undone.")){update(d=>{d.collections=d.collections.filter(x=>x.id!==selectedColl.id);});setSelectedColl(null);setPage(selectedWorld?'world':'collections');}}}><i className="ti ti-trash"></i>Delete</button>}
             <button className={`btn ${rightPanel?'primary':''}`} onClick={()=>setRightPanel(p=>!p)} title="Toggle notes panel"><i className={`ti ti-layout-sidebar-right-${rightPanel?'collapse':'expand'}`}></i></button>
           </div>
         </div>
 
         <div style={{display:'flex',flex:1,overflow:'hidden'}}>
           <div className="content" style={{flex:1}}>
-            {page==='dashboard'&&<DashboardPage calCells={calCells} calYear={calYear} calMonth={calMonth} today={today} selDay={selDay} setSelDay={setSelDay} charsOnDay={charsOnDay} postedOnDay={postedOnDay} calDate={calDate} setCalDate={setCalDate} upcoming={upcoming} data={data} update={update} setSelectedChar={(c,tab)=>{setSelectedChar(c);if(tab)setCharInitialTab(tab);else setCharInitialTab(null);setPage('char');}} setSelectedLore={(l)=>{setSelectedLore(l);setPage('lore');}} setSelectedWorld={(w,tab)=>{setSelectedWorld(w);if(tab)setWorldTab(tab);setPage('world');}} />}
+            {page==='dashboard'&&<DashboardPage calCells={calCells} calYear={calYear} calMonth={calMonth} today={today} selDay={selDay} setSelDay={setSelDay} charsOnDay={charsOnDay} postedOnDay={postedOnDay} calDate={calDate} setCalDate={setCalDate} upcoming={upcoming} data={data} update={update} setSelectedChar={(c,tab)=>openChar(c,tab)} setSelectedLore={(l)=>{setSelectedLore(l);setPage('lore');}} setSelectedWorld={(w,tab)=>{setSelectedWorld(w);if(tab)setWorldTab(tab);setPage('world');}} />}
             {page==='worlds'&&<WorldsPage data={data} setSelectedWorld={w=>{setSelectedWorld(w);setWorldTab('characters');setPage('world');}} setModal={setModal} />}
-            {page==='world'&&selectedWorld&&<WorldDetailPage world={selectedWorld} tab={worldTab} setTab={setWorldTab} worldChars={worldChars} worldLores={worldLores} worldColls={worldColls} worldGallery={worldGallery} setSelectedChar={c=>{setSelectedChar(c);setPage('char');}} setSelectedLore={setSelectedLore} selectedLore={selectedLore} update={update} setModal={setModal} exportChar={exportChar} exportLore={exportLore} exportColl={exportColl} setPage={setPage} setSelectedWorld={setSelectedWorld} data={data} initialCollId={initialCollId} clearInitialCollId={()=>setInitialCollId(null)} />}
+            {page==='world'&&selectedWorld&&<WorldDetailPage world={selectedWorld} tab={worldTab} setTab={setWorldTab} worldChars={worldChars} worldLores={worldLores} worldColls={worldColls} worldGallery={worldGallery} setSelectedChar={c=>openChar(c)} setSelectedLore={setSelectedLore} openLore={openLore} openColl={openColl} selectedLore={selectedLore} update={update} setModal={setModal} exportChar={exportChar} exportLore={exportLore} exportColl={exportColl} setPage={setPage} setSelectedWorld={setSelectedWorld} data={data} initialCollId={initialCollId} clearInitialCollId={()=>setInitialCollId(null)} />}
             {page==='characters'&&<CharactersPage data={data} setSelectedChar={c=>{setSelectedChar(c);setPage('char');}} />}
-            {page==='lorebooks'&&<AllLorebooksPage data={data} update={update} setSelectedWorld={w=>{setSelectedWorld(w);setWorldTab('lorebooks');setPage('world');}} setSelectedLore={l=>{setSelectedLore(l);setPage('lore');}} exportLore={exportLore} />}
-            {page==='collections'&&<AllCollectionsPage data={data} update={update} openColl={(col)=>{const w=data.worlds.find(x=>x.id===col.world_id);if(w){setSelectedWorld(w);setWorldTab('collections');setInitialCollId(col.id);setPage('world');}else{setSelectedWorld(null);setWorldTab('collections');setInitialCollId(col.id);setPage('world');}}} exportColl={exportColl} />}
+            {page==='lorebooks'&&<AllLorebooksPage data={data} update={update} exportLore={exportLore} openLore={openLore} />}
+            {page==='collections'&&<AllCollectionsPage data={data} update={update} openColl={openColl} exportColl={exportColl} />}
             {page==='settings'&&<SettingsPage data={data} update={update}/>}
             {page==='help'&&<HelpPage/>}
-            {page==='lore'&&selectedLore&&<StandaloneLorePage lorebook={selectedLore} data={data} update={update} exportLore={exportLore} onBack={()=>{setPage('lorebooks');setSelectedLore(null);}} />}
+            {page==='lore'&&selectedLore&&<LorePage lorebook={selectedLore} data={data} update={update} exportLore={exportLore} onBack={()=>{setPage(selectedWorld?'world':'lorebooks');setSelectedLore(null);}} />}
+            {page==='collection'&&selectedColl&&<CollPage coll={selectedColl} data={data} update={update} exportColl={exportColl} onBack={()=>{setPage(selectedWorld?'world':'collections');setSelectedColl(null);}} />}
             {page==='char'&&selectedChar&&<CharDetailPage char={selectedChar} data={data} update={update} initialTab={charInitialTab} exportChar={exportChar} onBack={()=>{setCharInitialTab(null);setPage(selectedWorld?'world':'characters');}} />}
             {page==='batch'&&<BatchImportPage data={data} update={update} />}
             {page==='templates'&&<TemplatesPage data={data} update={update} newTemplate={newTemplate} clearNew={()=>setNewTemplate(false)} />}
@@ -3053,7 +3088,7 @@ function WorldsPage({data,setSelectedWorld,setModal}) {
   );
 }
 
-function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worldGallery,setSelectedChar,setSelectedLore,selectedLore,update,setModal,exportChar,exportLore,exportColl,setPage,setSelectedWorld,data,initialCollId,clearInitialCollId}) {
+function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worldGallery,setSelectedChar,setSelectedLore,openLore,openColl,selectedLore,update,setModal,exportChar,exportLore,exportColl,setPage,setSelectedWorld,data,initialCollId,clearInitialCollId}) {
   const tabs=[['characters','ti-users','Characters'],['lorebooks','ti-book','Lorebooks'],['collections','ti-folders','Collections'],['gallery','ti-photo','Gallery'],['info','ti-info-circle','World Info']];
   const handleBannerUpload=async()=>{
     const _r=await window.lorekeeper.importImage();
@@ -3064,97 +3099,61 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
     else { update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.image=_r.base64;}); }
   };
   const handleGalleryUpload=async()=>{const _r=await window.lorekeeper.importImage();if(_r)update(d=>{d.gallery.push({id:uuid(),world_id:world.id,name:'image',data:_r.base64});});};
-  const [selectedColl,setSelectedColl]=useState(null);
-  const [collTab,setCollTab]=useState('edit');
   React.useEffect(()=>{
-    if(initialCollId){
-      const c=worldColls.find(x=>x.id===initialCollId);
-      if(c){setSelectedColl(c);setCollTab('edit');}
-      if(clearInitialCollId) clearInitialCollId();
-    }
+    if(initialCollId&&clearInitialCollId) clearInitialCollId();
   },[initialCollId]);
-  const updColl=(fn)=>update(d=>{
-    const c=d.collections.find(x=>x.id===selectedColl?.id);
-    if(!c)return;
-    fn(c);
-    c.updated_at=new Date().toISOString();
-    setSelectedColl(sc=>({...sc,...c}));setCollTab('edit');
-    if(c.collection_filename){
-      const{world_id,image_data,collection_filename,...rest}=c;
-      window.lorekeeper.saveCollectionJson(c.collection_filename,{...rest,updated_at:c.updated_at});
-    }
-  });
+
   const worldBanner = world.image || world.image_relpath || worldColls.find(c=>c.image_data)?.image_data || null;
   const lorebook=(selectedLore&&worldLores.find(x=>x.id===selectedLore.id))||worldLores[0]||null;
   return (
     <div>
-      {worldBanner&&!selectedColl&&<div style={{height:160,borderRadius:'var(--rl)',overflow:'hidden',marginBottom:16,position:'relative'}}><img src={worldBanner} alt={world.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/><div style={{position:'absolute',inset:0,background:'linear-gradient(to top, rgba(15,14,19,0.85) 0%, transparent 60%)'}}></div><h2 style={{position:'absolute',bottom:14,left:16,fontSize:22,fontWeight:700,color:'#fff',letterSpacing:'0.01em'}}>{world.name}</h2></div>}
+      {worldBanner&&<div style={{height:160,borderRadius:'var(--rl)',overflow:'hidden',marginBottom:16,position:'relative'}}><img src={worldBanner} alt={world.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/><div style={{position:'absolute',inset:0,background:'linear-gradient(to top, rgba(15,14,19,0.85) 0%, transparent 60%)'}}></div><h2 style={{position:'absolute',bottom:14,left:16,fontSize:22,fontWeight:700,color:'#fff',letterSpacing:'0.01em'}}>{world.name}</h2></div>}
       <div className="breadcrumb" onClick={()=>setPage('worlds')}><i className="ti ti-arrow-left"></i><span>Worlds</span><i className="ti ti-chevron-right"></i><span>{world.name}</span></div>
       <div className="world-sub-nav">
-        {tabs.map(([t,icon,label])=><div key={t} className={`sub-nav-item ${tab===t?'active':''}`} onClick={()=>{setTab(t);setSelectedColl(null);}}><i className={`ti ${icon}`}></i>{label}</div>)}
+        {tabs.map(([t,icon,label])=><div key={t} className={`sub-nav-item ${tab===t?'active':''}`} onClick={()=>setTab(t)}><i className={`ti ${icon}`}></i>{label}</div>)}
       </div>
       {tab==='characters'&&(worldChars.length===0?<div className="empty"><i className="ti ti-users"></i><h3>No characters yet</h3></div>:<div className="chars-grid">{worldChars.map(c=><CharCard key={c.id} char={c} onClick={()=>setSelectedChar(c)}/>)}</div>)}
       {tab==='lorebooks'&&(
-        <div>
-          {worldLores.length===0?<div className="empty"><i className="ti ti-book"></i><h3>No lorebooks yet</h3></div>:
-          <div style={{display:'flex',flexDirection:'column',gap:16}}>
-            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-              {worldLores.map((l,i)=><div key={l.id}
-                draggable
-                onDragStart={e=>{e.dataTransfer.setData('lore-id',l.id);e.currentTarget.style.opacity='0.4';}}
-                onDragEnd={e=>{e.currentTarget.style.opacity='1';}}
-                onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent)';}}
-                onDragLeave={e=>{e.currentTarget.style.borderColor=selectedLore?.id===l.id?'var(--accent2)':'var(--border)';}}
-                onDrop={e=>{
-                  e.preventDefault();
-                  e.currentTarget.style.borderColor=selectedLore?.id===l.id?'var(--accent2)':'var(--border)';
-                  const fromId=e.dataTransfer.getData('lore-id');
-                  if(fromId===l.id)return;
-                  update(d=>{
-                    const fromIdx=d.lorebooks.findIndex(x=>x.id===fromId);
-                    const toIdx=d.lorebooks.findIndex(x=>x.id===l.id);
-                    if(fromIdx===-1||toIdx===-1)return;
-                    const [moved]=d.lorebooks.splice(fromIdx,1);
-                    d.lorebooks.splice(toIdx,0,moved);
-                  });
-                }}
-                style={{background:'var(--bg2)',border:selectedLore?.id===l.id?'1px solid var(--accent2)':'1px solid var(--border)',borderRadius:'var(--r)',padding:'7px 14px',cursor:'grab',fontSize:13,color:selectedLore?.id===l.id?'var(--accent)':'var(--text2)',display:'flex',flexDirection:'column',gap:4,minWidth:140,transition:'border-color 0.15s'}}
-                onClick={()=>setSelectedLore(l)}>
-                <div style={{display:'flex',alignItems:'center',gap:8}}>
-                  <i className="ti ti-grip-vertical" style={{fontSize:12,color:'var(--text3)',flexShrink:0}}></i>
-                  {(l.image_data||l.image_relpath)?<ImgFromPath src={l.image_data||l.image_relpath} alt={l.name} style={{width:24,height:24,borderRadius:4,objectFit:'cover',flexShrink:0}}/>:<i className="ti ti-book"></i>}{l.name}
+        worldLores.length===0?<div className="empty"><i className="ti ti-book"></i><h3>No lorebooks yet</h3></div>:
+        <div className="chars-grid">
+          {worldLores.map(l=>{
+            const imgSrc=l.image_data||l.image_relpath||null;
+            return (
+              <div key={l.id} className="char-card" onClick={()=>openLore(l)}>
+                <div className="char-portrait">
+                  {imgSrc?<ImgFromPath src={imgSrc} alt={l.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<i className="ti ti-book" style={{fontSize:32,color:'var(--amber)'}}></i>}
                 </div>
-                {(l.tags||[]).length>0&&<div style={{display:'flex',flexWrap:'wrap',gap:3}}>{(l.tags||[]).slice(0,5).map(t=><span key={t} className="tag" style={{fontSize:9}}>{t}</span>)}</div>}
-              </div>)}
-            </div>
-            {lorebook&&<LoreboookEditor lorebook={lorebook} update={update} exportLore={exportLore}/>}
-          </div>}
+                <div className="char-card-body">
+                  <div className="char-name">{l.name}</div>
+                  <div className="char-tags">
+                    <span className={"status-badge status-"+(l.access_level==='public'?'posted':'draft')}>{l.access_level||'private'}</span>
+                    <span className="tag" style={{color:'var(--text3)'}}>{(l.content||[]).length} ch.</span>
+                    {(l.tags||[]).slice(0,3).map(t=><span key={t} className="tag">{t}</span>)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
-      {tab==='collections'&&(worldColls.length===0?<div className="empty"><i className="ti ti-folders"></i><h3>No collections yet</h3></div>:
-        <div>
-          {selectedColl ? (
-            <div>
-              <div className="breadcrumb" onClick={()=>{setSelectedColl(null);setCollTab("edit");}} style={{marginBottom:16}}>
-                <i className="ti ti-arrow-left"></i><span>Collections</span><i className="ti ti-chevron-right"></i><span>{selectedColl.name}</span>
+      {tab==='collections'&&(
+        worldColls.length===0?<div className="empty"><i className="ti ti-folders"></i><h3>No collections yet</h3></div>:
+        <div className="coll-grid">
+          {worldColls.map(c=>{
+            const bannerImg=c.image_data||world.image||null;
+            return (
+              <div key={c.id} className="coll-card" onClick={()=>openColl(c)}>
+                <div className="coll-banner" style={{backgroundImage:bannerImg?'url('+bannerImg+')':'none',backgroundSize:'cover',backgroundPosition:'center'}}>
+                  {!bannerImg&&<i className="ti ti-folders" style={{fontSize:24,color:'var(--teal)',opacity:0.5}}></i>}
+                </div>
+                <div className="coll-card-body">
+                  <h3>{c.name}</h3>
+                  {c.definition&&<p style={{WebkitLineClamp:2,WebkitBoxOrient:'vertical',display:'-webkit-box',overflow:'hidden'}}>{c.definition}</p>}
+                  {(c.tags||[]).length>0&&<div className="char-tags" style={{marginTop:6}}>{c.tags.slice(0,4).map(t=><span key={t} className="tag">{t}</span>)}</div>}
+                </div>
               </div>
-              {(selectedColl.image_data||world.image)&&<div style={{height:140,borderRadius:'var(--rl)',overflow:'hidden',marginBottom:16,position:'relative'}}>
-                <img src={selectedColl.image_data||world.image} alt={selectedColl.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-                <div style={{position:'absolute',inset:0,background:'linear-gradient(to top, rgba(15,14,19,0.8) 0%, transparent 60%)'}}></div>
-                <h2 style={{position:'absolute',bottom:12,left:16,fontSize:20,fontWeight:700,color:'#fff'}}>{selectedColl.name}</h2>
-                <button className="btn" style={{position:'absolute',top:10,right:10,background:'rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.2)',color:'#fff'}} onClick={async()=>{const r=await window.lorekeeper.importImage();if(!r)return;if(selectedColl.collection_filename){const res=await window.lorekeeper.copyImageToFolder(r.srcPath,'Collections',selectedColl.collection_filename.replace(/\.json$/i,''));if(res){update(d=>{const c=d.collections.find(x=>x.id===selectedColl.id);if(c){c.image_data=res.base64;c.image_relpath=res.relPath;}});setSelectedColl(sc=>({...sc,image_data:res.base64,image_relpath:res.relPath}));return;}}update(d=>{const c=d.collections.find(x=>x.id===selectedColl.id);if(c)c.image_data=r.base64;});setSelectedColl(sc=>({...sc,image_data:r.base64}));}}><i className="ti ti-camera"></i>Change image</button>
-              </div>}
-              <div className="coll-tab-bar">
-                {[["edit","Edit"],["export","Export"]].map(([t,l])=>(
-                  <button key={t} onClick={()=>setCollTab(t)} className={"lore-tab-btn"+(collTab===t?" active":"")}>{l}</button>
-                ))}
-              </div>
-              {collTab==="edit"?<CollEditPanel coll={selectedColl} data={data} update={update} setSelectedColl={setSelectedColl} world={world} exportColl={exportColl}/>:null}
-              {collTab==="export"?<CollExportPanel coll={selectedColl} data={data} exportColl={exportColl}/>:null}
-            </div>
-          ) : (
-            <div className="coll-grid">{worldColls.map(c=>{const count=data.characters.filter(ch=>(ch.collections||[]).includes(c.id)||(c.companions||[]).includes(ch.id)).length; const bannerImg=c.image_data||world.image; return <div key={c.id} className="coll-card" onClick={()=>setSelectedColl(c)}><div className="coll-banner" style={{backgroundImage:bannerImg?'url('+bannerImg+')'  :'none',backgroundSize:'cover',backgroundPosition:'center'}}>{!bannerImg&&<i className="ti ti-folders" style={{fontSize:24,color:'var(--teal)',opacity:0.5}}></i>}</div><div className="coll-card-body"><h3>{c.name}</h3><p>{c.definition||'No description.'}</p><div className="coll-count">{count} characters</div>{(c.tags||[]).length>0&&<div className="char-tags" style={{marginTop:6}}>{(c.tags||[]).slice(0,5).map(t=><span key={t} className="tag">{t}</span>)}</div>}<button className="btn" style={{marginTop:8,fontSize:11,padding:'3px 8px'}} onClick={e=>{e.stopPropagation();exportColl(c);}}><i className="ti ti-download"></i>Export</button></div></div>;})}</div>
-          )}
+            );
+          })}
         </div>
       )}
       {tab==='gallery'&&(
@@ -3299,7 +3298,7 @@ function LoreboookEditor({lorebook,update,exportLore}) {
           <div style={{marginTop:8}}>
             <div style={{fontSize:9,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:3}}>Lorebooks filename (auto-save)</div>
             <input value={lorebook.lorebook_filename||''} onChange={e=>updLore(l=>{l.lorebook_filename=e.target.value||null;})} placeholder="e.g. MyLorebook.json" style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',fontFamily:'inherit',width:'100%'}}/>
-            {lorebook.lorebook_filename&&<div style={{fontSize:10,color:'var(--text3)',marginTop:2}}>I:\Lorekeeper\Lorebooks\{lorebook.lorebook_filename}</div>}
+            {lorebook.lorebook_filename?<div className="field-hint">{loreHint(lorebook.lorebook_filename)}</div>:null}
           </div>
           <TagSelector value={lorebook.tags||[]} onChange={v=>updLore(l=>{l.tags=v;})} max={25}/>
           <div style={{marginTop:8}}>
@@ -3498,41 +3497,163 @@ function CharCard({char,onClick}) {
   );
 }
 
-function StandaloneLorePage({lorebook,data,update,exportLore,onBack}) {
+function LorePage({lorebook,data,update,exportLore,onBack}) {
+  const [loreTab, setLoreTab] = useState('chapters');
+  const lore = (data.lorebooks.find(x=>x.id===lorebook.id))||lorebook;
+  const world = data.worlds.find(w=>w.id===lore.world_id);
+
   const updLore=(fn)=>update(d=>{const l=d.lorebooks.find(x=>x.id===lorebook.id);if(l){fn(l);l.updated_at=new Date().toISOString();if(l.lorebook_filename){
-        const{world_id,image_data,lorebook_filename,...lrest}=l;
-        window.lorekeeper.saveLorebookJson(l.lorebook_filename,{...lrest,updated_at:l.updated_at});
-      }}});
-  const lore=(data.lorebooks.find(x=>x.id===lorebook.id))||lorebook;
+    const{world_id,image_data,lorebook_filename,...lrest}=l;
+    window.lorekeeper.saveLorebookJson(l.lorebook_filename,{...lrest,updated_at:l.updated_at});
+  }}});
+
   const handleImage=async()=>{
     const r=await window.lorekeeper.importImage();
     if(!r) return;
-    if(lorebook.lorebook_filename){
-      const folder='Lorebooks';
-      const baseName=lorebook.lorebook_filename.replace(/\.json$/i,'');
-      const res=await window.lorekeeper.copyImageToFolder(r.srcPath,folder,baseName);
-      if(res) { updLore(l=>{l.image_data=res.base64;l.image_relpath=res.relPath;}); return; }
+    if(lore.lorebook_filename){
+      const res=await window.lorekeeper.copyImageToFolder(r.srcPath,'Lorebooks',lore.lorebook_filename.replace(/\.json$/i,''));
+      if(res){updLore(l=>{l.image_data=res.base64;l.image_relpath=res.relPath;});return;}
     }
     updLore(l=>{l.image_data=r.base64;});
   };
+
+  const tabs=[['chapters','Chapters'],['settings','Settings'],['export','Export']];
+
   return (
     <div>
-      <div className="breadcrumb" onClick={onBack}><i className="ti ti-arrow-left"></i><span>Lorebooks</span><i className="ti ti-chevron-right"></i><span>{lore.name}</span></div>
-      <LoreboookEditor lorebook={lore} update={update} exportLore={exportLore}/>
+      <div className="breadcrumb" onClick={onBack}>
+        <i className="ti ti-arrow-left"></i>
+        <span>{world?world.name:'Lorebooks'}</span>
+        <i className="ti ti-chevron-right"></i>
+        <span>{lore.name}</span>
+      </div>
+      <div className="char-detail">
+        <div className="char-sidebar">
+          <div className="char-portrait-lg" onClick={handleImage} style={{cursor:'pointer'}}>
+            {(lore.image_data||lore.image_relpath)
+              ?<ImgFromPath src={lore.image_data||lore.image_relpath} alt={lore.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+              :<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6}}><i className="ti ti-photo" style={{fontSize:40,color:'var(--text3)'}}></i><span style={{fontSize:11,color:'var(--text3)'}}>Set cover</span></div>
+            }
+          </div>
+          <button className="btn" style={{width:'100%',justifyContent:'center'}} onClick={handleImage}>
+            <i className="ti ti-upload"></i>{(lore.image_data||lore.image_relpath)?'Change Image':'Set Image'}
+          </button>
+          {(lore.image_data||lore.image_relpath)?<button className="btn danger" style={{width:'100%',justifyContent:'center',fontSize:12}} onClick={()=>updLore(l=>{l.image_data=null;l.image_relpath=null;})}><i className="ti ti-x"></i>Remove Image</button>:null}
+          {lore.image_id&&<div className="info-card">
+            <h4>Image ID</h4>
+            <div style={{display:'flex',gap:4}}>
+              <input readOnly value={lore.image_id} style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text3)',padding:'4px 6px',borderRadius:'var(--r)',fontSize:10,outline:'none',fontFamily:'monospace',minWidth:0}}/>
+              <button className="btn" style={{padding:'3px 5px',flexShrink:0}} onClick={()=>navigator.clipboard.writeText(lore.image_id)}><i className="ti ti-copy" style={{fontSize:11}}></i></button>
+            </div>
+          </div>}
+          <div className="info-card">
+            <h4>Quick Info</h4>
+            {world&&<div className="info-row"><span className="label">World</span><span className="value">{world.emoji?world.emoji+' ':''}{world.name}</span></div>}
+            <div className="info-row"><span className="label">Access</span><span className={"status-badge status-"+(lore.access_level==='public'?'posted':'draft')}>{lore.access_level||'private'}</span></div>
+            <div className="info-row"><span className="label">Chapters</span><span className="value">{(lore.content||[]).length}</span></div>
+            <div className="info-row"><span className="label">Updated</span><span className="value">{lore.updated_at?lore.updated_at.split('T')[0]:'—'}</span></div>
+          </div>
+          {(lore.tags||[]).length>0&&<div className="info-card">
+            <h4>Tags</h4>
+            <div className="char-tags">{lore.tags.map(t=><span key={t} className="tag">{t}</span>)}</div>
+          </div>}
+        </div>
+        <div className="char-main">
+          <div style={{display:'flex',gap:4,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:4,flexWrap:'wrap'}}>
+            {tabs.map(([t,l])=><div key={t} className={"sub-nav-item "+(loreTab===t?'active':'')} onClick={()=>setLoreTab(t)} style={{fontSize:12,padding:'5px 10px'}}>{l}</div>)}
+          </div>
+          {loreTab==='chapters'&&<LoreChaptersTab lore={lore} updLore={updLore}/>}
+          {loreTab==='settings'&&<LoreSettingsTab lore={lore} updLore={updLore} data={data}/>}
+          {loreTab==='export'&&<LoreExportPanel lorebook={lore} exportLore={exportLore} exportLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];if(lore.short_description){lines.push("");lines.push(lore.short_description);}(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});const safeName=(lore.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n")});}} loreMdPreview={false} setLoreMdPreview={()=>{}} buildLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});return lines.join("\n");}}/>}
+        </div>
+      </div>
     </div>
   );
 }
 
-function AllLorebooksPage({data,update,setSelectedWorld,setSelectedLore,exportLore}) {
+function LoreChaptersTab({lore, updLore}) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const chapters = lore.content||[];
+  const chapter = chapters[activeIdx]||null;
+  return (
+    <div className="lore-layout">
+      <div className="lore-chapters">
+        <div style={{padding:'8px 10px',display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid var(--border)',marginBottom:4}}>
+          <span style={{fontSize:11,color:'var(--text3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em'}}>Chapters</span>
+          <button className="btn" style={{padding:'3px 8px',fontSize:11}} onClick={()=>{updLore(l=>{l.content.push({id:uuid(),title:'New Chapter',text:''});});setActiveIdx(chapters.length);}}><i className="ti ti-plus"></i></button>
+        </div>
+        {chapters.map((ch,i)=>(
+          <div key={ch.id} className={"chapter-item "+(activeIdx===i?'active':'')} onClick={()=>setActiveIdx(i)}>
+            <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{ch.title||'Untitled'}</span>
+            <button className="ch-del" onClick={e=>{e.stopPropagation();updLore(l=>{l.content.splice(i,1)});if(activeIdx>=i&&activeIdx>0)setActiveIdx(a=>a-1);}}><i className="ti ti-x"></i></button>
+          </div>
+        ))}
+      </div>
+      <div className="lore-editor">
+        {!chapter?<p className="text-muted">No chapters yet. Add one to start.</p>:<>
+          <input value={chapter.title} onChange={e=>updLore(l=>{l.content[activeIdx].title=e.target.value;})} placeholder="Chapter title"/>
+          <MdField value={chapter.text} onChange={e=>updLore(l=>{l.content[activeIdx].text=e.target.value;})} style={{minHeight:500}} placeholder="Write lore here... markdown supported"/>
+        </>}
+      </div>
+    </div>
+  );
+}
+
+function LoreSettingsTab({lore, updLore, data}) {
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:14,maxWidth:600}}>
+      <div className="field-block">
+        <label>Name</label>
+        <input value={lore.name||''} onChange={e=>updLore(l=>{l.name=e.target.value;})}/>
+      </div>
+      <div className="field-block">
+        <label>Short Description</label>
+        <textarea style={{minHeight:70}} value={lore.short_description||''} onChange={e=>updLore(l=>{l.short_description=e.target.value;})} placeholder="Brief description shown on the site…"/>
+      </div>
+      <div className="field-block">
+        <label>World</label>
+        <select value={lore.world_id||''} onChange={e=>updLore(l=>{l.world_id=e.target.value||null;})}>
+          <option value="">— Standalone —</option>
+          {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
+        </select>
+      </div>
+      <div className="field-row">
+        <div className="field-block">
+          <label>Access Level</label>
+          <select value={lore.access_level||'private'} onChange={e=>updLore(l=>{l.access_level=e.target.value;})}>
+            <option value="private">Private</option>
+            <option value="public">Public</option>
+          </select>
+        </div>
+        <div className="field-block">
+          <label>Definition Protection</label>
+          <select value={lore.definition_protection||'copy_protection'} onChange={e=>updLore(l=>{l.definition_protection=e.target.value;})}>
+            <option value="open">Open</option>
+            <option value="copy_protection">Copy Protection (recommended)</option>
+            <option value="hidden">Hidden</option>
+          </select>
+        </div>
+      </div>
+      <div className="field-block">
+        <label>Auto-save filename <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— saves to Lorebooks\</span></label>
+        <input value={lore.lorebook_filename||''} onChange={e=>updLore(l=>{l.lorebook_filename=e.target.value||null;})} placeholder="e.g. MyLorebook.json"/>
+        {lore.lorebook_filename?<div className="field-hint">{loreHint(lore.lorebook_filename)}</div>:null}
+      </div>
+      <div className="field-block">
+        <label>Tags</label>
+        <TagSelector value={lore.tags||[]} onChange={v=>updLore(l=>{l.tags=v;})} max={25}/>
+      </div>
+    </div>
+  );
+}
+
+
+function AllLorebooksPage({data,update,exportLore,openLore}) {
   const [filter,setFilter]=useState('all');
   const worlds=data.worlds;
   const lorebooks=filter==='all'?data.lorebooks:filter==='none'?data.lorebooks.filter(l=>!l.world_id):data.lorebooks.filter(l=>l.world_id===filter);
 
-  const openLorebook=(l)=>{
-    const w=data.worlds.find(x=>x.id===l.world_id);
-    if(w){ setSelectedWorld(w); setWorldTab('lorebooks'); setSelectedLore(l); setPage('world'); }
-    else { setSelectedLore(l); setPage('lore'); }
-  };
+  const openLorebook=(l)=>{ openLore(l); };
 
   return (
     <div>
@@ -3549,7 +3670,7 @@ function AllLorebooksPage({data,update,setSelectedWorld,setSelectedLore,exportLo
       <div className="chars-grid">
         {lorebooks.map(l=>{
           const w=data.worlds.find(x=>x.id===l.world_id);
-          const imgSrc=l.image_relpath||l.image_data||null;
+          const imgSrc=l.image_data||l.image_relpath||null;
           return (
             <div key={l.id} className="char-card" onClick={()=>openLorebook(l)}>
               <div className="char-portrait">
@@ -3818,7 +3939,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,onBack}) {
               <div className="field-block">
                 <label>Companions Folder <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— auto-saves JSON to Companions\FolderName\ on every edit</span></label>
                 <input value={charData.companion_folder||''} onChange={e=>updChar(c=>c.companion_folder=e.target.value||null)} placeholder="e.g. Victor (leave blank to disable auto-save)"/>
-                {charData.companion_folder&&<div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>Saves to: I:\Lorekeeper\Companions\{charData.companion_folder}\character.json</div>}
+                {charData.companion_folder?<div className="field-hint">{charFolderHint(charData.companion_folder)}</div>:null}
               </div>
               <div className="field-row">
                 <div className="field-block"><label>Access Level</label><select value={charData.access_level||'private'} onChange={e=>updChar(c=>c.access_level=e.target.value)}><option value="private">Private</option><option value="unlisted">Unlisted</option><option value="public">Public</option></select></div>
@@ -4017,6 +4138,95 @@ function LoreExportPanel({lorebook,exportLore,exportLoreMd,loreMdPreview,setLore
         </div>
         {loreMdPreview?<pre className="md-preview">{buildLoreMd()}</pre>:null}
       </div>
+    </div>
+  );
+}
+
+function CollPage({coll,data,update,exportColl,onBack}) {
+  const [collTab,setCollTab]=useState('edit');
+  const col=(data.collections.find(x=>x.id===coll.id))||coll;
+  const world=data.worlds.find(w=>w.id===col.world_id);
+  const setCol=(fn)=>update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(!c)return;fn(c);c.updated_at=new Date().toISOString();if(c.collection_filename){const{world_id,image_data,collection_filename,...rest}=c;window.lorekeeper.saveCollectionJson(c.collection_filename,{...rest,updated_at:c.updated_at});}});
+  const charCount=data.characters.filter(ch=>(ch.collections||[]).includes(col.id)||(col.companions||[]).includes(ch.id)).length;
+  const tabs=[['edit','Edit'],['export','Export']];
+  return (
+    <div>
+      <div className="breadcrumb" onClick={onBack}>
+        <i className="ti ti-arrow-left"></i>
+        <span>{world?world.name:'Collections'}</span>
+        <i className="ti ti-chevron-right"></i>
+        <span>{col.name}</span>
+      </div>
+      <div className="char-detail">
+        <div className="char-sidebar">
+          <div className="char-portrait-lg" style={{cursor:'pointer'}} onClick={async()=>{const r=await window.lorekeeper.importImage();if(!r)return;if(col.collection_filename){const res=await window.lorekeeper.copyImageToFolder(r.srcPath,"Collections",col.collection_filename.replace(/\.json$/i,""));if(res){setCol(c=>{c.image_data=res.base64;c.image_relpath=res.relPath;});return;}}setCol(c=>{c.image_data=r.base64;});}}>
+            {(col.image_data||col.image_relpath)
+              ?<ImgFromPath src={col.image_data||col.image_relpath} alt={col.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+              :(world&&world.image)?<img src={world.image} alt={col.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+              :<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6}}><i className="ti ti-folders" style={{fontSize:40,color:'var(--teal)',opacity:0.5}}></i><span style={{fontSize:11,color:'var(--text3)'}}>Set cover</span></div>
+            }
+          </div>
+          <button className="btn" style={{width:'100%',justifyContent:'center'}} onClick={async()=>{const r=await window.lorekeeper.importImage();if(!r)return;if(col.collection_filename){const res=await window.lorekeeper.copyImageToFolder(r.srcPath,"Collections",col.collection_filename.replace(/\.json$/i,""));if(res){setCol(c=>{c.image_data=res.base64;c.image_relpath=res.relPath;});return;}}setCol(c=>{c.image_data=r.base64;});}}>
+            <i className="ti ti-upload"></i>{(col.image_data||col.image_relpath)?'Change Image':'Set Image'}
+          </button>
+          {(col.image_data||col.image_relpath)?<button className="btn danger" style={{width:'100%',justifyContent:'center',fontSize:12}} onClick={()=>setCol(c=>{c.image_data=null;c.image_relpath=null;})}><i className="ti ti-x"></i>Remove Image</button>:null}
+          <div className="info-card">
+            <h4>Quick Info</h4>
+            {world&&<div className="info-row"><span className="label">World</span><span className="value">{world.emoji?world.emoji+' ':''}{world.name}</span></div>}
+            <div className="info-row"><span className="label">Characters</span><span className="value">{charCount}</span></div>
+            <div className="info-row"><span className="label">Access</span><span className={"status-badge status-"+(col.access_level==='public'?'posted':'draft')}>{col.access_level||'private'}</span></div>
+          </div>
+          {(col.tags||[]).length>0&&<div className="info-card"><h4>Tags</h4><div className="char-tags">{col.tags.map(t=><span key={t} className="tag">{t}</span>)}</div></div>}
+        </div>
+        <div className="char-main">
+          <div style={{display:'flex',gap:4,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:4,flexWrap:'wrap'}}>
+            {tabs.map(([t,l])=><div key={t} className={"sub-nav-item "+(collTab===t?'active':'')} onClick={()=>setCollTab(t)} style={{fontSize:12,padding:'5px 10px'}}>{l}</div>)}
+          </div>
+          {collTab==='edit'?<CollSettingsTab col={col} setCol={setCol} data={data} world={world} update={update}/>:null}
+          {collTab==='export'?<CollExportPanel coll={col} data={data} exportColl={exportColl}/>:null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CollSettingsTab({col,setCol,data,world,update}) {
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:14}}>
+      <div className="field-block">
+        <label>Name</label>
+        <input value={col.name||''} onChange={e=>setCol(c=>{c.name=e.target.value;})}/>
+      </div>
+      <div className="field-block">
+        <label>Description</label>
+        <textarea style={{minHeight:80}} value={col.definition||''} onChange={e=>setCol(c=>{c.definition=e.target.value;})}/>
+      </div>
+      <div className="field-block">
+        <label>World</label>
+        <select value={col.world_id||''} onChange={e=>setCol(c=>{c.world_id=e.target.value||null;})}>
+          <option value="">— Standalone —</option>
+          {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
+        </select>
+      </div>
+      <div className="field-row">
+        <div className="field-block">
+          <label>Access Level</label>
+          <select value={col.access_level||'private'} onChange={e=>setCol(c=>{c.access_level=e.target.value;})}>
+            <option value="private">Private</option>
+            <option value="public">Public</option>
+          </select>
+        </div>
+        <div className="field-block">
+          <label>Tags</label>
+          <TagSelector value={col.tags||[]} onChange={v=>setCol(c=>{c.tags=v;})} max={25}/>
+        </div>
+      </div>
+      <div className="field-block">
+        <label>Auto-save filename <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— saves to Collections{String.fromCharCode(92)}</span></label>
+        <input value={col.collection_filename||''} onChange={e=>setCol(c=>{c.collection_filename=e.target.value||null;})} placeholder="e.g. Guideverse.json"/>
+        {col.collection_filename?<div className="field-hint">{["I:","Lorekeeper","Collections",col.collection_filename].join(BS)}</div>:null}
+      </div>
+      <CollectionCharPicker coll={col} data={data} update={update} setSelectedChar={()=>{}}/>
     </div>
   );
 }
