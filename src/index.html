@@ -180,7 +180,7 @@
   .tpl-list { display:flex; flex-direction:column; gap:8px; }
   .tpl-section-header { font-size:11px; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
   .tpl-section { margin-bottom:24px; }
-  .world-info-tab { max-width:580px; display:flex; flex-direction:column; gap:12px; }
+  .world-info-tab { display:flex; flex-direction:column; gap:12px; }
   .world-banner-preview { height:120px; border-radius:var(--r); overflow:hidden; background:var(--bg3); display:flex; align-items:center; justify-content:center; cursor:pointer; border:1px solid var(--border); margin-bottom:10px; }
   .world-banner-placeholder { text-align:center; color:var(--text3); }
   .plot-tag { display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:2px 7px; border-radius:4px; background:var(--accent-dim); border:1px solid var(--accent2); color:var(--accent); }
@@ -597,6 +597,13 @@ function App() {
   const charsOnDay=(d)=>data.characters.filter(c=>c.status!=='posted'&&c.schedule_dates&&c.schedule_dates.some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;}));
   const postedOnDay=(d)=>data.characters.filter(c=>{const hasPostedDate=(c.posted_dates||[]).some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;});const isPostedAndScheduled=c.status==='posted'&&(c.schedule_dates||[]).some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;});return hasPostedDate||isPostedAndScheduled;});
   const upcoming=data.characters.filter(c=>c.status!=='posted'&&c.schedule_dates&&c.schedule_dates.length>0).flatMap(c=>c.schedule_dates.map(d=>({char:c,date:parseLocalDate(d)}))).filter(x=>x.date>=new Date(today.getFullYear(),today.getMonth(),today.getDate())).sort((a,b)=>a.date-b.date).slice(0,10);
+
+  // Apply font size globally whenever settings change
+  React.useEffect(() => {
+    const size = (data.settings||{}).font_size || 'normal';
+    const map = {small:'13px', normal:'14px', large:'16px', xlarge:'18px'};
+    document.documentElement.style.fontSize = map[size] || '14px';
+  }, [(data.settings||{}).font_size]);
 
   const navTo=(p)=>{setPage(p);setSelectedWorld(null);setSelectedChar(null);setSelectedLore(null);setSelectedPersona(null);};
   const openColl=(c)=>{
@@ -3224,6 +3231,10 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
             </div>
             <PlotArchetypeInput worldId={world.id} update={update}/>
           </div>
+          <div className="field-block">
+            <label>Notes <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— also editable in the Notes panel</span></label>
+            <textarea value={world.notes||''} onChange={e=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.notes=e.target.value;})} style={{minHeight:120}} placeholder="Ideas, plot threads, reminders…"/>
+          </div>
           <div className="delete-zone">
             <button className="btn danger" onClick={()=>{update(d=>{d.worlds=d.worlds.filter(x=>x.id!==world.id);d.characters=d.characters.filter(c=>c.world_id!==world.id);d.lorebooks=d.lorebooks.filter(l=>l.world_id!==world.id);});setPage('worlds');setSelectedWorld(null);}}><i className="ti ti-trash"></i>Delete World</button>
           </div>
@@ -5475,13 +5486,6 @@ function SettingsPage({data, update}) {
     setTimeout(() => setApiKeySaved(false), 2000);
   };
 
-  // Apply font size to root
-  React.useEffect(() => {
-    const size = settings.font_size || 'normal';
-    const map = { small: '13px', normal: '14px', large: '16px', xlarge: '18px' };
-    document.documentElement.style.setProperty('--font-size-base', map[size] || '14px');
-  }, [settings.font_size]);
-
   const Section = ({title, icon, children, badge}) => (
     <div style={{marginBottom:24}}>
       <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,paddingBottom:8,borderBottom:'1px solid var(--border)'}}>
@@ -5508,7 +5512,7 @@ function SettingsPage({data, update}) {
   );
 
   return (
-    <div style={{maxWidth:600}}>
+    <div>
 
       <Section title="Claude API" icon="ti-sparkles">
         <Field label="Anthropic API Key"

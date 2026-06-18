@@ -1,5 +1,5 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 19, 2026 (session 13)**
+**Last updated: June 19, 2026 (session 14)**
 
 ---
 
@@ -157,24 +157,36 @@ I:\Lorekeeper\
 
 ## Navigation (Sidebar)
 - **Dashboard** — calendar, today banner, upcoming, release cycle, site checklist, lorekeeper checklist, drafts in progress
-- **Worlds** — world card grid
-- **Characters** — all characters, filter by world
-- **Lorebooks** — all lorebooks, filter by world or Standalone
-- **Collections** — all collections, filter by world or Standalone
-- **Personas** — player characters, independent from worlds
-- **Templates** — global and per-world character creation templates
+- **Worlds** — world card grid; click → WorldDetailPage (Characters/Lorebooks/Collections/Gallery/World Info tabs)
+- **Characters** — all characters, filter by world; click → CharDetailPage (13 tabs)
+- **Lorebooks** — all lorebooks, filter by world or Standalone; click → LorePage (Chapters/Settings/Export tabs)
+- **Collections** — all collections, filter by world or Standalone; click → CollPage (Edit/Export tabs)
+- **Personas** — player characters; click → PersonaDetailPage (char-detail layout)
+- **Templates** — global and per-world character creation templates; tpl-card list
 - **Batch Import** — scan folders, import, image audit, backup/restore
-- **Settings** — API key, model, font size, debounce, theme/colorblind (placeholders)
-- **Help** — 13 collapsible sections covering all features
+- **Settings** — API key, model, font size (applied globally), debounce, theme/colorblind (placeholders)
+- **Help** — 15 collapsible sections covering all features
 - **Worlds list** — pinned first, emoji icon, right-click → pin/unpin
-- **Sidebar collapse** — icons only mode
+- **Sidebar collapse** — icons only mode; footer has Import + Backup buttons
 - **Logo** — clickable → Dashboard
 
+### Detail Pages (full-page, all use char-detail layout)
+- **CharDetailPage** — 260px sidebar (portrait, UUID, banner, quick info, tags) + main (13 tabs)
+- **LorePage** — 260px sidebar (cover image, image ID, quick info) + main (Chapters / Settings / Export)
+- **CollPage** — 260px sidebar (banner image, quick info) + main (Edit / Export)
+- **PersonaDetailPage** — 260px sidebar (portrait, quick info) + main (Profile tab)
+
+### Navigation helpers (App level)
+- `openChar(c, tab?)` — sets selectedChar + selectedWorld + page='char'
+- `openLore(l)` — sets selectedLore + selectedWorld + page='lore'
+- `openColl(c)` — sets selectedColl + selectedWorld + page='collection'
+All three helpers set selectedWorld automatically so the right panel Notes tab always shows the correct world.
+
 ### Right Panel (toggle button in top bar)
-- **Notes** — world notes or global scratchpad; auto-saves
-- **Tools** — 8 tools (Height, Names, Physicals, Nationality, Color, Text Diff, Personality, Plot)
+- **Notes** — world notes (synced with World Info tab) or global scratchpad; auto-saves
+- **Tools** — 13 tools (Height, Names, Physicals, Nationality, Color, Text Diff, Personality, Plot, Esper Powers, Hockey, Swim, Western Zodiac, Chinese Zodiac)
 - **Claude** — AI chat assistant with full world context
-- **Map** — placeholder
+- **Map** — Relationship map (SVG canvas, 640px expanded); draggable portrait nodes; labeled edges; per-world filter
 
 ---
 
@@ -355,23 +367,30 @@ Right panel Claude tab — full AI chat with world-aware context.
 
 ## Tools Panel
 
-| Tool | Description |
-|---|---|
-| Height | cm ↔ ft/in bidirectional; click to copy |
-| Names | Masc/Fem/Neutral/Any; international pool |
-| Physicals | Eyes, Hair, Build; roll individually or all |
-| Nationality | 100+ nationalities; region filter; languages + currency |
-| Color | HSL sliders + 6 harmony modes; click swatches to copy hex |
-| Text Diff | Word-level diff; green/red highlights; added/removed counts |
-| Personality | Literary Archetypes (77), MBTI (16), Jungian (13), Attachment Styles (4); Roll All + Copy All |
-| Plot | 100 global archetypes + per-world custom pool; filter global/world/any |
+| Tool | Icon | Description |
+|---|---|---|
+| Height | ti-ruler | cm ↔ ft/in bidirectional; click to copy |
+| Names | ti-user-circle | Masc/Fem/Neutral/Any; international pool |
+| Physicals | ti-sparkles | Eyes, Hair, Build; roll individually or all |
+| Nationality | ti-world | 100+ nationalities; region filter; languages + currency |
+| Color | ti-palette | HSL sliders + 6 harmony modes; click swatches to copy hex |
+| Text Diff | ti-scan | Word-level diff; green/red highlights; added/removed counts |
+| Personality | ti-brain | Literary Archetypes (77), MBTI (16), Jungian (13), Attachment Styles (4); Roll All + Copy All |
+| Plot | ti-books | 100 global archetypes + per-world custom pool; filter global/world/any |
+| Esper Powers | ti-sparkles | Rolls ability type, F–S rank, drawback, codename |
+| Hockey | ti-trophy | Rolls position, role description, handedness, character trait |
+| Swim | ti-send | Rolls stroke, event distance, stroke description, swimmer archetype |
+| Western Zodiac | ti-stars | Rolls sun sign: element/modality, traits, shadow side, vibe |
+| Chinese Zodiac | ti-yin-yang | Rolls sign: element, reference years, traits, shadow side, vibe |
+
+Note: All icons must exist in Tabler Icons 2.44.0 (pinned). `ti-files-diff` and `ti-waves` do NOT exist in 2.44.
 
 ---
 
 ## Help System
 
-- Help page in sidebar — 13 collapsible sections
-- Sections: Dashboard, Characters, Lorebooks, Collections, Lorebook Templates, Batch Import, Image Storage Audit, Backup & Restore, Character Templates, Tools, Auto-save, Settings, Claude AI
+- Help page in sidebar — 15 collapsible sections (fully updated session 11)
+- Sections: Dashboard, Characters, Worlds, Lorebooks, Collections, Personas, Templates, Lorebook Templates, Relationship Map, Tools Panel, Batch Import, Auto-save, Image Storage Audit, Backup & Restore, Settings, Claude AI, GitHub backup
 - Each has plain explanations, numbered steps, tip callouts
 - Inline `?` buttons: Site Checklist, Batch Import, Lorebook Entry tab, Lorebook Templates manager
 
@@ -395,9 +414,8 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 - **Relationship dynamic generator**
 
 ### UI Overhaul (in progress)
-Major consistency pass underway. Remaining items:
-- **World Info tab** — still uses some inconsistent field widths/layout vs char/lore/coll settings tabs
-- **CharDetailPage** — 145 inline styles; structural ones acceptable but worth a pass later
+Major consistency pass done. Remaining polish items:
+- **CharDetailPage** — 145 inline styles; structurally fine, worth a cleanup pass later
 - **Global themes** — light/dark + accent color
 - **Colorblind mode** — deuteranopia, protanopia, tritanopia
 - **Standalone / Public Version** — configurable data path, strip Saucepan-specific stuff, packaged `.exe`, optional rename/theming; README.md goes here
@@ -452,6 +470,10 @@ git push
 - Session 8: `EsperTool, HockeyTool, SwimTool — data tables + roll components in ToolsPanel`
 - Session 9: `WesternZodiacTool, ChineseZodiacTool; RelationshipsPage (SVG relationship map with draggable portrait nodes + labeled edges)`
 - Session 10: `Fix relationship map — collection-aware char filter (Gabriel), fixed label positions, draggable edit popup, correct icon replacements for Tabler 2.44, esper rank letters F–S`
+- Session 11: `LorePage full-page (char-detail layout: cover sidebar + Chapters/Settings/Export tabs), world lorebooks tab card grid, AllLorebooksPage card grid, openLore/openChar helpers, notes panel world fix`
+- Session 12: `CollPage full-page (char-detail layout: image sidebar + Edit/Export tabs), world collections tab card grid, openColl helper, CollSettingsTab, unified navigation pattern across all content types`
+- Session 13: `UI consistency pass — tpl-card/tpl-section/tpl-editor CSS, PersonaDetailPage tab bar chrome, World Info tab CSS classes, portrait cards 200px, world/coll banners 80px, filter buttons cleaned, font size applied globally via App-level useEffect`
+- Session 14: `Settings page full-width, World Info tab full-width (removed max-width cap), font size fixed (sets document.documentElement.style.fontSize directly), Notes field added to World Info tab`
 
 ### What goes in the repo
 | File | Tracked? |
@@ -500,5 +522,15 @@ WesternZodiacTool (sign, element/modality, traits, shadow, vibe), ChineseZodiacT
 
 ### Session 10 (June 19)
 Relationship map fixes: collection-aware char filter (matches WorldDetailPage logic), fixed label drag removed, draggable edit popup with getBoundingClientRect fix, transparent hit area on edges, correct Tabler 2.44 icons (ti-scan/ti-send)
+
+### Session 11 (June 19)
+LorePage full-page layout (char-detail: cover image sidebar + Chapters/Settings/Export tabs replacing LoreboookEditor inline); world lorebooks tab replaced with chars-grid card grid; AllLorebooksPage already cards, now navigates to LorePage; openLore() App helper sets selectedWorld; notes panel world fix; quickfind wired to openLore
+
+### Session 12 (June 19)
+CollPage full-page layout (char-detail: image sidebar + Edit/Export tabs); CollSettingsTab (name/description/world/access/tags/filename/char-picker); world collections tab replaced with coll-grid card grid; openColl() App helper; selectedColl state moved to App level; AllCollectionsPage navigates directly to CollPage; quickfind wired to openColl
+
 ### Session 13 (June 19)
-UI consistency pass: TemplatesPage uses tpl-card/tpl-section CSS classes with TplCard component; TemplateEditor uses tpl-editor wrapper class; PersonaDetailPage gets tab bar chrome (single Profile tab) matching char/lore/coll; World Info tab refactored to world-info-tab/field-row/plot-tag/delete-zone CSS classes; char/lore/persona portrait cards bumped to 200px; world/coll banner height aligned to 80px; filter buttons stripped of emoji+counts; notes panel now shows correct world when opening char from dashboard; openChar/openLore/openColl helpers set selectedWorld automatically; LorePage/CollPage full-page layouts with char-detail sidebar pattern; BS/loreHint/charFolderHint constants for backslash path display
+UI consistency pass: TemplatesPage → tpl-card/tpl-section/TplCard component; TemplateEditor → tpl-editor/tpl-hint CSS; PersonaDetailPage → tab bar chrome (single Profile tab); World Info tab → world-info-tab/field-row/plot-tag/delete-zone; portrait cards 200px; world/coll banners aligned to 80px; filter buttons stripped of emoji+counts; BS/loreHint/charFolderHint constants for backslash path rendering
+
+### Session 14 (June 19)
+Settings page full-width (removed maxWidth:600); World Info tab full-width (removed max-width cap); font size now applied globally via App-level useEffect (sets document.documentElement.style.fontSize directly, was broken); Notes field added to World Info tab (syncs with right-panel Notes); spec updated: navigation, tools table, help sections, session log
