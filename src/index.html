@@ -163,6 +163,19 @@
   .lore-editor input:focus { border-color: var(--accent2); }
   .lore-editor textarea { flex: 1; min-height: 400px; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 12px; border-radius: var(--r); font-size: 13px; outline: none; font-family: inherit; resize: vertical; line-height: 1.7; width: 100%; }
   .lore-editor textarea:focus { border-color: var(--accent2); }
+  .md-preview { margin-top:8px; background:var(--bg3); border:1px solid var(--border); border-radius:var(--r); padding:10px 14px; font-size:11px; color:var(--text2); white-space:pre-wrap; line-height:1.6; max-height:400px; overflow-y:auto; }
+  .export-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--rl); padding:16px; }
+  .export-card-title { font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px; }
+  .export-card-desc { font-size:12px; color:var(--text3); margin-bottom:12px; line-height:1.6; }
+  .export-card-meta { font-size:11px; color:var(--text3); margin-bottom:12px; display:flex; flex-wrap:wrap; gap:6px; }
+  .export-field-ok { color:var(--green); }
+  .export-field-missing { color:var(--text3); }
+  .export-panel { display:flex; flex-direction:column; gap:16px; max-width:600px; padding:8px 0; }
+  .export-row { display:flex; gap:8px; margin-top:8px; }
+  .lore-tab-bar { display:flex; border-bottom:1px solid var(--border); margin-bottom:0; }
+  .coll-tab-bar { display:flex; border-bottom:1px solid var(--border); margin-bottom:16px; }
+  .lore-tab-btn { padding:8px 18px; font-size:12px; font-weight:600; background:none; border:none; border-bottom:2px solid transparent; color:var(--text3); cursor:pointer; transition:color 0.15s; }
+  .lore-tab-btn.active { border-bottom-color:var(--accent); color:var(--accent); }
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 200; }
   .modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--rl); padding: 24px; width: 480px; max-width: 95vw; max-height: 85vh; overflow-y: auto; }
   .modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
@@ -430,7 +443,10 @@ function App() {
     setModal(null);
   };
 
-  const exportAll = () => window.lorekeeper.exportFile({ defaultName: 'lorekeeper-export.json', content: JSON.stringify(data, null, 2) });
+  const exportAll = async () => {
+    const res = await window.lorekeeper.exportBackup({});
+    if (res && res.success) { const mb=(res.size/1048576).toFixed(1); alert("Backup saved ("+mb+" MB)"); }
+  };
   const exportColl = (c) => {
     const {world_id,image_data,image_relpath,collection_filename,...rest}=c;
     window.lorekeeper.exportFile({ defaultName:`${c.name}-collection.json`, content:JSON.stringify(rest,null,2) });
@@ -476,8 +492,60 @@ function App() {
   };
   const exportLore = (l) => {
     const {world_id,lorebook_filename,image_data,image_relpath,selected_chapter_index,...rest}=l;
-    window.lorekeeper.exportFile({ defaultName: `${l.name}-lorebook.json`, content: JSON.stringify(rest, null, 2) });
+    window.lorekeeper.exportFile({ defaultName: l.name+"-lorebook.json", content: JSON.stringify(rest, null, 2) });
     update(d=>{const lb=d.lorebooks.find(x=>x.id===l.id);if(lb)lb.site_last_synced_at=new Date().toISOString();});
+  };
+
+  const exportWorldPlatformZip = async (world) => {
+    const wChars = data.characters.filter(c => c.world_id === world.id && c.status === 'posted');
+    const wLores = data.lorebooks.filter(l => l.world_id === world.id && l.access_level === 'public');
+    const wColls = data.collections.filter(c => c.world_id === world.id && c.access_level === 'public');
+    if (wChars.length === 0 && wLores.length === 0 && wColls.length === 0) {
+      alert("Nothing to export: no posted characters, public lorebooks, or public collections in this world.");
+      return;
+    }
+    const files = [];
+    const warnings = [];
+    wChars.forEach(c => {
+      const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,lorebook_entry_text,lorebook_entry_title,...rest} = c;
+      const exportImage = rest.image && rest.image.id ? {id: rest.image.id} : null;
+      const exportPortraits = (rest.portraits||[]).map(p => { const {data,...pr} = p; return pr; });
+      const exportBanner = rest.companion_profile_banner_image && rest.companion_profile_banner_image.id ? {id: rest.companion_profile_banner_image.id} : undefined;
+      const safe = {...rest, image: exportImage, portraits: exportPortraits, companion_profile_banner_image: exportBanner, card: rest.card||" ", example_dialogue: rest.example_dialogue||"", temperature_offset_percentage: rest.temperature_offset_percentage||0};
+      if (!exportImage) warnings.push(c.name + ": no portrait UUID");
+      const safeName = (c.name||"character").replace(/[^a-zA-Z0-9_-]/g, "_");
+      files.push({name: "Companions/" + safeName + "-companion.json", content: JSON.stringify(safe, null, 2)});
+    });
+    wLores.forEach(l => {
+      const {world_id,lorebook_filename,image_data,image_relpath,selected_chapter_index,site_last_synced_at,...rest} = l;
+      const safeName = (l.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g, "_");
+      files.push({name: "Lorebooks/" + safeName + "-lorebook.json", content: JSON.stringify(rest, null, 2)});
+    });
+    wColls.forEach(c => {
+      const {world_id,image_data,image_relpath,collection_filename,site_last_synced_at,...rest} = c;
+      const safeName = (c.name||"collection").replace(/[^a-zA-Z0-9_-]/g, "_");
+      files.push({name: "Collections/" + safeName + "-collection.json", content: JSON.stringify(rest, null, 2)});
+    });
+    if (warnings.length > 0) {
+      const proceed = window.confirm("Export warnings:\n\n" + warnings.map(function(w){return "- "+w;}).join("\n") + "\n\nExport anyway?");
+      if (!proceed) return;
+    }
+    const worldName = (world.name||"world").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const date = new Date().toISOString().split("T")[0];
+    const defaultName = worldName + "-platform-export-" + date + ".zip";
+    const res = await window.lorekeeper.exportPlatformZip({defaultName, files});
+    if (res && res.success) {
+      const mb = (res.size/1048576).toFixed(1);
+      update(d => {
+        const now = new Date().toISOString();
+        wChars.forEach(c => { const ch = d.characters.find(x => x.id === c.id); if(ch) ch.site_last_synced_at = now; });
+        wLores.forEach(l => { const lb = d.lorebooks.find(x => x.id === l.id); if(lb) lb.site_last_synced_at = now; });
+        wColls.forEach(c => { const cl = d.collections.find(x => x.id === c.id); if(cl) cl.site_last_synced_at = now; });
+      });
+      alert("Exported " + files.length + " files (" + mb + " MB)\n" + wChars.length + " characters, " + wLores.length + " lorebooks, " + wColls.length + " collections");
+    } else if (res && !res.cancelled) {
+      alert("Export failed: " + (res.error||"unknown error"));
+    }
   };
 
   const calYear=calDate.getFullYear(), calMonth=calDate.getMonth();
@@ -551,7 +619,7 @@ function App() {
         <div className="sidebar-footer">
           {sidebarOpen?<>
             <button onClick={importJSON}><i className="ti ti-upload"></i>Import</button>
-            <button onClick={exportAll}><i className="ti ti-download"></i>Export</button>
+            <button onClick={exportAll}><i className="ti ti-archive"></i>Backup</button>
           </>:<button onClick={importJSON} style={{padding:'6px'}}><i className="ti ti-upload"></i></button>}
         </div>
       </div>
@@ -596,11 +664,11 @@ function App() {
             {page==='lorebooks'&&<button className="btn primary" onClick={()=>setModal({type:'new-lore',worldId:null})}><i className="ti ti-plus"></i>New Lorebook</button>}
             {page==='collections'&&<button className="btn primary" onClick={()=>setModal({type:'new-coll',worldId:null})}><i className="ti ti-plus"></i>New Collection</button>}
             {page==='world'&&worldTab==='collections'&&<button className="btn primary" onClick={()=>setModal({type:'new-coll',worldId:selectedWorld.id})}><i className="ti ti-plus"></i>New Collection</button>}
+            {page==='world'&&selectedWorld&&<button className="btn" onClick={()=>exportWorldPlatformZip(selectedWorld)} title="Export all posted characters + public lorebooks + public collections as a ZIP ready for site upload"><i className="ti ti-package-export"></i>Export ZIP</button>}
             {page==='templates'&&<button className="btn primary" onClick={()=>setNewTemplate(true)}><i className="ti ti-plus"></i>New Template</button>}
             {page==='personas'&&selectedPersona&&<button className="btn danger" onClick={()=>setModal({type:'confirm-delete-persona',persona:selectedPersona,onBack:()=>setSelectedPersona(null)})}><i className="ti ti-trash"></i>Delete</button>}
             {page==='char'&&selectedChar&&<>
               <button className="btn" onClick={importJSON}><i className="ti ti-refresh"></i>Update from JSON</button>
-              <button className="btn" onClick={()=>exportChar(selectedChar)}><i className="ti ti-download"></i>Export</button>
               <button className="btn danger" onClick={()=>setModal({type:'confirm-delete-char',char:selectedChar})}><i className="ti ti-trash"></i>Delete</button>
             </>}
             <button className={`btn ${rightPanel?'primary':''}`} onClick={()=>setRightPanel(p=>!p)} title="Toggle notes panel"><i className={`ti ti-layout-sidebar-right-${rightPanel?'collapse':'expand'}`}></i></button>
@@ -618,7 +686,7 @@ function App() {
             {page==='settings'&&<SettingsPage data={data} update={update}/>}
             {page==='help'&&<HelpPage/>}
             {page==='lore'&&selectedLore&&<StandaloneLorePage lorebook={selectedLore} data={data} update={update} exportLore={exportLore} onBack={()=>{setPage('lorebooks');setSelectedLore(null);}} />}
-            {page==='char'&&selectedChar&&<CharDetailPage char={selectedChar} data={data} update={update} initialTab={charInitialTab} onBack={()=>{setCharInitialTab(null);setPage(selectedWorld?'world':'characters');}} />}
+            {page==='char'&&selectedChar&&<CharDetailPage char={selectedChar} data={data} update={update} initialTab={charInitialTab} exportChar={exportChar} onBack={()=>{setCharInitialTab(null);setPage(selectedWorld?'world':'characters');}} />}
             {page==='batch'&&<BatchImportPage data={data} update={update} />}
             {page==='templates'&&<TemplatesPage data={data} update={update} newTemplate={newTemplate} clearNew={()=>setNewTemplate(false)} />}
             {page==='personas'&&!selectedPersona&&<PersonasPage data={data} setSelectedPersona={p=>{setSelectedPersona(p);}} />}
@@ -2609,12 +2677,13 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
   };
   const handleGalleryUpload=async()=>{const _r=await window.lorekeeper.importImage();if(_r)update(d=>{d.gallery.push({id:uuid(),world_id:world.id,name:'image',data:_r.base64});});};
   const [selectedColl,setSelectedColl]=useState(null);
+  const [collTab,setCollTab]=useState('edit');
   const updColl=(fn)=>update(d=>{
     const c=d.collections.find(x=>x.id===selectedColl?.id);
     if(!c)return;
     fn(c);
     c.updated_at=new Date().toISOString();
-    setSelectedColl(sc=>({...sc,...c}));
+    setSelectedColl(sc=>({...sc,...c}));setCollTab('edit');
     if(c.collection_filename){
       const{world_id,image_data,collection_filename,...rest}=c;
       window.lorekeeper.saveCollectionJson(c.collection_filename,{...rest,updated_at:c.updated_at});
@@ -2671,7 +2740,7 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
         <div>
           {selectedColl ? (
             <div>
-              <div className="breadcrumb" onClick={()=>setSelectedColl(null)} style={{marginBottom:16}}>
+              <div className="breadcrumb" onClick={()=>{setSelectedColl(null);setCollTab("edit");}} style={{marginBottom:16}}>
                 <i className="ti ti-arrow-left"></i><span>Collections</span><i className="ti ti-chevron-right"></i><span>{selectedColl.name}</span>
               </div>
               {(selectedColl.image_data||world.image)&&<div style={{height:140,borderRadius:'var(--rl)',overflow:'hidden',marginBottom:16,position:'relative'}}>
@@ -2680,38 +2749,13 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
                 <h2 style={{position:'absolute',bottom:12,left:16,fontSize:20,fontWeight:700,color:'#fff'}}>{selectedColl.name}</h2>
                 <button className="btn" style={{position:'absolute',top:10,right:10,background:'rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.2)',color:'#fff'}} onClick={async()=>{const r=await window.lorekeeper.importImage();if(!r)return;if(selectedColl.collection_filename){const res=await window.lorekeeper.copyImageToFolder(r.srcPath,'Collections',selectedColl.collection_filename.replace(/\.json$/i,''));if(res){update(d=>{const c=d.collections.find(x=>x.id===selectedColl.id);if(c){c.image_data=res.base64;c.image_relpath=res.relPath;}});setSelectedColl(sc=>({...sc,image_data:res.base64,image_relpath:res.relPath}));return;}}update(d=>{const c=d.collections.find(x=>x.id===selectedColl.id);if(c)c.image_data=r.base64;});setSelectedColl(sc=>({...sc,image_data:r.base64}));}}><i className="ti ti-camera"></i>Change image</button>
               </div>}
-              {!selectedColl.image_data&&!world.image&&<div style={{display:'flex',gap:8,marginBottom:16,alignItems:'center'}}>
-                <button className="btn" onClick={async()=>{const r=await window.lorekeeper.importImage();if(!r)return;if(selectedColl.collection_filename){const res=await window.lorekeeper.copyImageToFolder(r.srcPath,'Collections',selectedColl.collection_filename.replace(/\.json$/i,''));if(res){update(d=>{const c=d.collections.find(x=>x.id===selectedColl.id);if(c){c.image_data=res.base64;c.image_relpath=res.relPath;}});setSelectedColl(sc=>({...sc,image_data:res.base64,image_relpath:res.relPath}));return;}}update(d=>{const c=d.collections.find(x=>x.id===selectedColl.id);if(c)c.image_data=r.base64;});setSelectedColl(sc=>({...sc,image_data:r.base64}));}}><i className="ti ti-camera"></i>Set image</button>
-              </div>}
-              <div className="field-block" style={{marginBottom:12}}>
-                <label>Name</label>
-                <input value={selectedColl.name||''} onChange={e=>{const v=e.target.value;update(d=>{const c=d.collections.find(x=>x.id===selectedColl.id);if(c)c.name=v;});setSelectedColl(sc=>({...sc,name:v}));}}/>
+              <div className="coll-tab-bar">
+                {[["edit","Edit"],["export","Export"]].map(([t,l])=>(
+                  <button key={t} onClick={()=>setCollTab(t)} className={"lore-tab-btn"+(collTab===t?" active":"")}>{l}</button>
+                ))}
               </div>
-              <div className="field-block" style={{marginBottom:12}}>
-                <label>Description</label>
-                <textarea style={{minHeight:80}} value={selectedColl.definition||''} onChange={e=>{const v=e.target.value;update(d=>{const c=d.collections.find(x=>x.id===selectedColl.id);if(c)c.definition=v;});setSelectedColl(sc=>({...sc,definition:v}));}}/>
-              </div>
-              <div className="field-block" style={{marginBottom:12}}>
-                <label>Tags <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— comma separated</span></label>
-                <TagSelector value={selectedColl.tags||[]} onChange={v=>{update(d=>{const c=d.collections.find(x=>x.id===selectedColl.id);if(c)c.tags=v;});setSelectedColl(sc=>({...sc,tags:v}));}} max={25}/>
-              </div>
-              <div className="field-block" style={{marginBottom:12}}>
-                <label>World</label>
-                <select value={selectedColl.world_id||''} onChange={e=>{const v=e.target.value||null;update(d=>{const c=d.collections.find(x=>x.id===selectedColl.id);if(c)c.world_id=v;});setSelectedColl(sc=>({...sc,world_id:v}));}}>
-                  <option value="">No World (standalone)</option>
-                  {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
-                </select>
-              </div>
-              <div className="field-block" style={{marginBottom:16}}>
-                <label>Collections filename <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— auto-saves JSON to Collections\</span></label>
-                <input value={selectedColl.collection_filename||''} onChange={e=>{const v=e.target.value||null;update(d=>{const c=d.collections.find(x=>x.id===selectedColl.id);if(c)c.collection_filename=v;});setSelectedColl(sc=>({...sc,collection_filename:v}));}} placeholder="e.g. Guideverse.json"/>
-                {selectedColl.collection_filename&&<div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>I:\Lorekeeper\Collections\{selectedColl.collection_filename}</div>}
-              </div>
-              <div style={{display:'flex',gap:8,marginBottom:16}}>
-                <button className="btn danger" style={{fontSize:12}} onClick={()=>{if(window.confirm(`Delete "${selectedColl.name}"? This cannot be undone.`)){update(d=>{d.collections=d.collections.filter(x=>x.id!==selectedColl.id);});setSelectedColl(null);}}}><i className="ti ti-trash"></i>Delete Collection</button>
-                <button className="btn" style={{fontSize:12}} onClick={()=>exportColl(selectedColl)}><i className="ti ti-download"></i>Export</button>
-              </div>
-              <CollectionCharPicker coll={selectedColl} data={data} update={update} setSelectedChar={setSelectedChar} />
+              {collTab==="edit"?<CollEditPanel coll={selectedColl} data={data} update={update} setSelectedColl={setSelectedColl} world={world} exportColl={exportColl}/>:null}
+              {collTab==="export"?<CollExportPanel coll={selectedColl} data={data} exportColl={exportColl}/>:null}
             </div>
           ) : (
             <div className="coll-grid">{worldColls.map(c=>{const count=data.characters.filter(ch=>(ch.collections||[]).includes(c.id)||(c.companions||[]).includes(ch.id)).length; const bannerImg=c.image_data||world.image; return <div key={c.id} className="coll-card" onClick={()=>setSelectedColl(c)}><div className="coll-banner" style={{backgroundImage:bannerImg?'url('+bannerImg+')'  :'none',backgroundSize:'cover',backgroundPosition:'center'}}>{!bannerImg&&<i className="ti ti-folders" style={{fontSize:24,color:'var(--teal)',opacity:0.5}}></i>}</div><div className="coll-card-body"><h3>{c.name}</h3><p>{c.definition||'No description.'}</p><div className="coll-count">{count} characters</div>{(c.tags||[]).length>0&&<div className="char-tags" style={{marginTop:6}}>{(c.tags||[]).slice(0,5).map(t=><span key={t} className="tag">{t}</span>)}</div>}<button className="btn" style={{marginTop:8,fontSize:11,padding:'3px 8px'}} onClick={e=>{e.stopPropagation();exportColl(c);}}><i className="ti ti-download"></i>Export</button></div></div>;})}</div>
@@ -2780,6 +2824,7 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
 
 function LoreboookEditor({lorebook,update,exportLore}) {
   const [activeIdx,setActiveIdx]=useState(0);
+  const [loreTab,setLoreTab]=useState('edit');
   const chapters=lorebook.content||[];
   const chapter=chapters[activeIdx]||null;
   const updLore=(fn)=>update(d=>{const l=d.lorebooks.find(x=>x.id===lorebook.id);if(l){fn(l);l.updated_at=new Date().toISOString();if(l.lorebook_filename){
@@ -2797,7 +2842,37 @@ function LoreboookEditor({lorebook,update,exportLore}) {
     }
     updLore(l=>{l.image_data=r.base64;});
   };
+  const buildLoreMd = () => {
+    const lines = [];
+    lines.push("# " + (lorebook.name||"Lorebook"));
+    if(lorebook.short_description) { lines.push(""); lines.push(lorebook.short_description); }
+    (lorebook.content||[]).forEach(ch => {
+      lines.push(""); lines.push("## " + (ch.title||"Untitled"));
+      if(ch.text) lines.push(ch.text);
+    });
+    return lines.join("\n");
+  };
+  const exportLoreMd = () => {
+    const safeName = (lorebook.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");
+    window.lorekeeper.exportFile({defaultName: safeName + ".md", content: buildLoreMd()});
+  };
+  const [loreMdPreview,setLoreMdPreview]=useState(false);
+  const loreTabBar = (
+    <div className="lore-tab-bar">
+      {[["edit","Edit"],["export","Export"]].map(([t,l])=>(
+        <button key={t} onClick={()=>setLoreTab(t)} className={"lore-tab-btn"+(loreTab===t?" active":"")}>{l}</button>
+      ))}
+    </div>
+  );
+  if(loreTab==="export") return (
+    <div>
+      {loreTabBar}
+      <LoreExportPanel lorebook={lorebook} exportLore={exportLore} exportLoreMd={exportLoreMd} loreMdPreview={loreMdPreview} setLoreMdPreview={setLoreMdPreview} buildLoreMd={buildLoreMd}/>
+    </div>
+  );
   return (
+    <div>
+      {loreTabBar}
     <div className="lore-layout">
       <div className="lore-chapters">
         <div style={{padding:'8px 10px',display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid var(--border)',marginBottom:4}}>
@@ -2854,9 +2929,10 @@ function LoreboookEditor({lorebook,update,exportLore}) {
       <div className="lore-editor">
         {!chapter?<p className="text-muted">No chapters. Add one to start.</p>:<>
           <input value={chapter.title} onChange={e=>updLore(l=>{l.content[activeIdx].title=e.target.value;})} placeholder="Chapter title"/>
-          <MdField value={chapter.text} onChange={e=>updLore(l=>{l.content[activeIdx].text=e.target.value;})} style={{minHeight:400}} placeholder="Write lore here… markdown supported"/>
+          <MdField value={chapter.text} onChange={e=>updLore(l=>{l.content[activeIdx].text=e.target.value;})} style={{minHeight:400}} placeholder="Write lore here... markdown supported"/>
         </>}
       </div>
+    </div>
     </div>
   );
 }
@@ -3111,7 +3187,7 @@ function CharactersPage({data,setSelectedChar}) {
   );
 }
 
-function CharDetailPage({char,data,update,initialTab,onBack}) {
+function CharDetailPage({char,data,update,initialTab,exportChar,onBack}) {
   const updChar=(fn)=>update(d=>{
     const c=d.characters.find(x=>x.id===char.id);
     if(c){
@@ -3132,7 +3208,7 @@ function CharDetailPage({char,data,update,initialTab,onBack}) {
   const handlePortrait=async()=>{const r=await window.lorekeeper.importImage();if(r)updChar(c=>{c.image={...( c.image||{}),data:r.base64};});};
   const handleBanner=async()=>{const r=await window.lorekeeper.importImage();if(r)updChar(c=>{c.companion_profile_banner_image={data:r.base64};});};
   const charData=data.characters.find(x=>x.id===char.id)||char;
-  const tabs=[['identity','Identity'],['description','Full Description'],['card','Character Card'],['formatting','Formatting'],['dialogue','Example Dialogue'],['scenarios','Scenarios'],['portraits','Portraits'],['lorebooks','Lorebooks'],['collections','Collections'],['settings','Settings'],['schedule','Schedule'],['lore-entry','Lorebook Entry']];
+  const tabs=[['identity','Identity'],['description','Full Description'],['card','Character Card'],['formatting','Formatting'],['dialogue','Example Dialogue'],['scenarios','Scenarios'],['portraits','Portraits'],['lorebooks','Lorebooks'],['collections','Collections'],['settings','Settings'],['schedule','Schedule'],['lore-entry','Lorebook Entry'],['export','Export']];
   return (
     <div>
       <div className="breadcrumb" onClick={onBack}><i className="ti ti-arrow-left"></i><span>Back</span><i className="ti ti-chevron-right"></i><span>{charData.name}</span></div>
@@ -3384,6 +3460,9 @@ function CharDetailPage({char,data,update,initialTab,onBack}) {
           {tab==='lore-entry'&&(
             <LorebookEntryTab charData={charData} data={data} update={update} updChar={updChar}/>
           )}
+          {tab==='export'&&(
+            <CharExportTab charData={charData} data={data} exportChar={exportChar}/>
+          )}
         </div>
       </div>
     </div>
@@ -3511,6 +3590,161 @@ function LorebookEntryTab({charData, data, update, updChar}) {
           <i className="ti ti-device-floppy"></i>{saving?'Saving…':'Save to Lorebook'}
         </button>
         {msg&&<span style={{fontSize:12,color:'#6ee7b7'}}>{msg}</span>}
+      </div>
+    </div>
+  );
+}
+
+function LoreExportPanel({lorebook,exportLore,exportLoreMd,loreMdPreview,setLoreMdPreview,buildLoreMd}) {
+  return (
+    <div className="export-panel">
+      <div className="export-card">
+        <div className="export-card-title">Export to JSON</div>
+        <p className="export-card-desc">Platform-ready JSON stripped of app-only fields. Upload directly to Saucepan.</p>
+        <button className="btn primary" onClick={()=>exportLore(lorebook)}><i className="ti ti-download"></i>Export JSON</button>
+      </div>
+      <div className="export-card">
+        <div className="export-card-title">Export to Markdown</div>
+        <p className="export-card-desc">All chapters as ## headings — good for offline reference or sharing.</p>
+        <div className="export-card-meta">{(lorebook.content||[]).length} chapter{(lorebook.content||[]).length!==1?"s":""}</div>
+        <div className="export-row">
+          <button className="btn primary" onClick={exportLoreMd}><i className="ti ti-file-text"></i>Export MD</button>
+          <button className="btn" onClick={()=>setLoreMdPreview(p=>!p)}><i className={"ti "+(loreMdPreview?"ti-eye-off":"ti-eye")}></i>{loreMdPreview?"Hide":"Preview"}</button>
+        </div>
+        {loreMdPreview?<pre className="md-preview">{buildLoreMd()}</pre>:null}
+      </div>
+    </div>
+  );
+}
+
+function CollEditPanel({coll,data,update,setSelectedColl,world,exportColl}) {
+  const handleImg = async () => {
+    const r = await window.lorekeeper.importImage();
+    if(!r) return;
+    if(coll.collection_filename){
+      const res = await window.lorekeeper.copyImageToFolder(r.srcPath,"Collections",coll.collection_filename.replace(/\.json$/i,""));
+      if(res){update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c){c.image_data=res.base64;c.image_relpath=res.relPath;}});setSelectedColl(sc=>({...sc,image_data:res.base64,image_relpath:res.relPath}));return;}
+    }
+    update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c)c.image_data=r.base64;});
+    setSelectedColl(sc=>({...sc,image_data:r.base64}));
+  };
+  return (
+    <div>
+      {!coll.image_data&&!world.image&&<div style={{display:"flex",gap:8,marginBottom:16,alignItems:"center"}}>
+        <button className="btn" onClick={handleImg}><i className="ti ti-camera"></i>Set image</button>
+      </div>}
+      <div className="field-block" style={{marginBottom:12}}>
+        <label>Name</label>
+        <input value={coll.name||""} onChange={e=>{const v=e.target.value;update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c)c.name=v;});setSelectedColl(sc=>({...sc,name:v}));}}/>
+      </div>
+      <div className="field-block" style={{marginBottom:12}}>
+        <label>Description</label>
+        <textarea style={{minHeight:80}} value={coll.definition||""} onChange={e=>{const v=e.target.value;update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c)c.definition=v;});setSelectedColl(sc=>({...sc,definition:v}));}}/>
+      </div>
+      <div className="field-block" style={{marginBottom:12}}>
+        <label>Tags</label>
+        <TagSelector value={coll.tags||[]} onChange={v=>{update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c)c.tags=v;});setSelectedColl(sc=>({...sc,tags:v}));}} max={25}/>
+      </div>
+      <div className="field-block" style={{marginBottom:12}}>
+        <label>World</label>
+        <select value={coll.world_id||""} onChange={e=>{const v=e.target.value||null;update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c)c.world_id=v;});setSelectedColl(sc=>({...sc,world_id:v}));}}>
+          <option value="">No World (standalone)</option>
+          {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+" ":""}{w.name}</option>)}
+        </select>
+      </div>
+      <div className="field-block" style={{marginBottom:16}}>
+        <label>Auto-save filename</label>
+        <input value={coll.collection_filename||""} onChange={e=>{const v=e.target.value||null;update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c)c.collection_filename=v;});setSelectedColl(sc=>({...sc,collection_filename:v}));}} placeholder="e.g. Guideverse.json"/>
+        {coll.collection_filename&&<div style={{fontSize:11,color:"var(--text3)",marginTop:4}}>{"I:\\Lorekeeper\\Collections\\"}{coll.collection_filename}</div>}
+      </div>
+      <button className="btn danger" style={{fontSize:12,marginBottom:16}} onClick={()=>{if(window.confirm("Delete "+coll.name+"? This cannot be undone.")){update(d=>{d.collections=d.collections.filter(x=>x.id!==coll.id);});setSelectedColl(null);}}}><i className="ti ti-trash"></i>Delete</button>
+      <CollectionCharPicker coll={coll} data={data} update={update} setSelectedChar={()=>{}}/>
+    </div>
+  );
+}
+
+function CollExportPanel({coll,data,exportColl}) {
+  const exportCollMd = () => {
+    const lines = ["# " + coll.name];
+    if(coll.definition){lines.push(""); lines.push(coll.definition);}
+    const members = data.characters.filter(ch=>(ch.collections||[]).includes(coll.id)||(coll.companions||[]).includes(ch.id));
+    if(members.length>0){lines.push(""); lines.push("## Characters"); members.forEach(ch=>lines.push("- "+(ch.display_name||ch.name)));}
+    if((coll.tags||[]).length>0){lines.push(""); lines.push("## Tags"); lines.push(coll.tags.join(", "));}
+    const safeName = (coll.name||"collection").replace(/[^a-zA-Z0-9_-]/g,"_");
+    window.lorekeeper.exportFile({defaultName: safeName+".md", content: lines.join("\n")});
+  };
+  return (
+    <div className="export-panel">
+      <div className="export-card">
+        <div className="export-card-title">Export to JSON</div>
+        <p className="export-card-desc">Platform-ready JSON stripped of app-only fields. Upload directly to Saucepan.</p>
+        <button className="btn primary" onClick={()=>exportColl(coll)}><i className="ti ti-download"></i>Export JSON</button>
+      </div>
+      <div className="export-card">
+        <div className="export-card-title">Export to Markdown</div>
+        <p className="export-card-desc">Collection name, description, character list, and tags as a readable document.</p>
+        <button className="btn primary" onClick={exportCollMd}><i className="ti ti-file-text"></i>Export MD</button>
+      </div>
+    </div>
+  );
+}
+
+function CharExportTab({charData, data, exportChar}) {
+  const buildMd = () => {
+    const c = charData;
+    const lines = [];
+    lines.push("# " + (c.display_name||c.name||"Character"));
+    if(c.name && c.display_name && c.name !== c.display_name) lines.push("**Name:** " + c.name);
+    lines.push("");
+    if(c.short_description) { lines.push("## Short Description"); lines.push(c.short_description); lines.push(""); }
+    if(c.full_description) { lines.push("## Full Description"); lines.push(c.full_description); lines.push(""); }
+    if(c.card && c.card.trim() && c.card.trim() !== " ") { lines.push("## Character Card"); lines.push(c.card); lines.push(""); }
+    if(c.advanced_prompt) { lines.push("## Advanced Prompt"); lines.push(c.advanced_prompt); lines.push(""); }
+    if(c.formatting_instructions) { lines.push("## Formatting Instructions"); lines.push(c.formatting_instructions); lines.push(""); }
+    if((c.starting_scenarios||[]).length > 0) {
+      lines.push("## Starting Scenarios");
+      c.starting_scenarios.forEach((s,i) => {
+        lines.push("### " + (s.title||("Scenario " + (i+1))));
+        if(s.message) lines.push(s.message);
+        lines.push("");
+      });
+    }
+    if((c.tags||[]).length > 0) { lines.push("## Tags"); lines.push(c.tags.join(", ")); lines.push(""); }
+    return lines.join("\n");
+  };
+  const exportMd = () => {
+    const md = buildMd();
+    const safeName = (charData.display_name||charData.name||"character").replace(/[^a-zA-Z0-9_-]/g,"_");
+    window.lorekeeper.exportFile({defaultName: safeName + "-sheet.md", content: md});
+  };
+  const [mdPreview, setMdPreview] = React.useState(false);
+  const md = buildMd();
+  return (
+    <div className="export-panel">
+      <div className="export-card">
+        <div className="export-card-title">Export to JSON</div>
+        <p className="export-card-desc">Platform-ready JSON stripped of all app-only fields. Upload directly to Saucepan.</p>
+        <button className="btn primary" onClick={()=>exportChar(charData)}><i className="ti ti-download"></i>Export JSON</button>
+      </div>
+      <div className="export-card">
+        <div className="export-card-title">Export to Markdown</div>
+        <p className="export-card-desc">Display name, short + full description, character card, advanced prompt, formatting instructions, scenarios, tags.</p>
+        <div className="export-card-meta">
+          {[
+            [charData.short_description,"short desc"],
+            [charData.full_description,"full desc"],
+            [charData.card&&charData.card.trim()&&charData.card.trim()!==" ","card"],
+            [charData.advanced_prompt,"advanced prompt"],
+            [(charData.starting_scenarios||[]).length>0,"scenarios"]
+          ].map(([ok,label])=>(
+            <span key={label} className={"export-field-"+(ok?"ok":"missing")}>{ok?"✓":"–"} {label}</span>
+          ))}
+        </div>
+        <div className="export-row">
+          <button className="btn primary" onClick={exportMd}><i className="ti ti-file-text"></i>Export MD</button>
+          <button className="btn" onClick={()=>setMdPreview(p=>!p)}><i className={"ti "+(mdPreview?"ti-eye-off":"ti-eye")}></i>{mdPreview?"Hide":"Preview"}</button>
+        </div>
+        {mdPreview?<pre className="md-preview">{md}</pre>:null}
       </div>
     </div>
   );

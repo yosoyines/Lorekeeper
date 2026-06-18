@@ -395,6 +395,24 @@ ipcMain.handle('export-backup', async (event, { worldId }) => {
   } catch (e) { console.error('export-backup:', e); return { success: false, error: e.message }; }
 });
 
+// ── Export platform ZIP (stripped JSONs ready for upload) ──
+ipcMain.handle('export-platform-zip', async (event, { defaultName, files }) => {
+  try {
+    const { filePath } = await dialog.showSaveDialog(mainWindow, {
+      defaultPath: path.join(DATA_DIR, defaultName),
+      filters: [{ name: 'ZIP Archive', extensions: ['zip'] }]
+    });
+    if (!filePath) return { success: false, cancelled: true };
+    const zip = new AdmZip();
+    for (const f of files) {
+      zip.addFile(f.name, Buffer.from(f.content, 'utf-8'));
+    }
+    zip.writeZip(filePath);
+    const size = fs.statSync(filePath).size;
+    return { success: true, size, path: filePath };
+  } catch (e) { console.error('export-platform-zip:', e); return { success: false, error: e.message }; }
+});
+
 // ── Restore from backup ──────────────────────────────────
 ipcMain.handle('restore-backup', async () => {
   try {

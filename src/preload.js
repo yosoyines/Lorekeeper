@@ -19,5 +19,6 @@ contextBridge.exposeInMainWorld('lorekeeper', {
   copyImageToFolder: (srcPath, destFolder, filename) => ipcRenderer.invoke('copy-image-to-folder', { srcPath, destFolder, filename }),
   writeImageFromBase64: (opts) => ipcRenderer.invoke('write-image-from-base64', opts),
   exportBackup: (opts) => ipcRenderer.invoke('export-backup', opts),
+  exportPlatformZip: (opts) => ipcRenderer.invoke('export-platform-zip', opts),
   restoreBackup: () => ipcRenderer.invoke('restore-backup'),
 });

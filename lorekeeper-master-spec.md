@@ -1,5 +1,5 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 18, 2026 (session 4)**
+**Last updated: June 18, 2026 (session 6)**
 
 ---
 
@@ -69,6 +69,8 @@ I:\Lorekeeper\
 | `copyImageToFolder(srcPath, destFolder, filename)` | Copy image locally; skips if already in Lorekeeper folder or dest exists; returns `{relPath, base64}` |
 | `writeImageFromBase64({base64, destFolder, filename})` | Write base64 to image file; checks dest exists first; returns `{relPath}` |
 | `exportBackup({worldId?})` | Create zip — full or per-world; returns `{success, size, path}` |
+| `exportPlatformZip({defaultName, files[]})` | Save dialog → zip pre-built JSON strings; returns `{success, size, path}` |
+| `exportPlatformZip({defaultName, files[]})` | Save dialog → zip pre-built JSON strings; returns `{success, size, path}` |
 | `restoreBackup()` | Open zip picker, extract files, return data for merge/replace |
 
 ---
@@ -383,22 +385,43 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 
 ## What's Next (Priority Order)
 
-### Immediate / small
-1. **Fix posted ✓ chip on calendar** — marking posted from Today Banner doesn't show green ✓ on calendar same day
-2. **Portrait UUID quick access on character sidebar** — currently only in Portraits tab
+### Immediate — features first, then polish
+Build out all remaining functionality before tackling UI consistency or standalone packaging.
 
-### Medium
-3. **Structured export** — per-world or global; individual JSONs ready to upload; handle missing portrait UUIDs
+### Export to Markdown ✓
+Export clean `.md` files added to character (Export tab), lorebook (Edit/Export tabs), collection (Edit/Export tabs).
+- **Character sheet** ✓ — `# Display Name`, short desc, full desc, character card, advanced prompt, formatting instructions, scenarios, tags; preview in-app
+- **Lorebook** ✓ — `# Name`, each chapter as `## Title` + body; preview in-app
+- **Collection** ✓ — `# Name`, description, character list, tags
+- **Persona** — todo
+- **Template** — todo
+
+JSON export moved from topbar button into Export tab on each item.
+
+### Image Tools
+- **Format converter** — convert any local image (PNG/JPG/WEBP/AVIF etc.) to a target format; useful for Saucepan which prefers AVIF; uses `sharp` npm package
+- **Paste & save** — paste image from clipboard → preview → save as a file to a chosen folder (Companions/CharName, Lorebooks, Collections, etc.); replaces manual screenshot workflow
+- **Cropper** — crop a local or pasted image to a target aspect ratio (3:4 portrait, 4:1 banner, 1:1 square); canvas-based UI; 16:9 dropped — Saucepan banners are actually 4:1
+- **Image prompt generator** — Claude call using character name/description/tags to generate an image generation prompt; lives in character editor or right panel
+
+### New Tools
+- **Map generator** — region/landmark randomiser; output as text description or simple ASCII map
+- **Powers generator** — esper-style power sets (type, strength, drawback, name)
+- **Hockey positions** — roll a position + role description for a hockey player character
+- **Swim strokes** — roll a stroke + event distance for a swim team character
 
 ### Tools (future)
 - Zodiac / birth chart generator
 - Relationship dynamic generator
 
-### Bigger
-4. **Visual board / relationship map** — per world
-5. **Global themes** — light/dark + accent color (scaffold in Settings)
-6. **Colorblind mode** — deuteranopia, protanopia, tritanopia (scaffold in Settings)
-7. **Android build**
+### Bigger features
+- **Visual board / relationship map** — per world
+
+### Once all features are done
+- **UI Overhaul** — consistent layout system across all pages (widths, padding, section headers, card styles, field spacing); audit Characters, Lorebook detail, Collection detail, World tabs, Batch Import, Settings, Tools, Dashboard checklists
+- **Global themes** — light/dark + accent color
+- **Colorblind mode** — deuteranopia, protanopia, tritanopia
+- **Standalone / Public Version** — configurable data path, strip Saucepan-specific stuff, packaged `.exe`, optional rename/theming
 
 ### Won't do
 - Per-world color theming
@@ -406,6 +429,9 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 - Text stats in tools
 - Schedule page (replaced by dashboard calendar)
 - README.md
+
+### Very long term
+- Android build
 
 ---
 
@@ -442,6 +468,9 @@ git push
 - Session 2: `TagSelector, personality/plot tools, nationality/color/diff tools, site checklist`
 - Session 3: `Claude integration, lorebook templates, help page, settings, tag suggestions`
 - Session 4: `Fix Babel syntax errors, ScanBadge/ScanTagChips, batch import tag chips`
+- Session 5: `Sidebar Backup button, world Export ZIP (platform-ready stripped JSONs)`
+- Session 6: `Export to Markdown — CharExportTab, LoreExportPanel, CollExportPanel, CollEditPanel; tab bars on lorebook and collection detail`
+- Session 6: `Export to Markdown: CharExportTab, lorebook Edit/Export tabs, collection Edit/Export tabs`
 
 ### What goes in the repo
 | File | Tracked? |
@@ -471,4 +500,17 @@ Collections top-level page, TagSelector with 540 Saucepan tags + 21 CW tags, tag
 Claude integration (right panel chat, full world context, API key from Settings), lorebook entry templates (per-world, title + body template, save to lorebook by char_id), help page (13 collapsible sections) + inline ? buttons, Settings page (API key, model, font size, debounce, theme/colorblind placeholders), auto-fill folder/filename on new character creation, TagSelector wired to lorebook sidebar + collection detail view
 
 ### Session 4 (June 18)
-Fixed all Babel syntax errors (backtick template literals in style props, semicolons after JSX in map returns, multiline JSX ternary variable assignments), extracted `ScanBadge` + `ScanTagChips` helper components, tag chips in batch import scan results for all three types (companions, lorebooks, collections)
+Fixed all Babel syntax errors, extracted ScanBadge/ScanTagChips, batch import tag chips
+
+### Session 5 (June 18)
+Sidebar Export → Backup (wired to full zip); world topbar Export ZIP button (exportWorldPlatformZip — builds platform-ready stripped JSONs for all posted chars + public lorebooks/collections, packages into dated zip, stamps site_last_synced_at); exportPlatformZip IPC handler in main.js + preload.js
+
+### Session 6 (June 18)
+Export to Markdown: CharExportTab component (JSON + MD with preview and field checklist), LoreExportPanel (JSON + MD with preview), CollExportPanel (JSON + MD), CollEditPanel; lorebook editor and collection detail get Edit/Export tab bars; all export components use CSS classes to avoid Babel double-brace issues; lore tabs use if/return pattern; CSS classes: .export-card, .export-panel, .export-row, .export-card-title/desc/meta, .export-field-ok/missing, .lore-tab-bar, .coll-tab-bar, .lore-tab-btn, .md-preview
+
+### Session 5 (June 18)
+Sidebar Export → Backup button (wired to full zip via exportBackup); world topbar Export ZIP (exportWorldPlatformZip — platform-ready stripped JSONs for posted chars + public lorebooks + public collections in a dated zip, stamps site_last_synced_at); new exportPlatformZip IPC handler in main.js + preload.js
+
+
+### Session 6 (June 18)
+Export to Markdown — CharExportTab component (JSON + MD with in-app preview, field checklist), lorebook editor Edit/Export tab bar (MD export with preview), collection detail Edit/Export tab bar (MD export); JSON export moved from topbar into Export tabs on all three
