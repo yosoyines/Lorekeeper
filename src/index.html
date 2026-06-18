@@ -173,6 +173,21 @@
   .export-panel { display:flex; flex-direction:column; gap:16px; max-width:600px; padding:8px 0; }
   .export-row { display:flex; gap:8px; margin-top:8px; }
   .field-hint { font-size:11px; color:var(--text3); margin-top:4px; }
+  .tpl-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--rl); padding:14px 16px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:border-color 0.15s, transform 0.1s; }
+  .tpl-card:hover { border-color:var(--border2); transform:translateY(-1px); }
+  .tpl-card-name { font-size:14px; font-weight:600; color:var(--text); }
+  .tpl-card-meta { font-size:12px; color:var(--text3); margin-top:2px; }
+  .tpl-list { display:flex; flex-direction:column; gap:8px; }
+  .tpl-section-header { font-size:11px; color:var(--text3); font-weight:600; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+  .tpl-section { margin-bottom:24px; }
+  .world-info-tab { max-width:580px; display:flex; flex-direction:column; gap:12px; }
+  .world-banner-preview { height:120px; border-radius:var(--r); overflow:hidden; background:var(--bg3); display:flex; align-items:center; justify-content:center; cursor:pointer; border:1px solid var(--border); margin-bottom:10px; }
+  .world-banner-placeholder { text-align:center; color:var(--text3); }
+  .plot-tag { display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:2px 7px; border-radius:4px; background:var(--accent-dim); border:1px solid var(--accent2); color:var(--accent); }
+  .plot-tag button { background:none; border:none; color:var(--accent); cursor:pointer; padding:0 0 0 2px; font-size:12px; line-height:1; }
+  .delete-zone { margin-top:4px; padding-top:12px; border-top:1px solid var(--border); }
+  .tpl-editor { max-width:700px; display:flex; flex-direction:column; gap:14px; }
+  .tpl-hint { font-size:12px; color:var(--text3); padding:0 2px; }
   .lore-tab-bar { display:flex; border-bottom:1px solid var(--border); margin-bottom:0; }
   .coll-tab-bar { display:flex; border-bottom:1px solid var(--border); margin-bottom:16px; }
   .lore-tab-btn { padding:8px 18px; font-size:12px; font-weight:600; background:none; border:none; border-bottom:2px solid transparent; color:var(--text3); cursor:pointer; transition:color 0.15s; }
@@ -3174,40 +3189,42 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
         </div>
       )}
       {tab==='info'&&(
-        <div style={{maxWidth:580}}>
-          <div className="field-block" style={{marginBottom:12}}>
+        <div className="world-info-tab">
+          <div className="field-block">
             <label>World Banner Image</label>
-            <div style={{height:120,borderRadius:'var(--r)',overflow:'hidden',background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:10,cursor:'pointer',border:'1px solid var(--border)'}} onClick={handleBannerUpload}>
-              {(world.image||world.image_relpath)?<ImgFromPath src={world.image||world.image_relpath} alt="banner" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<div style={{textAlign:'center',color:'var(--text3)'}}><i className="ti ti-photo" style={{fontSize:28,display:'block',marginBottom:6}}></i><span style={{fontSize:12}}>Click to upload banner</span></div>}
+            <div className="world-banner-preview" onClick={handleBannerUpload}>
+              {(world.image||world.image_relpath)?<ImgFromPath src={world.image||world.image_relpath} alt="banner" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<div className="world-banner-placeholder"><i className="ti ti-photo" style={{fontSize:28,display:'block',marginBottom:6}}></i><span style={{fontSize:12}}>Click to upload banner</span></div>}
             </div>
-            <div style={{display:'flex',gap:8}}>
+            <div className="export-row">
               <button className="btn" onClick={handleBannerUpload}><i className="ti ti-upload"></i>{world.image?'Change Image':'Upload Image'}</button>
-              {world.image&&<button className="btn danger" onClick={()=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.image=null;})}><i className="ti ti-x"></i>Remove</button>}
+              {world.image?<button className="btn danger" onClick={()=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.image=null;})}><i className="ti ti-x"></i>Remove</button>:null}
             </div>
           </div>
-          <div className="field-block"><label>World Name</label><input value={world.name} onChange={e=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.name=e.target.value;})}/></div>
-          <div className="field-block" style={{marginTop:12}}>
-            <label>Emoji <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— shown in sidebar</span></label>
-            <input value={world.emoji||''} onChange={e=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.emoji=e.target.value.slice(-2)||e.target.value.slice(-1)||'';})} placeholder="e.g. ⚔️ 🌸 🎭" maxLength={4} style={{fontSize:20,width:80}}/>
+          <div className="field-row">
+            <div className="field-block"><label>World Name</label><input value={world.name} onChange={e=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.name=e.target.value;})}/></div>
+            <div className="field-block">
+              <label>Emoji <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— shown in sidebar</span></label>
+              <input value={world.emoji||''} onChange={e=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.emoji=e.target.value.slice(-2)||e.target.value.slice(-1)||'';})} placeholder="e.g. ⚔️ 🌸 🎭" maxLength={4} style={{fontSize:20,width:80}}/>
+            </div>
           </div>
-          <div className="field-block" style={{marginTop:12}}><label>Short Description</label><textarea value={world.short_description||''} onChange={e=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.short_description=e.target.value;})}/></div>
-          <div className="field-block" style={{marginTop:12}}><label>Tags (comma separated)</label><TagInput value={world.tags||[]} onChange={v=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.tags=v;})}/></div>
-          <div className="field-block" style={{marginTop:12}}>
+          <div className="field-block"><label>Short Description</label><textarea value={world.short_description||''} onChange={e=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.short_description=e.target.value;})}/></div>
+          <div className="field-block"><label>Tags</label><TagInput value={world.tags||[]} onChange={v=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.tags=v;})}/></div>
+          <div className="field-block">
             <label>Lorebook Templates <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— per-character lorebook entries (Character → Lorebook Entry tab)</span></label>
             <LoreTplManager worldId={world.id} data={data} update={update}/>
           </div>
-          <div className="field-block" style={{marginTop:12}}>
+          <div className="field-block">
             <label>Plot Archetypes <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— custom scenarios for this world (Tools → Plot)</span></label>
             <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:6}}>
               {(world.plot_archetypes||[]).map((a,i)=>(
-                <span key={i} style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:11,padding:'2px 7px',borderRadius:4,background:'var(--accent-dim)',border:'1px solid var(--accent2)',color:'var(--accent)'}}>
-                  {a}<button onClick={()=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.plot_archetypes=(w.plot_archetypes||[]).filter((_,j)=>j!==i);})} style={{background:'none',border:'none',color:'var(--accent)',cursor:'pointer',padding:'0 0 0 2px',fontSize:12,lineHeight:1}}>×</button>
+                <span key={i} className="plot-tag">
+                  {a}<button onClick={()=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.plot_archetypes=(w.plot_archetypes||[]).filter((_,j)=>j!==i);})}>×</button>
                 </span>
               ))}
             </div>
             <PlotArchetypeInput worldId={world.id} update={update}/>
           </div>
-          <div style={{marginTop:16,paddingTop:12,borderTop:'1px solid var(--border)'}}>
+          <div className="delete-zone">
             <button className="btn danger" onClick={()=>{update(d=>{d.worlds=d.worlds.filter(x=>x.id!==world.id);d.characters=d.characters.filter(c=>c.world_id!==world.id);d.lorebooks=d.lorebooks.filter(l=>l.world_id!==world.id);});setPage('worlds');setSelectedWorld(null);}}><i className="ti ti-trash"></i>Delete World</button>
           </div>
         </div>
@@ -3658,12 +3675,12 @@ function AllLorebooksPage({data,update,exportLore,openLore}) {
   return (
     <div>
       <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-        <button className={"btn "+(filter==='all'?'primary':'')} onClick={()=>setFilter('all')}>All ({data.lorebooks.length})</button>
-        <button className={"btn "+(filter==='none'?'primary':'')} onClick={()=>setFilter('none')}>Standalone ({data.lorebooks.filter(l=>!l.world_id).length})</button>
+        <button className={"btn "+(filter==='all'?'primary':'')} onClick={()=>setFilter('all')}>All</button>
+        <button className={"btn "+(filter==='none'?'primary':'')} onClick={()=>setFilter('none')}>Standalone</button>
         {worlds.map(w=>{
           const count=data.lorebooks.filter(l=>l.world_id===w.id).length;
           if(count===0) return null;
-          return <button key={w.id} className={"btn "+(filter===w.id?'primary':'')} onClick={()=>setFilter(w.id)}>{w.emoji?w.emoji+' ':''}{w.name} ({count})</button>;
+          return <button key={w.id} className={"btn "+(filter===w.id?'primary':'')} onClick={()=>setFilter(w.id)}>{w.name}</button>;
         })}
       </div>
       {lorebooks.length===0?<div className="empty"><i className="ti ti-book"></i><h3>No lorebooks</h3></div>:
@@ -4656,6 +4673,9 @@ function PersonaDetailPage({persona,data,update,onBack}) {
           </div>
         </div>
         <div className="char-main">
+          <div style={{display:'flex',gap:4,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:4}}>
+            <div className="sub-nav-item active" style={{fontSize:12,padding:'5px 10px'}}>Profile</div>
+          </div>
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
             <div className="field-row">
               <div className="field-block"><label>Name</label><input value={pData.name} onChange={e=>updP(p=>p.name=e.target.value)}/></div>
@@ -4668,7 +4688,7 @@ function PersonaDetailPage({persona,data,update,onBack}) {
                 <option value="">— None —</option>
                 {data.lorebooks.map(l=>{const w=data.worlds.find(x=>x.id===l.world_id); return <option key={l.id} value={l.id}>{w?.emoji?w.emoji+' ':''}{w?.name?w.name+' · ':''}{l.name}</option>;})}
               </select>
-              <div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>Personas can have one lorebook attached — can be from any world.</div>
+              <div className="field-hint">Personas can have one lorebook attached — can be from any world.</div>
             </div>
           </div>
         </div>
@@ -5311,43 +5331,29 @@ function TemplatesPage({data,update,newTemplate,clearNew}) {
   const globalTemplates=templates.filter(t=>!t.world_id);
   const worldTemplates=templates.filter(t=>!!t.world_id);
 
+  const TplCard = ({t, accent}) => (
+    <div className="tpl-card" onClick={()=>setEditing(t.id)}>
+      <i className={"ti ti-template"} style={{fontSize:20,color:accent||'var(--accent)',flexShrink:0}}></i>
+      <div style={{flex:1}}>
+        <div className="tpl-card-name">{t.name}</div>
+        <div className="tpl-card-meta">{Object.keys(t.fields||{}).filter(k=>t.fields[k]!==undefined&&t.fields[k]!=='').length} fields set</div>
+      </div>
+      <button className="btn danger" style={{padding:'4px 8px',fontSize:12}} onClick={e=>{e.stopPropagation();if(window.confirm("Delete "+t.name+"?"))update(d=>{d.templates=d.templates.filter(x=>x.id!==t.id);});}}><i className="ti ti-trash"></i></button>
+    </div>
+  );
   return (
     <div>
       {templates.length===0&&<div className="empty"><i className="ti ti-template"></i><h3>No templates yet</h3><p>Templates pre-fill character fields on creation. Create a global template or associate one with a world.</p></div>}
-      {globalTemplates.length>0&&<div style={{marginBottom:24}}>
-        <div style={{fontSize:11,color:'var(--text3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:12}}>Global</div>
-        <div style={{display:'flex',flexDirection:'column',gap:8}}>
-          {globalTemplates.map(t=>(
-            <div key={t.id} style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:'14px 16px',display:'flex',alignItems:'center',gap:12,cursor:'pointer'}} onClick={()=>setEditing(t.id)}>
-              <i className="ti ti-template" style={{fontSize:20,color:'var(--accent)',flexShrink:0}}></i>
-              <div style={{flex:1}}>
-                <div style={{fontSize:14,fontWeight:600,color:'var(--text)'}}>{t.name}</div>
-                <div style={{fontSize:12,color:'var(--text3)',marginTop:2}}>{Object.keys(t.fields||{}).filter(k=>t.fields[k]!==undefined&&t.fields[k]!=='').length} fields set</div>
-              </div>
-              <button className="btn danger" style={{padding:'4px 8px',fontSize:12}} onClick={e=>{e.stopPropagation();if(window.confirm(`Delete "${t.name}"?`))update(d=>{d.templates=d.templates.filter(x=>x.id!==t.id);});}}><i className="ti ti-trash"></i></button>
-            </div>
-          ))}
-        </div>
+      {globalTemplates.length>0&&<div className="tpl-section">
+        <div className="tpl-section-header">Global</div>
+        <div className="tpl-list">{globalTemplates.map(t=><TplCard key={t.id} t={t} accent="var(--accent)"/>)}</div>
       </div>}
       {worlds.map(w=>{
         const wt=worldTemplates.filter(t=>t.world_id===w.id);
         if(wt.length===0) return null;
-        return <div key={w.id} style={{marginBottom:24}}>
-          <div style={{fontSize:11,color:'var(--text3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:12,display:'flex',alignItems:'center',gap:6}}>
-            {w.emoji&&<span>{w.emoji}</span>}{w.name}
-          </div>
-          <div style={{display:'flex',flexDirection:'column',gap:8}}>
-            {wt.map(t=>(
-              <div key={t.id} style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:'14px 16px',display:'flex',alignItems:'center',gap:12,cursor:'pointer'}} onClick={()=>setEditing(t.id)}>
-                <i className="ti ti-template" style={{fontSize:20,color:'var(--teal)',flexShrink:0}}></i>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:14,fontWeight:600,color:'var(--text)'}}>{t.name}</div>
-                  <div style={{fontSize:12,color:'var(--text3)',marginTop:2}}>{Object.keys(t.fields||{}).filter(k=>t.fields[k]!==undefined&&t.fields[k]!=='').length} fields set</div>
-                </div>
-                <button className="btn danger" style={{padding:'4px 8px',fontSize:12}} onClick={e=>{e.stopPropagation();if(window.confirm(`Delete "${t.name}"?`))update(d=>{d.templates=d.templates.filter(x=>x.id!==t.id);});}}><i className="ti ti-trash"></i></button>
-              </div>
-            ))}
-          </div>
+        return <div key={w.id} className="tpl-section">
+          <div className="tpl-section-header">{w.emoji&&<span>{w.emoji}</span>}{w.name}</div>
+          <div className="tpl-list">{wt.map(t=><TplCard key={t.id} t={t} accent="var(--teal)"/>)}</div>
         </div>;
       })}
     </div>
@@ -5372,7 +5378,7 @@ function TemplateEditor({template,data,update,onBack}) {
   return (
     <div>
       <div className="breadcrumb" onClick={onBack}><i className="ti ti-arrow-left"></i><span>Templates</span><i className="ti ti-chevron-right"></i><span>{isNew?'New Template':template.name}</span></div>
-      <div style={{maxWidth:700,display:'flex',flexDirection:'column',gap:14}}>
+      <div className="tpl-editor">
         <div className="field-row">
           <div className="field-block">
             <label>Template Name</label>
@@ -5386,7 +5392,7 @@ function TemplateEditor({template,data,update,onBack}) {
             </select>
           </div>
         </div>
-        <div style={{fontSize:12,color:'var(--text3)',padding:'0 2px'}}>Fill in only the fields you want this template to set. Empty fields will be skipped.</div>
+        <div className="tpl-hint">Fill in only the fields you want this template to set. Empty fields will be skipped.</div>
         {TEMPLATE_FIELDS.map(([key,label,type,extra])=>(
           <div key={key} className="field-block">
             <label>{label}</label>
@@ -5401,7 +5407,7 @@ function TemplateEditor({template,data,update,onBack}) {
             {type==='fandom_tags'&&<TagInput value={fields[key]||[]} onChange={v=>setF(key,v.slice(0,3))}/>}
           </div>
         ))}
-        <div style={{display:'flex',gap:8,marginTop:4}}>
+        <div className="export-row" style={{marginTop:4}}>
           <button className="btn" onClick={onBack}>Cancel</button>
           <button className="btn primary" disabled={!name.trim()} onClick={save}><i className="ti ti-check"></i>{isNew?'Create Template':'Save Changes'}</button>
           {!isNew&&<button className="btn" onClick={()=>{
@@ -5784,12 +5790,12 @@ function AllCollectionsPage({data,update,openColl,exportColl}) {
   return (
     <div>
       <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-        <button className={"btn "+(filter==='all'?'primary':'')} onClick={()=>setFilter('all')}>All ({data.collections.length})</button>
-        <button className={"btn "+(filter==='none'?'primary':'')} onClick={()=>setFilter('none')}>Standalone ({data.collections.filter(c=>!c.world_id).length})</button>
+        <button className={"btn "+(filter==='all'?'primary':'')} onClick={()=>setFilter('all')}>All</button>
+        <button className={"btn "+(filter==='none'?'primary':'')} onClick={()=>setFilter('none')}>Standalone</button>
         {worlds.map(w=>{
           const count=data.collections.filter(c=>c.world_id===w.id).length;
           if(count===0) return null;
-          return <button key={w.id} className={"btn "+(filter===w.id?'primary':'')} onClick={()=>setFilter(w.id)}>{w.emoji?w.emoji+' ':''}{w.name} ({count})</button>;
+          return <button key={w.id} className={"btn "+(filter===w.id?'primary':'')} onClick={()=>setFilter(w.id)}>{w.name}</button>;
         })}
       </div>
       {collections.length===0?<div className="empty"><i className="ti ti-folders"></i><h3>No collections</h3></div>:

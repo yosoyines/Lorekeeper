@@ -1,5 +1,5 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 19, 2026 (session 12)**
+**Last updated: June 19, 2026 (session 13)**
 
 ---
 
@@ -394,8 +394,10 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 - **Map generator** — region/landmark randomiser; output as text description or simple ASCII map (design TBD)
 - **Relationship dynamic generator**
 
-### Once all features are done
-- **UI Overhaul** — consistent layout system across all pages (widths, padding, section headers, card styles, field spacing); audit Characters, Lorebook detail, Collection detail, World tabs, Batch Import, Settings, Tools, Dashboard checklists
+### UI Overhaul (in progress)
+Major consistency pass underway. Remaining items:
+- **World Info tab** — still uses some inconsistent field widths/layout vs char/lore/coll settings tabs
+- **CharDetailPage** — 145 inline styles; structural ones acceptable but worth a pass later
 - **Global themes** — light/dark + accent color
 - **Colorblind mode** — deuteranopia, protanopia, tritanopia
 - **Standalone / Public Version** — configurable data path, strip Saucepan-specific stuff, packaged `.exe`, optional rename/theming; README.md goes here
@@ -498,3 +500,5 @@ WesternZodiacTool (sign, element/modality, traits, shadow, vibe), ChineseZodiacT
 
 ### Session 10 (June 19)
 Relationship map fixes: collection-aware char filter (matches WorldDetailPage logic), fixed label drag removed, draggable edit popup with getBoundingClientRect fix, transparent hit area on edges, correct Tabler 2.44 icons (ti-scan/ti-send)
+### Session 13 (June 19)
+UI consistency pass: TemplatesPage uses tpl-card/tpl-section CSS classes with TplCard component; TemplateEditor uses tpl-editor wrapper class; PersonaDetailPage gets tab bar chrome (single Profile tab) matching char/lore/coll; World Info tab refactored to world-info-tab/field-row/plot-tag/delete-zone CSS classes; char/lore/persona portrait cards bumped to 200px; world/coll banner height aligned to 80px; filter buttons stripped of emoji+counts; notes panel now shows correct world when opening char from dashboard; openChar/openLore/openColl helpers set selectedWorld automatically; LorePage/CollPage full-page layouts with char-detail sidebar pattern; BS/loreHint/charFolderHint constants for backslash path display
