@@ -176,6 +176,17 @@
   .coll-tab-bar { display:flex; border-bottom:1px solid var(--border); margin-bottom:16px; }
   .lore-tab-btn { padding:8px 18px; font-size:12px; font-weight:600; background:none; border:none; border-bottom:2px solid transparent; color:var(--text3); cursor:pointer; transition:color 0.15s; }
   .lore-tab-btn.active { border-bottom-color:var(--accent); color:var(--accent); }
+  .rel-page { display:flex; flex-direction:column; flex:1; overflow:hidden; padding:0 8px 8px; }
+  .rel-toolbar { display:flex; align-items:center; gap:10px; padding:10px 0 10px 0; flex-shrink:0; flex-wrap:wrap; }
+  .rel-world-select { background:var(--bg2); border:1px solid var(--border); color:var(--text); padding:5px 10px; border-radius:var(--r); font-size:13px; }
+  .rel-hint { font-size:11px; color:var(--text3); font-style:italic; }
+  .rel-canvas { flex:1; width:100%; background:var(--bg1); border:1px solid var(--border); border-radius:var(--r); display:block; }
+  .rel-edge-popup { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--bg2); border:1px solid var(--border); border-radius:var(--rl); padding:10px 14px; display:flex; align-items:center; gap:10px; z-index:100; box-shadow:0 4px 16px rgba(0,0,0,0.3); }
+  .rel-edge-label { font-size:13px; font-weight:600; color:var(--accent); }
+  .rel-label-modal { position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:200; }
+  .rel-label-box { background:var(--bg2); border:1px solid var(--border); border-radius:var(--rl); padding:20px 24px; min-width:320px; }
+  .rel-label-input { width:100%; background:var(--bg3); border:1px solid var(--border); color:var(--text); padding:7px 10px; border-radius:var(--r); font-size:13px; outline:none; }
+  .rel-label-input:focus { border-color:var(--accent); }
   .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 200; }
   .modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: var(--rl); padding: 24px; width: 480px; max-width: 95vw; max-height: 85vh; overflow-y: auto; }
   .modal h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
@@ -666,6 +677,17 @@ function App() {
             {page==='world'&&worldTab==='collections'&&<button className="btn primary" onClick={()=>setModal({type:'new-coll',worldId:selectedWorld.id})}><i className="ti ti-plus"></i>New Collection</button>}
             {page==='world'&&selectedWorld&&<button className="btn" onClick={()=>exportWorldPlatformZip(selectedWorld)} title="Export all posted characters + public lorebooks + public collections as a ZIP ready for site upload"><i className="ti ti-package-export"></i>Export ZIP</button>}
             {page==='templates'&&<button className="btn primary" onClick={()=>setNewTemplate(true)}><i className="ti ti-plus"></i>New Template</button>}
+            {page==='personas'&&selectedPersona&&<button className="btn" onClick={()=>{
+              const p=selectedPersona;
+              const lines=["# "+p.name];
+              if(p.pronouns){lines.push("");lines.push("**Pronouns:** "+p.pronouns);}
+              if(p.description){lines.push("");lines.push("## Description");lines.push(p.description);}
+              const lb=data.lorebooks.find(x=>x.id===p.linked_lorebook);
+              if(lb){lines.push("");lines.push("**Linked Lorebook:** "+lb.name);}
+              const safeName=(p.name||"persona").replace(/[^a-zA-Z0-9_-]/g,"_");
+              window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n")});
+            }}><i className="ti ti-file-text"></i>Export MD</button>}
+            {page==='personas'&&selectedPersona&&<button className="btn" onClick={()=>{const p=selectedPersona;const lines=["# "+p.name];if(p.pronouns){lines.push("");lines.push("**Pronouns:** "+p.pronouns);}if(p.description){lines.push("");lines.push("## Description");lines.push(p.description);}const lb=data.lorebooks.find(x=>x.id===p.linked_lorebook);if(lb){lines.push("");lines.push("**Linked Lorebook:** "+lb.name);}const safeName=(p.name||"persona").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n")});}}><i className="ti ti-file-text"></i>Export MD</button>}
             {page==='personas'&&selectedPersona&&<button className="btn danger" onClick={()=>setModal({type:'confirm-delete-persona',persona:selectedPersona,onBack:()=>setSelectedPersona(null)})}><i className="ti ti-trash"></i>Delete</button>}
             {page==='char'&&selectedChar&&<>
               <button className="btn" onClick={importJSON}><i className="ti ti-refresh"></i>Update from JSON</button>
@@ -848,6 +870,368 @@ function GenResult({label, value, onCopy}) {
   ) : null;
 }
 
+// ── Western Zodiac Tool ──────────────────────────────────────────────────
+const WESTERN_SIGNS = [
+  {
+    name:"Aries", symbol:"♈", dates:"Mar 21 – Apr 19", element:"Fire", modality:"Cardinal",
+    traits:"Bold, impulsive, competitive, pioneering. Rushes in headfirst — thinks later. Infectious energy that drags people along for the ride.",
+    shadow:"Impatient, short-tempered, self-centred. Drops things the moment they get hard.",
+    vibe:"The one who starts the fight and somehow wins it."
+  },
+  {
+    name:"Taurus", symbol:"♉", dates:"Apr 20 – May 20", element:"Earth", modality:"Fixed",
+    traits:"Stubborn, sensual, reliable, deeply comfort-seeking. Knows exactly what they like and refuses to settle for less.",
+    shadow:"Possessive, resistant to change, holds grudges for years without saying a word.",
+    vibe:"Would rather die than cancel plans — but also their couch is genuinely the best place on earth."
+  },
+  {
+    name:"Gemini", symbol:"♊", dates:"May 21 – Jun 20", element:"Air", modality:"Mutable",
+    traits:"Curious, witty, adaptable, perpetually restless. Two moods, both valid. Can talk to anyone about anything.",
+    shadow:"Inconsistent, prone to gossip, commitment is a foreign concept.",
+    vibe:"Has seventeen projects on the go and will finish two of them."
+  },
+  {
+    name:"Cancer", symbol:"♋", dates:"Jun 21 – Jul 22", element:"Water", modality:"Cardinal",
+    traits:"Intuitive, nurturing, deeply emotional, fiercely protective. Remembers every birthday and every slight in equal detail.",
+    shadow:"Moody, clingy, retreats into the shell at the first sign of conflict.",
+    vibe:"Will feed you until you can't move and then cry when you leave."
+  },
+  {
+    name:"Leo", symbol:"♌", dates:"Jul 23 – Aug 22", element:"Fire", modality:"Fixed",
+    traits:"Charismatic, generous, warm, dramatic in the best possible way. Natural performer who genuinely wants everyone to shine.",
+    shadow:"Ego-driven, needs constant validation, sulks magnificently when ignored.",
+    vibe:"Entered the room and somehow everyone already knows their name."
+  },
+  {
+    name:"Virgo", symbol:"♍", dates:"Aug 23 – Sep 22", element:"Earth", modality:"Mutable",
+    traits:"Analytical, precise, helpful to a fault, quietly brilliant. Notices everything. Fixes things before anyone realises they were broken.",
+    shadow:"Hypercritical, anxious, perfectionism that edges into self-destruction.",
+    vibe:"Already made a colour-coded plan for the thing you haven't brought up yet."
+  },
+  {
+    name:"Libra", symbol:"♎", dates:"Sep 23 – Oct 22", element:"Air", modality:"Cardinal",
+    traits:"Charming, diplomatic, fairness-obsessed, aesthetically driven. Makes everyone feel heard — sometimes at the cost of their own opinion.",
+    shadow:"Indecisive, avoidant of conflict to the point of dishonesty, people-pleaser.",
+    vibe:"Spent forty-five minutes deciding what to order and it was still the wrong thing."
+  },
+  {
+    name:"Scorpio", symbol:"♏", dates:"Oct 23 – Nov 21", element:"Water", modality:"Fixed",
+    traits:"Intense, perceptive, magnetic, relentlessly transformative. Sees through every lie. Loyal beyond reason to those who earn it.",
+    shadow:"Vindictive, secretive, obsessive. Does not forget. Does not forgive easily.",
+    vibe:"Already knows. Has known for a while. Was waiting to see what you'd do."
+  },
+  {
+    name:"Sagittarius", symbol:"♐", dates:"Nov 22 – Dec 21", element:"Fire", modality:"Mutable",
+    traits:"Optimistic, philosophical, freedom-loving, brutally honest. Chases the horizon. Big ideas, big laugh, big mouth.",
+    shadow:"Tactless, unreliable, allergic to being told what to do.",
+    vibe:"Booked a one-way flight at 2am and texted from the airport."
+  },
+  {
+    name:"Capricorn", symbol:"♑", dates:"Dec 22 – Jan 19", element:"Earth", modality:"Cardinal",
+    traits:"Disciplined, ambitious, dry-humoured, quietly relentless. Plans twenty years ahead. Gets there.",
+    shadow:"Workaholic, emotionally guarded, can come across as cold or ruthless.",
+    vibe:"Was old at twenty-five and will be young at seventy."
+  },
+  {
+    name:"Aquarius", symbol:"♒", dates:"Jan 20 – Feb 18", element:"Air", modality:"Fixed",
+    traits:"Visionary, unconventional, humanitarian, emotionally detached. Marches to a completely different rhythm and doesn't notice you're not keeping up.",
+    shadow:"Contrarian for its own sake, emotionally unavailable, self-righteous.",
+    vibe:"Has strong opinions about everything and is probably right, unfortunately."
+  },
+  {
+    name:"Pisces", symbol:"♓", dates:"Feb 19 – Mar 20", element:"Water", modality:"Mutable",
+    traits:"Dreamy, empathetic, creative, deeply spiritual. Absorbs the emotions of everyone in the room. Art comes naturally; reality is optional.",
+    shadow:"Escapist, self-pitying, boundary-free, loses itself in others.",
+    vibe:"Cried at an ad and then wrote a beautiful poem about it."
+  },
+];
+
+function WesternZodiacTool() {
+  const [result, setResult] = useState(null);
+  const roll = () => setResult(pick(WESTERN_SIGNS));
+  const S2 = {box:{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:"var(--r)",padding:12},label:{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:10,display:"block"}};
+  return (
+    <div style={S2.box}>
+      <span style={S2.label}>Western Zodiac</span>
+      <button className="btn primary" style={{width:"100%",justifyContent:"center",marginBottom:10}} onClick={roll}>
+        <i className="ti ti-stars"></i>Roll sign
+      </button>
+      {result&&(
+        <div>
+          <GenResult label={result.symbol+" Sign"} value={result.name+" ("+result.dates+")"}/>
+          <GenResult label="Element / Mode" value={result.element+" · "+result.modality}/>
+          <GenResult label="Traits" value={result.traits}/>
+          <GenResult label="Shadow side" value={result.shadow}/>
+          <GenResult label="Vibe" value={result.vibe}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Chinese Zodiac Tool ───────────────────────────────────────────────────
+const CHINESE_SIGNS = [
+  {
+    name:"Rat", symbol:"🐀", element:"Water", years:"1924 1936 1948 1960 1972 1984 1996 2008 2020",
+    traits:"Quick-witted, resourceful, charming, opportunistic. First into every new situation. Makes connections everywhere and cashes them in strategically.",
+    shadow:"Cunning, manipulative, tight-fisted, will throw you under a bus if cornered.",
+    vibe:"Somehow already knows someone who can help."
+  },
+  {
+    name:"Ox", symbol:"🐂", element:"Earth", years:"1925 1937 1949 1961 1973 1985 1997 2009 2021",
+    traits:"Dependable, methodical, hardworking, stoic. Moves slowly and gets there. Says very little but means every word.",
+    shadow:"Stubborn, uncompromising, holds grudges with impressive patience.",
+    vibe:"The most reliable person in the room and they know it."
+  },
+  {
+    name:"Tiger", symbol:"🐅", element:"Wood", years:"1926 1938 1950 1962 1974 1986 1998 2010 2022",
+    traits:"Brave, competitive, unpredictable, magnetic. Natural leader who hates being led. Lives with full intensity.",
+    shadow:"Reckless, arrogant, can't resist a fight.",
+    vibe:"Has a scar and a good story for every single one."
+  },
+  {
+    name:"Rabbit", symbol:"🐇", element:"Wood", years:"1927 1939 1951 1963 1975 1987 1999 2011 2023",
+    traits:"Gentle, diplomatic, artistic, perceptive. Moves through conflict without touching it. Exquisite taste in everything.",
+    shadow:"Avoidant, overly cautious, can be superficial.",
+    vibe:"Declined the party but somehow still knows everything that happened."
+  },
+  {
+    name:"Dragon", symbol:"🐉", element:"Earth", years:"1928 1940 1952 1964 1976 1988 2000 2012 2024",
+    traits:"Charismatic, visionary, confident, larger than life. Expects excellence from themselves and everyone around them.",
+    shadow:"Intolerant, arrogant, burns out when unchallenged.",
+    vibe:"Makes everything feel like an event worth attending."
+  },
+  {
+    name:"Snake", symbol:"🐍", element:"Fire", years:"1929 1941 1953 1965 1977 1989 2001 2013 2025",
+    traits:"Wise, intuitive, mysterious, deliberate. Never acts without thinking. Quietly collects information and uses it perfectly.",
+    shadow:"Suspicious, possessive, holds secrets longer than necessary.",
+    vibe:"Said almost nothing at the meeting and walked out with exactly what they wanted."
+  },
+  {
+    name:"Horse", symbol:"🐎", element:"Fire", years:"1930 1942 1954 1966 1978 1990 2002 2014 2026",
+    traits:"Energetic, independent, sociable, rebellious. Needs room to move. Brilliant company right up until they bolt.",
+    shadow:"Impatient, hot-headed, can't be tied down.",
+    vibe:"Leaving again but you can't even be mad about it."
+  },
+  {
+    name:"Goat", symbol:"🐐", element:"Earth", years:"1931 1943 1955 1967 1979 1991 2003 2015 2027",
+    traits:"Creative, compassionate, gentle, deeply feeling. Thrives in beauty and calm. Art, music, and the quiet things.",
+    shadow:"Insecure, pessimistic, over-reliant on others.",
+    vibe:"Made something beautiful and immediately apologised for it."
+  },
+  {
+    name:"Monkey", symbol:"🐒", element:"Metal", years:"1932 1944 1956 1968 1980 1992 2004 2016 2028",
+    traits:"Clever, inventive, mischievous, versatile. Solves problems for fun. Can improvise their way out of anything.",
+    shadow:"Unreliable, vain, gets bored and breaks things.",
+    vibe:"Already figured out the trick but pretended they hadn't."
+  },
+  {
+    name:"Rooster", symbol:"🐓", element:"Metal", years:"1933 1945 1957 1969 1981 1993 2005 2017 2029",
+    traits:"Observant, hardworking, confident, detail-oriented. Keeps everything running. High standards for themselves and everyone else.",
+    shadow:"Overcritical, boastful, inflexible.",
+    vibe:"Their kitchen is colour-coded and they will tell you why that matters."
+  },
+  {
+    name:"Dog", symbol:"🐕", element:"Earth", years:"1934 1946 1958 1970 1982 1994 2006 2018 2030",
+    traits:"Loyal, honest, brave, morally driven. Will defend the people they love to the last. Anxious about almost everything else.",
+    shadow:"Cynical, stubborn, prone to catastrophising.",
+    vibe:"Worried about you specifically since Tuesday."
+  },
+  {
+    name:"Pig", symbol:"🐖", element:"Water", years:"1935 1947 1959 1971 1983 1995 2007 2019 2031",
+    traits:"Generous, sincere, diligent, pleasure-seeking. Genuinely kind without agenda. Works hard and plays harder.",
+    shadow:"Naive, over-indulgent, easily taken advantage of.",
+    vibe:"Trusted someone they shouldn't have and somehow doesn't regret it."
+  },
+];
+
+function ChineseZodiacTool() {
+  const [result, setResult] = useState(null);
+  const roll = () => setResult(pick(CHINESE_SIGNS));
+  const S2 = {box:{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:"var(--r)",padding:12},label:{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:10,display:"block"}};
+  return (
+    <div style={S2.box}>
+      <span style={S2.label}>Chinese Zodiac</span>
+      <button className="btn primary" style={{width:"100%",justifyContent:"center",marginBottom:10}} onClick={roll}>
+        <i className="ti ti-yin-yang"></i>Roll sign
+      </button>
+      {result&&(
+        <div>
+          <GenResult label={result.symbol+" Sign"} value={result.name}/>
+          <GenResult label="Element" value={result.element}/>
+          <GenResult label="Years" value={result.years}/>
+          <GenResult label="Traits" value={result.traits}/>
+          <GenResult label="Shadow side" value={result.shadow}/>
+          <GenResult label="Vibe" value={result.vibe}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Esper Powers Tool ────────────────────────────────────────────────────
+const ESPER_TYPES = [
+  "Telekinesis","Telepathy","Pyrokinesis","Cryokinesis","Electrokinesis",
+  "Biokinesis","Chronokinesis","Aerokinesis","Hydrokinesis","Geokinesis",
+  "Photokinesis","Umbrakinesis","Precognition","Postcognition","Astral Projection",
+  "Psychometry","Empathy","Technopathy","Ferrokinesis","Thermokinesis",
+  "Sonokinesis","Haemokinesis","Necromancy","Illusion","Force Field",
+];
+const ESPER_TIERS = ["F","E","D","C","B","A","S"];
+const ESPER_DRAWBACKS = [
+  "Nosebleeds with heavy use","Severe migraines after extended use",
+  "Temporary blindness when pushed","Emotional bleed — feels targets' feelings",
+  "Power bleeds during sleep or nightmares","Loses control under high stress",
+  "Physical exhaustion — needs 8+ hours recovery","Burns through calories fast; must eat constantly",
+  "Chronic low-grade pain","Shortened lifespan with each major exertion",
+  "Memory gaps after peak use","Heightened sensitivity to their own element",
+  "Random involuntary activation","Amplifies nearby espers uncontrollably",
+  "Requires physical contact to activate","Useless within 10 metres of suppression tech",
+  "Leaves a detectable psychic signature","Painful to suppress; constant low drain",
+  "Triggers strong animal fear responses","Power tied to emotional state — useless when calm",
+];
+const ESPER_NAMES_ADJ = [
+  "Crimson","Silver","Static","Hollow","Fractured","Neon","Ashen","Gilded",
+  "Ironclad","Phantom","Dusk","Solar","Null","Apex","Feral","Obsidian",
+];
+const ESPER_NAMES_NOUN = [
+  "Veil","Surge","Tide","Echo","Pulse","Edge","Storm","Ward",
+  "Void","Flame","Gale","Drift","Shard","Coil","Chain","Flux",
+];
+
+function EsperTool() {
+  const [result, setResult] = useState(null);
+  const roll = () => {
+    setResult({
+      type: pick(ESPER_TYPES),
+      tier: pick(ESPER_TIERS),
+      drawback: pick(ESPER_DRAWBACKS),
+      codename: pick(ESPER_NAMES_ADJ) + " " + pick(ESPER_NAMES_NOUN),
+    });
+  };
+  const S2 = {box:{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:"var(--r)",padding:12},label:{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:10,display:"block"}};
+  return (
+    <div style={S2.box}>
+      <span style={S2.label}>Esper Powers</span>
+      <button className="btn primary" style={{width:"100%",justifyContent:"center",marginBottom:10}} onClick={roll}>
+        <i className="ti ti-sparkles"></i>Roll power
+      </button>
+      {result&&(
+        <div>
+          <GenResult label="Ability" value={result.type}/>
+          <GenResult label="Rank" value={result.tier}/>
+          <GenResult label="Drawback" value={result.drawback}/>
+          <GenResult label="Codename" value={result.codename}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Hockey Positions Tool ─────────────────────────────────────────────────
+const HOCKEY_POSITIONS = [
+  {pos:"Centre",role:"The engine of the line. Controls faceoffs, drives offensive play, expected to backcheck hard. High hockey IQ, reads plays before they happen."},
+  {pos:"Left Wing",role:"Crash the net, finish in close, win puck battles along the boards. Physical presence and a short-range shot more important than playmaking."},
+  {pos:"Right Wing",role:"Often the sniper on the line. Uses the off-wing for a one-timer setup, patrols the half-wall, provides an outlet on the breakout."},
+  {pos:"Left Defence",role:"Controls the left side of the blue line. Quarterbacks the power play from the point, responsible for gap control on the rush."},
+  {pos:"Right Defence",role:"Controls the right side. Shot from the point is a weapon. Must be strong in one-on-one puck battles below the goal line."},
+  {pos:"Enforcer",role:"Physical intimidation and team protection. Drops the gloves when needed. Presence alone changes how opponents play against the team."},
+  {pos:"Grinder / Checker",role:"No glory, all work. Wins puck races, kills penalties, forechecks relentlessly. Makes life miserable for the other team's top line."},
+  {pos:"Power Forward",role:"Combines scoring touch with physical dominance. Parks in front of the net, takes a beating to screen the goalie, garbage goals and tip-ins."},
+  {pos:"Offensive Defenceman",role:"Joins the rush as a fourth attacker. Quarterback on the power play. Offensive upside accepted at the cost of some defensive risk."},
+  {pos:"Shutdown Defenceman",role:"One job: neutralise the other team's best forward. Physical, disciplined, no fancy moves. Makes them earn every inch."},
+  {pos:"Goaltender",role:"Last line of defence. The position that wins or loses series. Butterfly or hybrid style; reads shooters, controls rebounds, talks to the defence constantly."},
+  {pos:"4th Line Centre",role:"Eats tough minutes, wins faceoffs in the defensive zone, provides energy shifts after goals. The team's conscience on the ice."},
+];
+const HOCKEY_HANDEDNESS = ["Shoots left","Shoots right"];
+const HOCKEY_TRAITS = [
+  "Dangles past three defenders like they're pylons",
+  "Known for a devastating one-timer from the circle",
+  "Never misses a backcheck, somehow still leads the team in points",
+  "Plays hurt every game, never mentions it",
+  "Talks non-stop on the ice — opponents hate it, teammates love it",
+  "Fights clean — earns respect even from the guys they drop",
+  "Has a signature move the whole league knows is coming and still can't stop",
+  "Reads the play two seconds ahead of everyone else",
+  "Biggest hitter on the team, but never takes a penalty",
+  "Chirps are legendary — opposing bench is always distracted",
+  "Goes to the dirty areas everyone else avoids",
+  "Breakaway speed that makes everyone in the building stand up",
+];
+
+function HockeyTool() {
+  const [result, setResult] = useState(null);
+  const roll = () => {
+    const p = pick(HOCKEY_POSITIONS);
+    setResult({pos: p.pos, role: p.role, hand: pick(HOCKEY_HANDEDNESS), trait: pick(HOCKEY_TRAITS)});
+  };
+  const S2 = {box:{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:"var(--r)",padding:12},label:{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:10,display:"block"}};
+  return (
+    <div style={S2.box}>
+      <span style={S2.label}>Hockey Position</span>
+      <button className="btn primary" style={{width:"100%",justifyContent:"center",marginBottom:10}} onClick={roll}>
+        <i className="ti ti-trophy"></i>Roll position
+      </button>
+      {result&&(
+        <div>
+          <GenResult label="Position" value={result.pos}/>
+          <GenResult label="Role" value={result.role}/>
+          <GenResult label="Handedness" value={result.hand}/>
+          <GenResult label="Trait" value={result.trait}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Swim Strokes Tool ─────────────────────────────────────────────────────
+const SWIM_EVENTS = [
+  {stroke:"Freestyle",distances:["50m","100m","200m","400m","800m","1500m"],desc:"The fastest and most versatile stroke. High elbow catch, rotation-driven power, flip turns. Most competitive swimmers' main event."},
+  {stroke:"Backstroke",distances:["50m","100m","200m"],desc:"Only stroke swum on the back. Rhythm and shoulder rotation are everything. Touch walls blind — timing a flip turn is an art form."},
+  {stroke:"Breaststroke",distances:["50m","100m","200m"],desc:"The oldest stroke. Slow and technical; a fraction off on the pullout or timing costs the race. Underwater phase after every turn is crucial."},
+  {stroke:"Butterfly",distances:["50m","100m","200m"],desc:"The hardest stroke. Dolphin kick, simultaneous arm pull, brutal on the lungs. Either beautiful to watch or a disaster — no middle ground."},
+  {stroke:"Individual Medley",distances:["100m","200m","400m"],desc:"All four strokes in one race: butterfly, backstroke, breaststroke, freestyle. True test of versatility. Butterfly leg makes or breaks it."},
+  {stroke:"Open Water",distances:["5km","10km","25km"],desc:"No walls, no lane lines. Sighting, drafting, and pack swimming replace pure technique. Physical and psychological endurance over speed."},
+];
+const SWIM_ROLES = [
+  "The anchor on every relay — coaches don't trust anyone else in the water last",
+  "Technician. Form is flawless; every practice drill is done at race pace",
+  "Sprinter mentality — hates anything over 200m, gods gifted with fast-twitch muscle",
+  "Distance grinder. Goes out slow, comes back faster, beats everyone on the back half",
+  "The team's loudest cheerleader on the block, completely silent underwater",
+  "Obsessive about start and turn times — shaves tenths no one else bothers with",
+  "Came to swimming late; raw and improving every meet",
+  "Dual-sport athlete — the body is wrong for swimming, the results are not",
+  "Streaky. When it's on, it's terrifying. When it's off, it's a mystery",
+  "Team captain energy — knows everyone's best times, gives the warmup speech",
+];
+
+function SwimTool() {
+  const [result, setResult] = useState(null);
+  const roll = () => {
+    const ev = pick(SWIM_EVENTS);
+    const dist = pick(ev.distances);
+    setResult({stroke: ev.stroke, distance: dist, desc: ev.desc, role: pick(SWIM_ROLES)});
+  };
+  const S2 = {box:{background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:"var(--r)",padding:12},label:{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:10,display:"block"}};
+  return (
+    <div style={S2.box}>
+      <span style={S2.label}>Swim Event</span>
+      <button className="btn primary" style={{width:"100%",justifyContent:"center",marginBottom:10}} onClick={roll}>
+        <i className="ti ti-send"></i>Roll event
+      </button>
+      {result&&(
+        <div>
+          <GenResult label="Stroke" value={result.stroke}/>
+          <GenResult label="Distance" value={result.distance}/>
+          <GenResult label="About" value={result.desc}/>
+          <GenResult label="Swimmer type" value={result.role}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ToolsPanel({data}) {
   const [tool, setTool] = useState(null);
   const [cm, setCm] = useState('');
@@ -885,9 +1269,14 @@ function ToolsPanel({data}) {
     {id:'physicals',icon:'ti-sparkles',label:'Physicals'},
     {id:'nationality',icon:'ti-world',label:'Nationality'},
     {id:'color',icon:'ti-palette',label:'Color'},
-    {id:'diff',icon:'ti-files-diff',label:'Text Diff'},
+    {id:'diff',icon:'ti-scan',label:'Text Diff'},
     {id:'personality',icon:'ti-brain',label:'Personality'},
     {id:'plot',icon:'ti-books',label:'Plot'},
+    {id:'esper',icon:'ti-sparkles',label:'Esper Powers'},
+    {id:'hockey',icon:'ti-trophy',label:'Hockey'},
+    {id:'swim',icon:'ti-send',label:'Swim'},
+    {id:'western-zodiac',icon:'ti-stars',label:'Western Zodiac'},
+    {id:'chinese-zodiac',icon:'ti-yin-yang',label:'Chinese Zodiac'},
   ];
 
   const S={box:{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:12},label:{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10,display:'block'},input:{width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none'}};
@@ -969,6 +1358,11 @@ function ToolsPanel({data}) {
       {tool==='diff'&&<TextDiffTool/>}
       {tool==='personality'&&<PersonalityTool/>}
       {tool==='plot'&&<PlotTool data={data}/>}
+      {tool==='esper'&&<EsperTool/>}
+      {tool==='western-zodiac'&&<WesternZodiacTool/>}
+      {tool==='chinese-zodiac'&&<ChineseZodiacTool/>}
+      {tool==='hockey'&&<HockeyTool/>}
+      {tool==='swim'&&<SwimTool/>}
     </div>
   );
 }
@@ -2221,7 +2615,7 @@ function RightPanel({tab,setTab,data,update,currentWorld,currentChar,currentPage
     : `Global scratchpad…\n\nNotes here are not tied to any world.`;
 
   return (
-    <div className="right-panel">
+    <div className="right-panel" style={{width:tab==="map"?"640px":"320px",minWidth:tab==="map"?"640px":"320px"}}>
       <div className="right-panel-tabs">
         <div className={`right-panel-tab ${tab==='notes'?'active':''}`} onClick={()=>setTab('notes')}>
           <i className="ti ti-notebook"></i>{currentWorld?`${currentWorld.emoji||''}Notes`:'Notes'}
@@ -2253,14 +2647,7 @@ function RightPanel({tab,setTab,data,update,currentWorld,currentChar,currentPage
         )}
         {tab==='tools'&&<ToolsPanel data={data}/>}
         {tab==='claude'&&<ClaudePanel data={data} currentWorld={currentWorld} currentChar={currentChar} currentPage={currentPage}/>}
-        {tab==='map'&&(
-          <div style={{padding:20,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',flex:1,gap:12,textAlign:'center'}}>
-            <i className="ti ti-circles-relation" style={{fontSize:40,color:'var(--accent)',opacity:0.5}}></i>
-            <h3 style={{fontSize:15,color:'var(--text2)',fontWeight:600}}>Visual Map</h3>
-            <p style={{fontSize:13,color:'var(--text3)',lineHeight:1.6}}>Relationship map and visual board — coming soon.</p>
-            <p style={{fontSize:12,color:'var(--text3)',opacity:0.7}}>Design TBD — will show connections between characters, worlds and lorebooks.</p>
-          </div>
-        )}
+        {tab==='map'&&<RelationshipsPage data={data} update={update} initialWorld={currentWorld?.id||null}/>}
       </div>
     </div>
   );
@@ -3750,6 +4137,252 @@ function CharExportTab({charData, data, exportChar}) {
   );
 }
 
+function RelPortrait({id, src, r, onMouseDown}) {
+  const [resolved, setResolved] = React.useState(null);
+  React.useEffect(() => {
+    if (!src) { setResolved(null); return; }
+    if (src.startsWith('data:')) { setResolved(src); return; }
+    window.lorekeeper.readImagePath(src).then(b64 => setResolved(b64||null)).catch(() => setResolved(null));
+  }, [src]);
+  if (!resolved) return <text x={r} y={r+6} textAnchor="middle" fontSize={22} fill="var(--text3)" style={{pointerEvents:'none',userSelect:'none'}}>👤</text>;
+  return (
+    <image href={resolved} x={0} y={0} width={r*2} height={r*2} clipPath={"url(#clip-"+id+")"} preserveAspectRatio="xMidYMid slice" onMouseDown={onMouseDown}/>
+  );
+}
+
+function RelationshipsPage({data, update, initialWorld}) {
+  const worlds = data.worlds || [];
+  const [worldId, setWorldId] = useState(initialWorld || worlds[0]?.id || null);
+  const [positions, setPositions] = useState({});
+  const [connecting, setConnecting] = useState(null);
+  const [labelInput, setLabelInput] = useState(null);
+  const [labelText, setLabelText] = useState('');
+  const [editEdge, setEditEdge] = useState(null);
+  const [editLabelText, setEditLabelText] = useState('');
+  const [dragging, setDragging] = useState(null); // node drag only
+  // Draggable edit popup
+  const [popupPos, setPopupPos] = useState({x: null, y: null});
+  const [popupDrag, setPopupDrag] = useState(null);
+  const svgRef = React.useRef();
+
+  const worldCollIds = worldId ? data.collections.filter(col=>col.world_id===worldId).map(col=>col.id) : [];
+  const worldCollCompanions = worldId ? data.collections.filter(col=>col.world_id===worldId).flatMap(col=>col.companions||[]) : [];
+  const worldChars = (data.characters || []).filter(c => {
+    if (!worldId) return false;
+    if (c.world_id === worldId) return true;
+    return (c.collections||[]).some(cid=>worldCollIds.includes(cid)) || worldCollCompanions.includes(c.id);
+  });
+  const rels = (data.relationships || []).filter(r => r.worldId === worldId);
+
+  React.useEffect(() => {
+    setConnecting(null);
+    setLabelInput(null);
+    setEditEdge(null);
+    const collIds = (data.collections||[]).filter(col=>col.world_id===worldId).map(col=>col.id);
+    const collCompanions = (data.collections||[]).filter(col=>col.world_id===worldId).flatMap(col=>col.companions||[]);
+    const chars = (data.characters||[]).filter(c => {
+      if (c.world_id === worldId) return true;
+      return (c.collections||[]).some(cid=>collIds.includes(cid)) || collCompanions.includes(c.id);
+    });
+    const cols = Math.max(1, Math.ceil(Math.sqrt(chars.length)));
+    const next = {};
+    chars.forEach((c, i) => {
+      next[c.id] = {x: 120 + (i % cols) * 170, y: 100 + Math.floor(i / cols) * 170};
+    });
+    setPositions(next);
+  }, [worldId, data.characters]);
+
+  const getSvgPoint = (e) => {
+    const svg = svgRef.current;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  };
+
+  const getPos = (id) => positions[id] || {x: 120, y: 120};
+
+  const onNodeMouseDown = (e, id) => {
+    if (connecting) {
+      if (connecting !== id) { setLabelInput({charA: connecting, charB: id}); setLabelText(''); }
+      setConnecting(null);
+      return;
+    }
+    e.preventDefault();
+    const svgP = getSvgPoint(e);
+    const pos = getPos(id);
+    setDragging({id, ox: svgP.x - pos.x, oy: svgP.y - pos.y});
+  };
+
+  const onSvgMouseMove = (e) => {
+    if (!dragging) return;
+    const svgP = getSvgPoint(e);
+    setPositions(prev => ({...prev, [dragging.id]: {x: svgP.x - dragging.ox, y: svgP.y - dragging.oy}}));
+  };
+
+  const onSvgMouseUp = () => setDragging(null);
+
+  // Popup drag handlers (on the DOM, not SVG)
+  const popupRef = React.useRef();
+  const onPopupMouseDown = (e) => {
+    e.preventDefault();
+    const rect = popupRef.current ? popupRef.current.getBoundingClientRect() : {left:0,top:0};
+    setPopupPos({x: rect.left, y: rect.top});
+    setPopupDrag({ox: e.clientX - rect.left, oy: e.clientY - rect.top});
+  };
+  React.useEffect(() => {
+    if (!popupDrag) return;
+    const onMove = (e) => setPopupPos({x: e.clientX - popupDrag.ox, y: e.clientY - popupDrag.oy});
+    const onUp = () => setPopupDrag(null);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [popupDrag]);
+
+  const openEdge = (id, label) => {
+    setEditEdge(id);
+    setEditLabelText(label);
+    setPopupPos({x: null, y: null}); // reset to default position
+  };
+
+  const saveRelationship = () => {
+    if (!labelText.trim() || !labelInput) return;
+    update(d => {
+      if (!d.relationships) d.relationships = [];
+      d.relationships.push({id: uuid(), worldId, charA: labelInput.charA, charB: labelInput.charB, label: labelText.trim()});
+    });
+    setLabelInput(null); setLabelText('');
+  };
+
+  const saveEditLabel = () => {
+    if (!editLabelText.trim()) return;
+    update(d => { const r = (d.relationships||[]).find(x=>x.id===editEdge); if(r) r.label = editLabelText.trim(); });
+    setEditEdge(null);
+  };
+
+  const deleteRel = (id) => {
+    update(d => { d.relationships = (d.relationships||[]).filter(r=>r.id!==id); });
+    setEditEdge(null);
+  };
+
+  const NODE_R = 36;
+
+  // Popup positioning
+  const popupStyle = {
+    position: 'fixed',
+    background: 'var(--bg2)',
+    border: '1px solid var(--border)',
+    borderRadius: 'var(--rl)',
+    padding: '10px 14px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    zIndex: 100,
+    boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+    cursor: 'default',
+    userSelect: 'none',
+  };
+  if (popupPos.x !== null) {
+    popupStyle.left = popupPos.x;
+    popupStyle.top = popupPos.y;
+  } else {
+    popupStyle.bottom = 24;
+    popupStyle.left = '50%';
+    popupStyle.transform = 'translateX(-50%)';
+  }
+
+  return (
+    <div className="rel-page">
+      <div className="rel-toolbar">
+        <select value={worldId||''} onChange={e=>setWorldId(e.target.value||null)} className="rel-world-select">
+          <option value="">— Pick a world —</option>
+          {worlds.map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
+        </select>
+        {connecting&&<span className="rel-hint">Click another character to connect — click same to cancel</span>}
+        {!connecting&&worldChars.length>0&&<span className="rel-hint">Drag nodes · Click + connect to draw a relationship · Click label to edit</span>}
+        {worldId&&<span className="rel-hint" style={{marginLeft:'auto',opacity:0.5}}>{worldChars.length} characters</span>}
+        {worldId&&worldChars.length>0&&<button className="btn" style={{fontSize:11,padding:'3px 8px'}} onClick={()=>{const cIds=(data.collections||[]).filter(col=>col.world_id===worldId).map(col=>col.id);const cComp=(data.collections||[]).filter(col=>col.world_id===worldId).flatMap(col=>col.companions||[]);const chars=(data.characters||[]).filter(c=>{if(c.world_id===worldId)return true;return(c.collections||[]).some(cid=>cIds.includes(cid))||cComp.includes(c.id);});const cols=Math.max(1,Math.ceil(Math.sqrt(chars.length)));const next={};chars.forEach((c,i)=>{next[c.id]={x:120+(i%cols)*170,y:100+Math.floor(i/cols)*170};});setPositions(next);}}>Reset layout</button>}
+        {rels.length>0&&<button className="btn danger" style={{fontSize:11,padding:"3px 8px"}} onClick={()=>{if(window.confirm("Clear all relationships for this world?"))update(d=>{d.relationships=(d.relationships||[]).filter(r=>r.worldId!==worldId);});}}>Clear all</button>}
+      </div>
+
+      {worldId&&worldChars.length===0&&<p className="text-muted" style={{padding:24}}>No characters in this world yet.</p>}
+
+      {worldId&&worldChars.length>0&&(
+        <svg ref={svgRef} className="rel-canvas" onMouseMove={onSvgMouseMove} onMouseUp={onSvgMouseUp} onMouseLeave={onSvgMouseUp}>
+          <defs>
+            {worldChars.map(c=>(
+              <clipPath key={'clip-'+c.id} id={'clip-'+c.id}>
+                <circle cx={NODE_R} cy={NODE_R} r={NODE_R}/>
+              </clipPath>
+            ))}
+          </defs>
+
+          {rels.map(r => {
+            const a = getPos(r.charA), b = getPos(r.charB);
+            const mx = (a.x+b.x)/2, my = (a.y+b.y)/2;
+            const dx = b.x-a.x, dy = b.y-a.y;
+            const len = Math.sqrt(dx*dx+dy*dy)||1;
+            const ax = a.x+(dx/len)*NODE_R, ay = a.y+(dy/len)*NODE_R;
+            const bx = b.x-(dx/len)*NODE_R, by = b.y-(dy/len)*NODE_R;
+            const isSelected = editEdge===r.id;
+            const labelW = Math.max(60, r.label.length*7+16);
+            return (
+              <g key={r.id} onClick={()=>openEdge(r.id, r.label)} style={{cursor:'pointer'}}>
+                <line x1={ax} y1={ay} x2={bx} y2={by} stroke="transparent" strokeWidth={12}/>
+                <line x1={ax} y1={ay} x2={bx} y2={by} stroke={isSelected?'var(--accent)':'var(--text3)'} strokeWidth={isSelected?2.5:1.5} strokeDasharray={isSelected?'':'4 3'} style={{pointerEvents:'none'}}/>
+                <rect x={mx-labelW/2} y={my-10} width={labelW} height={20} rx={4} fill="var(--bg2)" stroke={isSelected?'var(--accent)':'var(--border)'} strokeWidth={1}/>
+                <text x={mx} y={my+5} textAnchor="middle" fontSize={10} fill={isSelected?'var(--accent)':'var(--text2)'} style={{pointerEvents:'none',userSelect:'none'}}>{r.label}</text>
+              </g>
+            );
+          })}
+
+          {worldChars.map(c => {
+            const pos = getPos(c.id);
+            const isConnecting = connecting===c.id;
+            const imgSrc = c.image?(c.image.data||c.image.relPath||null):null;
+            return (
+              <g key={c.id} transform={"translate("+(pos.x-NODE_R)+","+(pos.y-NODE_R)+")"} style={{cursor:dragging?.id===c.id?'grabbing':'grab'}}>
+                <circle cx={NODE_R} cy={NODE_R} r={NODE_R+2} fill={isConnecting?'var(--accent)':'var(--bg2)'} stroke={isConnecting?'var(--accent)':'var(--border)'} strokeWidth={isConnecting?3:1.5} onMouseDown={e=>onNodeMouseDown(e,c.id)}/>
+                <RelPortrait id={c.id} src={imgSrc} r={NODE_R} onMouseDown={e=>onNodeMouseDown(e,c.id)}/>
+                <text x={NODE_R} y={NODE_R*2+14} textAnchor="middle" fontSize={11} fill="var(--text)" fontWeight="600" style={{pointerEvents:'none',userSelect:'none'}}>{(c.name||'').slice(0,18)}</text>
+                <text x={NODE_R} y={NODE_R*2+26} textAnchor="middle" fontSize={9} fill={isConnecting?"var(--accent)":"var(--text3)"} style={{userSelect:'none',cursor:'pointer'}} onClick={e=>{e.stopPropagation();setConnecting(connecting===c.id?null:c.id);}}>
+                  {isConnecting?'cancel':'+ connect'}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      )}
+
+      {editEdge&&(
+        <div ref={popupRef} style={popupStyle}>
+          <div onMouseDown={onPopupMouseDown} style={{cursor:'grab',padding:'0 4px',color:'var(--text3)',fontSize:14}}>⠿</div>
+          <input className="rel-label-input" style={{width:140,padding:'4px 8px',fontSize:12}} value={editLabelText} onChange={e=>setEditLabelText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')saveEditLabel();if(e.key==='Escape')setEditEdge(null);}}/>
+          <button className="btn primary" style={{fontSize:11,padding:'3px 8px'}} onClick={saveEditLabel} disabled={!editLabelText.trim()}><i className="ti ti-check"></i>Save</button>
+          <button className="btn danger" style={{fontSize:11,padding:'3px 8px'}} onClick={()=>deleteRel(editEdge)}><i className="ti ti-trash"></i></button>
+          <button className="btn" style={{fontSize:11,padding:'3px 8px'}} onClick={()=>setEditEdge(null)}>✕</button>
+        </div>
+      )}
+
+      {labelInput&&(
+        <div className="rel-label-modal">
+          <div className="rel-label-box">
+            <div style={{fontSize:13,fontWeight:600,marginBottom:8,color:'var(--text)'}}>
+              {(data.characters.find(c=>c.id===labelInput.charA)?.name||'?')}
+              {' — '}
+              {(data.characters.find(c=>c.id===labelInput.charB)?.name||'?')}
+            </div>
+            <input className="rel-label-input" value={labelText} onChange={e=>setLabelText(e.target.value)} placeholder="e.g. rivals, lovers, siblings..." onKeyDown={e=>{if(e.key==='Enter')saveRelationship();if(e.key==='Escape'){setLabelInput(null);setLabelText('');}}} autoFocus/>
+            <div style={{display:'flex',gap:8,marginTop:10}}>
+              <button className="btn primary" onClick={saveRelationship} disabled={!labelText.trim()}><i className="ti ti-check"></i>Add</button>
+              <button className="btn" onClick={()=>{setLabelInput(null);setLabelText('');}}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PersonasPage({data,setSelectedPersona}) {
   const personas = data.personas||[];
   return personas.length===0 ? (
@@ -4544,6 +5177,22 @@ function TemplateEditor({template,data,update,onBack}) {
         <div style={{display:'flex',gap:8,marginTop:4}}>
           <button className="btn" onClick={onBack}>Cancel</button>
           <button className="btn primary" disabled={!name.trim()} onClick={save}><i className="ti ti-check"></i>{isNew?'Create Template':'Save Changes'}</button>
+          {!isNew&&<button className="btn" onClick={()=>{
+            const lines=["# "+name];
+            const world=data.worlds.find(w=>w.id===worldId);
+            if(world){lines.push("");lines.push("**World:** "+(world.emoji?world.emoji+" ":"")+world.name);}
+            else{lines.push("");lines.push("**World:** Global");}
+            lines.push("");lines.push("## Fields");
+            TEMPLATE_FIELDS.forEach(([key,label])=>{
+              const v=fields[key];
+              if(v===undefined||v===''||v===false||v===null) return;
+              lines.push("");
+              lines.push("### "+label);
+              lines.push(typeof v==="boolean"?"Yes":Array.isArray(v)?v.join(", "):String(v));
+            });
+            const safeName=(name||"template").replace(/[^a-zA-Z0-9_-]/g,"_");
+            window.lorekeeper.exportFile({defaultName:safeName+"-template.md",content:lines.join("\n")});
+          }}><i className="ti ti-file-text"></i>Export MD</button>}
         </div>
       </div>
     </div>

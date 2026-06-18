@@ -1,5 +1,5 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 18, 2026 (session 6)**
+**Last updated: June 19, 2026 (session 10)**
 
 ---
 
@@ -405,17 +405,20 @@ JSON export moved from topbar button into Export tab on each item.
 - **Image prompt generator** — Claude call using character name/description/tags to generate an image generation prompt; lives in character editor or right panel
 
 ### New Tools
-- **Map generator** — region/landmark randomiser; output as text description or simple ASCII map
-- **Powers generator** — esper-style power sets (type, strength, drawback, name)
-- **Hockey positions** — roll a position + role description for a hockey player character
-- **Swim strokes** — roll a stroke + event distance for a swim team character
+- **Map generator** — region/landmark randomiser; output as text description or simple ASCII map (deferred — design TBD)
+- **Powers generator** ✓ — EsperTool: rolls ability type, tier, drawback, codename
+- **Hockey positions** ✓ — HockeyTool: rolls position, role description, handedness, character trait
+- **Swim strokes** ✓ — SwimTool: rolls stroke, event distance, stroke description, swimmer archetype
 
-### Tools (future)
-- Zodiac / birth chart generator
-- Relationship dynamic generator
+### Tools (future) ✓ (partial)
+- Western Zodiac ✓ — WesternZodiacTool: rolls sign, element/modality, traits, shadow side, vibe
+- Chinese Zodiac ✓ — ChineseZodiacTool: rolls sign, element, years, traits, shadow side, vibe
+- Relationship dynamic generator — still todo
+
+Note: Esper powers use F–S rank letters (not named tiers). Tool icons must exist in Tabler 2.44.0 — `ti-files-diff` and `ti-waves` don't; replaced with `ti-scan` and `ti-send`.
 
 ### Bigger features
-- **Visual board / relationship map** — per world
+- **Relationship Map** ✓ — lives in right panel Map tab (expands panel to 640px); world picker; SVG canvas with draggable portrait+name nodes (uses `name` not `display_name`); labeled edges fixed to line midpoint; click line/label to open draggable edit popup (drag via ⠿ handle, reads actual DOM position to avoid jump); edit label or delete; saves to `data.relationships`; collection-aware character filter (same logic as WorldDetailPage — includes chars via world_id OR via collections belonging to that world)
 
 ### Once all features are done
 - **UI Overhaul** — consistent layout system across all pages (widths, padding, section headers, card styles, field spacing); audit Characters, Lorebook detail, Collection detail, World tabs, Batch Import, Settings, Tools, Dashboard checklists
@@ -470,6 +473,10 @@ git push
 - Session 4: `Fix Babel syntax errors, ScanBadge/ScanTagChips, batch import tag chips`
 - Session 5: `Sidebar Backup button, world Export ZIP (platform-ready stripped JSONs)`
 - Session 6: `Export to Markdown — CharExportTab, LoreExportPanel, CollExportPanel, CollEditPanel; tab bars on lorebook and collection detail`
+- Session 7: `Persona + Template Export MD buttons`
+- Session 8: `EsperTool, HockeyTool, SwimTool — data tables + roll components in ToolsPanel`
+- Session 9: `WesternZodiacTool, ChineseZodiacTool; RelationshipsPage (SVG relationship map with draggable portrait nodes + labeled edges)`
+- Session 10: `Fix relationship map — collection-aware char filter (Gabriel), fixed label positions, draggable edit popup, correct icon replacements for Tabler 2.44, esper rank letters F–S`
 - Session 6: `Export to Markdown: CharExportTab, lorebook Edit/Export tabs, collection Edit/Export tabs`
 
 ### What goes in the repo
