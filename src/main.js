@@ -241,7 +241,12 @@ ipcMain.handle('write-image-from-base64', async (event, { base64, destFolder, fi
     const destFilename = filename.endsWith('.'+ext) ? filename : `${filename}.${ext}`;
     const destPath = path.join(destDir, destFilename);
 
-    // Check if any existing file in the folder already matches this content (by size)
+    // Check if destination file already exists (previous migrate)
+    if (fs.existsSync(destPath)) {
+      const relPath = `${destFolder}/${destFilename}`.replace(/\\/g, '/');
+      return { relPath };
+    }
+    // Check if any existing file in the folder already matches by base name
     if (fs.existsSync(destDir)) {
       const existing = fs.readdirSync(destDir).find(f => {
         const base = path.basename(f, path.extname(f)).toLowerCase();
