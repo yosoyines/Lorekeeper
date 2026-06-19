@@ -1,0 +1,23 @@
+{
+  "name": "lorekeeper",
+  "version": "1.0.0",
+  "description": "Lorekeeper — character and world management tool",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  },
+  "build": {
+    "appId": "com.lorekeeper.app",
+    "productName": "Lorekeeper",
+    "win": {
+      "target": "portable"
+    }
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.17"
+  }
+}
