@@ -1,5 +1,5 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 19, 2026 (session 15)**
+**Last updated: June 19, 2026 (session 17)**
 
 ---
 
@@ -53,7 +53,8 @@ I:\Lorekeeper\
 |---|---|
 | `loadData()` | Load lorekeeper-data.json |
 | `saveData(data)` | Async write to lorekeeper-data.json (compact JSON, no pretty-print) |
-| `exportFile({defaultName, content})` | Save dialog -> write JSON |
+| `exportFile({defaultName, content})` | Save dialog -> write file. Filter is chosen dynamically from `defaultName`'s extension (json/md/txt/fallback to All Files) — fixed June 19, was previously hardcoded to always show "JSON" even for `.md` exports. Defaults to opening in `I:\Lorekeeper\` rather than Windows' last-remembered folder. |
+| `saveNotesFile(filename, content)` | Write a standalone `.md` backup to `Notes\{filename}.md`, independent of the main data file — see Data Safety Architecture |
 | `importFile()` | Open dialog -> read JSON string |
 | `importImage()` | Open dialog -> returns `{base64, srcPath}` |
 | `importImages()` | Multi-select -> returns `[{name, base64, srcPath}]` |
@@ -165,7 +166,7 @@ I:\Lorekeeper\
 - **Characters** — all characters, filter by world; click -> CharDetailPage (13 tabs)
 - **Lorebooks** — all lorebooks, filter by world or Standalone; click -> LorePage (Chapters/Settings/Export tabs)
 - **Collections** — all collections, filter by world or Standalone; click -> CollPage (Edit/Export tabs)
-- **Personas** — player characters, independent from worlds; click -> PersonaDetailPage
+- **Personas** — player characters, independent from worlds; click -> PersonaDetailPage; "New Persona" button in topbar (added June 19 — was missing entirely, only Export/Delete existed once a persona was already selected)
 - **Templates** — global and per-world character creation templates; card list grouped by world
 - **Batch Import** — scan folders, import, image audit, backup/restore
 - **Settings** — API key, model, font size (applied globally), debounce, theme/colorblind (placeholders); full-width layout
@@ -222,7 +223,7 @@ All three exist so that opening any item — from the dashboard, quick find, a c
 8. **Lorebooks** — cross-world lorebook picker
 9. **Collections** — cross-world collection picker
 10. **Settings** — access level, temperature %, spicy flags, booleans, companion_folder
-11. **Schedule** — status (draft/ready/posted), schedule dates, posted date
+11. **Schedule** — status (draft/ready/posted), schedule dates, posted date. Setting status to "Posted" from this dropdown auto-stamps today's date into `posted_dates` if it's empty (fixed June 19 — previously only the Dashboard's "Mark posted" banner button did this; the dropdown left `posted_dates` empty, requiring a manual follow-up "Add Posted Date" click)
 12. **Lorebook Entry** — fill world lorebook template for this character; save directly to lorebook
 13. **Export** — Export JSON (platform-ready, stripped) and Export MD (sheet with descriptions, card, prompt, scenarios, tags) with in-app preview and a field-completeness checklist
 
@@ -253,6 +254,19 @@ All three exist so that opening any item — from the dashboard, quick find, a c
 4. Sets `companion_folder`, `lorebook_filename`, `collection_filename`, `image_relpath` from scan
 5. Tag chips shown per item with CW highlighting
 
+### "Local newer" override
+Items flagged "local newer" are skipped by default to protect local edits. Two ways to override:
+- **Per-item:** an "Import anyway" button next to the badge on that specific item
+- **Global:** a "Force import all (overwrite local edits)" checkbox at the top, with an amber warning banner while active
+
+This matters for the real use case of restoring from a Saucepan companion-backup export — without an override, freshly re-importing a site backup would be silently skipped entirely if Lorekeeper's local timestamp looked newer (which it could, incorrectly, before the `parseTimestamp` fix — see Data Safety section).
+
+### What gets carried over from a companion import (fixed June 19)
+Previously, importing a companion from a folder discarded two things it shouldn't have:
+- **Portrait UUID** — `obj.image.id` (the platform UUID, present in any site export) was being thrown away in favor of rebuilding `image` from a locally-matched file path only. Now: if the import JSON has `image.id`, it's preserved; local file path is only used as a fallback when there's no UUID.
+- **Posted date** — characters imported with `access_level: 'public'` correctly got `status: 'posted'`, but `posted_dates` was left empty, requiring a manual "Add Posted Date" afterward. Now: if the character is posted and has no local posted date yet, one is derived from the import's `posted_at` (or `updated_at` as fallback).
+- **`updated_at`** was being overwritten with `now()` on every import instead of using the site's actual value — this silently broke every future "local newer" comparison for that item. Now uses `obj.updated_at` from the import.
+
 ### Image Storage Audit
 - **Rescan images** — scans folders, links images via `image_relpath`
 - **Audit base64** — finds legacy base64 items; shows relpath status
@@ -263,6 +277,9 @@ All three exist so that opening any item — from the dashboard, quick find, a c
 - World **Export ZIP** (in world topbar) — platform-ready zip of posted characters + public lorebooks + public collections, stripped of app-only fields, stamps `site_last_synced_at`; this is what gets uploaded to Saucepan
 - Restore: global = full replace, world = smart merge
 - Requires `adm-zip` (`npm install adm-zip` in `I:\Lorekeeper\`)
+
+### Notes Backups
+See Data Safety Architecture section — independent `.md` backup per world plus the global scratchpad, separate from the main data file.
 
 ---
 
@@ -311,9 +328,10 @@ Strips: `world_id`, `collection_filename`, `image_data`, `image_relpath`, `site_
 
 ### Site Checklist
 - Shows items edited since last export: characters (status=posted), lorebooks/collections (has_been_public)
-- Condition: `updated_at > site_last_synced_at` AND `site_last_synced_at` exists
+- Condition: stale (`updated_at > site_last_synced_at`) **or never synced** (`site_last_synced_at` doesn't exist yet). The "never synced" half was added June 19 — previously an item that had never been through Lorekeeper's export flow (e.g. posted some other way, or batch-imported already-posted) would never appear here no matter how many times it was edited, since the old condition required `site_last_synced_at` to already exist.
 - Export button stamps `site_last_synced_at` -> item disappears from list
-- Help button explains the 4-step workflow
+- Help button explains the workflow
+- Implemented as its own component, `SiteChecklistPanel`, rather than an inline IIFE inside `DashboardPage`. This is a hard requirement, not a style preference: the panel's "show help" toggle needs a `useState`, and a `useState` called conditionally inside an IIFE that early-returns (`if (pending.length===0) return null`) violates React's Rules of Hooks — the hook count differs between renders depending on whether `pending` is empty, which crashes the entire Dashboard the moment `pending.length` changes between 0 and 1+. This crashed in production once. Any future "list panel with a local UI toggle" pattern on the Dashboard must be its own component for the same reason.
 
 ### Lorekeeper Checklist
 - Characters: posted with no `posted_dates`
@@ -376,7 +394,7 @@ Right panel Claude tab — full AI chat with world-aware context.
 - Suggested prompts on empty state; copy button on every response
 - Enter to send, Shift+Enter for newline
 - Uses model from Settings (default `claude-sonnet-4-6`)
-- API key from Settings -> Claude API; amber nudge if not set
+- API key from Settings -> Claude API; amber nudge if not set, with a working "add in Settings" link that navigates there (fixed June 19 — was previously a dead `onClick={()=>{}}` stub; `setPage` is now threaded through `RightPanel` -> `ClaudePanel`)
 - CSP allows `https:` so API calls work from Electron
 
 ---
@@ -422,7 +440,13 @@ Full-width layout (no max-width cap).
 
 ---
 
-## Babel Standalone Gotchas (hard-won, do not relitigate)
+## Full-Width Pages (do not reintroduce max-width caps)
+These pages/components were explicitly changed to fill the available content area, removing leftover `maxWidth`/`max-width` constraints from earlier sessions. This reverted itself multiple times across project re-uploads because fixes only existed in chat output and not yet in the synced project files — if a width regression is reported again, check these specific spots first before re-diagnosing from scratch:
+- `SettingsPage` — outer wrapper, was `maxWidth:600`
+- `.world-info-tab` CSS class (World Info tab) — was `max-width:580px`
+- `.tpl-editor` CSS class (TemplateEditor, used when creating/editing a template) — was `max-width:700px`
+
+If any of these show up capped again, it is a sync/regression issue, not a design decision — restore full width.
 These caused repeated regressions across sessions — treat as fixed rules:
 - **Never** put `style={{...}}` inside a ternary or `&&` conditional's JSX consequent — Babel standalone reliably fails to parse it. Use a CSS class instead, or extract the conditional content to its own component.
 - **Never** put a literal backslash in a JSX string (e.g. a Windows path) — Babel misreads it as a regex/escape sequence. Build the string outside JSX with a `BS = String.fromCharCode(92)` constant and plain string concatenation (see `loreHint`, `charFolderHint` helper functions), then just reference the result in JSX.
@@ -430,6 +454,27 @@ These caused repeated regressions across sessions — treat as fixed rules:
 - Apostrophes inside single-quoted JS strings need to become double-quoted strings instead of escaping.
 - Double-curly-brace syntax appearing in literal JSX text (e.g. documentation about macro syntax) must be wrapped as a string literal expression, not typed directly into JSX text.
 - Use `if(tab==='x') return (...)` pattern instead of nesting deep ternaries when a component has 2+ mutually exclusive views — more reliable than ternaries with multi-line JSX.
+
+---
+
+## Data Safety Architecture (critical — read before touching save/load code)
+
+On June 19 a race condition caused a real data-loss incident: the empty default `initData` was written over a 30MB+ real data file before the async load had finished resolving, destroying months of characters, worlds, lorebooks, collections, personas, and notes. Recovery was only possible via the independent per-character/lorebook/collection auto-save files (which were untouched) — the main data file and all notes were unrecoverable. This is now defended in three independent layers. **Do not remove or weaken any of these without explicit discussion — they exist because of a real loss, not a hypothetical one.**
+
+### Layer 1 — renderer load guard (`index.html`)
+A `dataLoaded` state flag starts `false`. The autosave `useEffect` (which writes `data` to disk on a debounce) checks `if (!dataLoaded) return;` as its very first line. `dataLoaded` only flips to `true` after `loadData()` has resolved — successfully or not. If loading throws, autosave stays permanently blocked rather than risk overwriting the real file with the default empty shape.
+
+### Layer 2 — main process shrink-refuse check (`main.js`)
+`save-data` compares the byte size of the incoming write against the existing file on disk. If the existing file is non-trivial (>5KB) and the new write would be less than 50% of that size (`SHRINK_REFUSE_RATIO`), the write is **refused**. Instead of overwriting, the would-be content is written to `lorekeeper-data.SUSPICIOUS.json` for manual review, and the real file is left untouched.
+
+### Layer 3 — rolling last-known-good backup (`main.js`)
+Every write that passes the Layer 2 check also writes a copy to `lorekeeper-data.lastgood.json`. This is a second, independent fallback file separate from the main save, useful as a manual recovery point if something Layers 1–2 didn't anticipate ever happens.
+
+### Layer 4 — standalone notes backup (`main.js` + `index.html`)
+Notes (global scratchpad and per-world) previously had **no** independent backup — they only ever lived inside the single big data file, unlike characters/lorebooks/collections which each already auto-save to their own JSON. Every world's notes (and the global scratchpad) now also debounce-write to a plain-text file at `Notes\{WorldName}.md` / `Notes\_global.md`, completely independent of the main data file write. A "Notes Backups" panel on the Batch Import page explains this and has an "Open Notes folder" button. Wired from both the right-panel Notes tab and the World Info tab's Notes field (same backend file, same backup).
+
+### `parseTimestamp()` — Saucepan date format
+Saucepan exports timestamps like `"2026-06-18 03:01:00.455294 +00:00:00"`, which native `Date()` cannot parse (silently returns `NaN`). This broke every "local newer" comparison in batch import for any item that had ever been touched by a site export. A `parseTimestamp()` helper near the top of `index.html` normalizes the format (space→T, truncate microseconds, fix the `+00:00:00`→`+00:00` offset) before handing off to `Date()`. All `pts`/`parseTs` local helpers throughout the file now alias to this single function — do not reintroduce inline duplicate date parsers.
 
 ---
 
@@ -479,29 +524,71 @@ Consistency pass complete across list pages, detail pages, and World Info/Settin
 
 ### Repository
 - Private repo at Ine's GitHub account (created June 2026)
-- Only source files tracked — personal data never committed
+- Only source files and documentation tracked — personal data never committed
 
 ### .gitignore
 ```
 lorekeeper-data.json
+lorekeeper-data.lastgood.json
+lorekeeper-data.SUSPICIOUS.json
 Companions/
 Lorebooks/
 Collections/
 Worlds/
 Personas/
+Templates/
+Notes/
 node_modules/
 assets/
 *.ico
 *.png
 *.svg
 ```
+Note: `Templates\` and `Notes\` were added June 19 (new auto-save folders). `lorekeeper-data.lastgood.json` and `*.SUSPICIOUS.json` are the safety-net files from the Data Safety Architecture section — also personal data, also excluded.
 
-### After each Claude session
+### Reliable update workflow — run every session, in this exact order
+
+**1. Check status first, before touching anything:**
+```powershell
+cd I:\Lorekeeper
+git status
 ```
-git add src/ lorekeeper-master-spec.md
-git commit -m "Brief description of what changed"
+Read the output. `modified:` = changed tracked files. `Untracked files:` should only ever show data/backup files (`lorekeeper-data.json`, `lorekeeper-data.lastgood.json`, etc) — if `src/index.html`, `src/main.js`, `src/preload.js`, or `lorekeeper-master-spec.md` show up as untracked rather than modified, something is wrong (e.g. a fresh clone, or `.gitignore` swallowed them by mistake) — stop and investigate before proceeding.
+
+**2. Stage exactly the source + doc files — never `git add .`:**
+```powershell
+git add .gitignore src/index.html src/main.js src/preload.js lorekeeper-master-spec.md README.md package.json package-lock.json
+```
+`git add .` is risky here because it would also try to add anything not yet in `.gitignore` — safer to always list files explicitly. Git silently skips any file in this list that has no changes, so it's safe to run every time even if not everything changed.
+
+**3. Commit with a description of what actually changed:**
+```powershell
+git commit -m "Brief description of what changed this session"
+```
+
+**4. Push:**
+```powershell
 git push
 ```
+
+**5. Verify clean state:**
+```powershell
+git status
+```
+Expected final output: `nothing to commit, working tree clean` except for the untracked data/backup files, which is correct and expected.
+
+### Creating a reliable checkpoint / tag (recommended after any major session)
+Once `git status` is clean, tag the commit so you have a named, easy-to-find restore point:
+```powershell
+git tag -a "session-17-stable" -m "Data safety fixes, batch import fixes, UI width fixes verified working"
+git push origin --tags
+```
+To see all tags later: `git tag -l`. To check out a specific tagged version if something breaks: `git checkout session-17-stable -- src/` (restores just the source files from that tag without touching your current branch state).
+
+### If `index.html`/`main.js`/`preload.js` ever look "reverted" again
+This has happened multiple times this project: a chat session's fixes only exist in the chat's output files until manually re-uploaded to the Claude project knowledge, so a *stale* local copy can get re-uploaded and silently undo recent fixes. Before assuming a bug is new, check:
+1. `git log --oneline -10` — does the most recent commit message match what was supposedly just fixed?
+2. If not, the project knowledge files are behind the actual chat output — re-export the latest files from the chat and re-upload before doing any further debugging.
 
 ### What goes in the repo
 | File | Tracked? |
@@ -513,9 +600,12 @@ git push
 | `start.bat` | yes |
 | `.gitignore` | yes |
 | `lorekeeper-master-spec.md` | yes |
+| `README.md` | yes |
+| `package.json` / `package-lock.json` | yes |
 | `lorekeeper-data.json` | no — personal data |
-| `Companions/` `Lorebooks/` `Collections/` `Worlds/` `Personas/` | no — personal data |
-| `node_modules/` | no — too large |
+| `lorekeeper-data.lastgood.json` / `*.SUSPICIOUS.json` | no — safety-net backups, still personal data |
+| `Companions/` `Lorebooks/` `Collections/` `Worlds/` `Personas/` `Templates/` `Notes/` | no — personal data |
+| `node_modules/` | no — too large, regenerable via `npm install` |
 
 ---
 
@@ -538,6 +628,8 @@ git push
 | 13 | Jun 19 | UI consistency pass: TemplatesPage/TemplateEditor CSS classes, PersonaDetailPage tab bar chrome, World Info tab CSS classes, portrait cards bumped to 200px, world/collection banners aligned to 80px, filter buttons cleaned of emoji+counts |
 | 14 | Jun 19 | Settings and World Info tabs made full-width (removed max-width caps); font size fix — now applied globally via App-level effect setting `document.documentElement.style.fontSize` directly (previous version set an unused CSS variable); Notes field added to World Info tab |
 | 15 | Jun 19 | Performance fix for Notes/text-field lag: `update()` switched from `JSON.parse(JSON.stringify())` to `structuredClone()`; `main.js` `saveData` switched from sync to async write with compact (non-pretty-printed) JSON; spec fully reviewed and cleaned up — removed duplicate/out-of-order entries, added Relationship Map section, added Babel Gotchas reference section, added Performance Notes section |
+| 16 | Jun 19 | **Data-loss incident and recovery.** A race condition (autosave firing before initial load resolved) overwrote the real 30MB+ data file with the empty default shape. Recovered characters via independent Companions/Lorebooks/Collections auto-save files; notes and app-only fields (schedule status etc.) were not recoverable. Built three-layer data safety architecture: (1) `dataLoaded` guard blocks autosave until load completes, (2) `main.js` shrink-refuse check rejects any write under 50% of the existing file's size and redirects it to a `.SUSPICIOUS.json` file instead, (3) rolling `lastgood.json` backup on every successful write. Added independent standalone `.md` notes backup per world + global scratchpad (`Notes\` folder), wired from both the right-panel Notes tab and World Info tab, with a "Notes Backups" panel on Batch Import. Also fixed a separate pre-existing bug surfaced during this incident: the inline Site Checklist IIFE inside `DashboardPage` called `useState` after a conditional early-return, violating React's Rules of Hooks and crashing the Dashboard whenever the checklist's item count changed between zero and nonzero — extracted to its own `SiteChecklistPanel` component. Fixed Site Checklist to also flag posted/public items that have never been synced (previously required `site_last_synced_at` to already exist, so never-synced items could never be flagged no matter how many edits). Fixed Schedule tab's status dropdown to auto-stamp `posted_dates` when set to Posted (previously only the Dashboard banner button did this). Discovered and fixed `parseTimestamp()` bug: Saucepan's timestamp format is unparseable by native `Date()`, silently breaking every "local newer" comparison involving a site-imported timestamp. Fixed batch import to preserve the platform image UUID from site exports (was being discarded in favor of local file paths), derive `posted_dates` from the site's `posted_at`/`updated_at` instead of leaving it empty, and use the site's real `updated_at` instead of overwriting it with import time. Added force-import overrides (per-item "Import anyway" button + global "Force import all" toggle) for restoring from a Saucepan companion backup export. Re-fixed four UI width regressions that had silently reverted across project re-uploads (Settings, World Info, Template editor, Persona "New" button) — root cause identified as chat-session fixes not yet being re-synced to project knowledge between turns. |
+| 17 | Jun 19 | Fixed dead "add in Settings" link in the Claude panel's no-API-key nudge (was a no-op `onClick={()=>{}}` stub; threaded `setPage` through `RightPanel` -> `ClaudePanel`). Fixed `export-file` IPC handler in `main.js`, which was hardcoded to always show a "JSON" filter in the save dialog regardless of the actual file being exported — affected every Export MD button in the app (characters, lorebooks, collections, personas, templates); now picks the filter from the file's real extension and defaults the save dialog to `I:\Lorekeeper\`. Updated `.gitignore` to include the new `Templates\` and `Notes\` auto-save folders and the safety-net backup files. Rewrote the GitHub section of this spec with an explicit, repeatable, verified command sequence (status check -> explicit `git add` of named files, never `git add .` -> commit -> push -> status verify -> optional tag), plus a "how to tell if project knowledge is stale" troubleshooting note, directly in response to the repeated-regression problem from session 16. |
 
 ---
 

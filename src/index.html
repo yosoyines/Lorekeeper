@@ -620,6 +620,16 @@ function App() {
   const postedOnDay=(d)=>data.characters.filter(c=>{const hasPostedDate=(c.posted_dates||[]).some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;});const isPostedAndScheduled=c.status==='posted'&&(c.schedule_dates||[]).some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;});return hasPostedDate||isPostedAndScheduled;});
   const upcoming=data.characters.filter(c=>c.status!=='posted'&&c.schedule_dates&&c.schedule_dates.length>0).flatMap(c=>c.schedule_dates.map(d=>({char:c,date:parseLocalDate(d)}))).filter(x=>x.date>=new Date(today.getFullYear(),today.getMonth(),today.getDate())).sort((a,b)=>a.date-b.date).slice(0,10);
 
+  // Apply font size globally whenever settings change — this lives at App level (not inside
+  // SettingsPage) so it stays in effect on every page, not just while Settings is open.
+  // It sets the real document root font-size directly, since the app's CSS uses hardcoded
+  // pixel values rather than a CSS variable, so a --custom-property here would do nothing.
+  React.useEffect(() => {
+    const size = (data.settings||{}).font_size || 'normal';
+    const map = {small:'13px', normal:'14px', large:'16px', xlarge:'18px'};
+    document.documentElement.style.fontSize = map[size] || '14px';
+  }, [(data.settings||{}).font_size]);
+
   const navTo=(p)=>{setPage(p);setSelectedWorld(null);setSelectedChar(null);setSelectedLore(null);setSelectedPersona(null);};
   const openColl=(c)=>{
     setSelectedColl(c);
@@ -722,7 +732,7 @@ function App() {
           {page==='settings'&&<h1>Settings</h1>}
           {page==='help'&&<h1>Help</h1>}
           <div className={`save-indicator ${saved?'show':''}`}><i className="ti ti-check" style={{fontSize:13}}></i>Saved</div>
-          {dataPath&&<span style={{fontSize:10,color:'var(--text3)',maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}} title={dataPath}>{dataPath}</span>}
+
           <div className="search-wrap" style={{marginLeft:8}}>
             <i className="ti ti-search"></i>
             <input placeholder="Quick find… (Ctrl+K)" value={searchQ} onChange={e=>{setSearchQ(e.target.value);setShowSearch(true);}} onFocus={()=>setShowSearch(true)} onBlur={()=>setTimeout(()=>setShowSearch(false),180)} />
@@ -778,7 +788,7 @@ function App() {
             {page==='characters'&&<CharactersPage data={data} setSelectedChar={c=>{setSelectedChar(c);setPage('char');}} />}
             {page==='lorebooks'&&<AllLorebooksPage data={data} update={update} exportLore={exportLore} openLore={openLore} />}
             {page==='collections'&&<AllCollectionsPage data={data} update={update} openColl={openColl} exportColl={exportColl} />}
-            {page==='settings'&&<SettingsPage data={data} update={update}/>}
+            {page==='settings'&&<SettingsPage data={data} update={update} dataPath={dataPath}/>}
             {page==='help'&&<HelpPage/>}
             {page==='lore'&&selectedLore&&<LorePage lorebook={selectedLore} data={data} update={update} exportLore={exportLore} onBack={()=>{setPage(selectedWorld?'world':'lorebooks');setSelectedLore(null);}} />}
             {page==='collection'&&selectedColl&&<CollPage coll={selectedColl} data={data} update={update} exportColl={exportColl} onBack={()=>{setPage(selectedWorld?'world':'collections');setSelectedColl(null);}} />}
@@ -4838,13 +4848,18 @@ function BackupRestorePanel({data, update}) {
 function NotesBackupPanel({data}) {
   return (
     <div style={{marginTop:24,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:16}}>
-      <div style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:12}}>Notes Backups</div>
-      <p style={{fontSize:12,color:'var(--text3)',marginBottom:12,lineHeight:1.6}}>
-        Notes have no other independent backup — unlike characters, lorebooks, and collections, they only live inside the main data file. To protect against that, every world's notes (and the global scratchpad) are also auto-saved as plain text files in <code style={{background:'var(--bg3)',padding:'1px 5px',borderRadius:3,fontFamily:'monospace'}}>Notes\</code>, independent of the main save. If the main data file is ever lost, your notes can be recovered from there.
+      <div style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:12}}>Notes & Templates Backups</div>
+      <p style={{fontSize:12,color:'var(--text3)',marginBottom:8,lineHeight:1.6}}>
+        Notes and templates have no other independent backup — unlike characters, lorebooks, and collections, they only live inside the main data file. To protect against that, every world's notes (and the global scratchpad) auto-save as plain text files in <code style={{background:'var(--bg3)',padding:'1px 5px',borderRadius:3,fontFamily:'monospace'}}>Notes\</code>, and every template auto-saves as a JSON file in <code style={{background:'var(--bg3)',padding:'1px 5px',borderRadius:3,fontFamily:'monospace'}}>Templates\</code>, independent of the main save. If the main data file is ever lost, these can be recovered from there.
       </p>
-      <button className="btn" style={{fontSize:12}} onClick={()=>window.lorekeeper.openFolder('Notes')}>
-        <i className="ti ti-folder-open"></i>Open Notes folder
-      </button>
+      <div style={{display:'flex',gap:8}}>
+        <button className="btn" style={{fontSize:12}} onClick={()=>window.lorekeeper.openFolder('Notes')}>
+          <i className="ti ti-folder-open"></i>Open Notes folder
+        </button>
+        <button className="btn" style={{fontSize:12}} onClick={()=>window.lorekeeper.openFolder('Templates')}>
+          <i className="ti ti-folder-open"></i>Open Templates folder
+        </button>
+      </div>
     </div>
   );
 }
@@ -5469,11 +5484,18 @@ function TemplateEditor({template,data,update,onBack}) {
   const setF=(k,v)=>setFields(f=>({...f,[k]:v}));
   const save=()=>{
     if(!name.trim())return;
+    const trimmedName=name.trim();
+    const templateId = isNew ? uuid() : template.id;
     if(isNew){
-      update(d=>{if(!d.templates)d.templates=[];d.templates.push({id:uuid(),name:name.trim(),world_id:worldId||null,fields});});
+      update(d=>{if(!d.templates)d.templates=[];d.templates.push({id:templateId,name:trimmedName,world_id:worldId||null,fields});});
     } else {
-      update(d=>{const t=d.templates.find(x=>x.id===template.id);if(t){t.name=name.trim();t.world_id=worldId||null;t.fields=fields;}});
+      update(d=>{const t=d.templates.find(x=>x.id===template.id);if(t){t.name=trimmedName;t.world_id=worldId||null;t.fields=fields;}});
     }
+    // Templates had no independent file backup — only ever lived inside the main data
+    // file, same gap notes had before being fixed. Auto-save a standalone JSON backup
+    // to Templates\ on every create/edit, separate from the main data file write.
+    const safeName=trimmedName.replace(/[^a-zA-Z0-9_-]/g,"_");
+    window.lorekeeper.saveTemplateFile(safeName, {id:templateId,name:trimmedName,world_id:worldId||null,fields}).catch(()=>{});
     onBack();
   };
   return (
@@ -5563,7 +5585,7 @@ function HelpTip({text}) {
 }
 
 
-function SettingsPage({data, update}) {
+function SettingsPage({data, update, dataPath}) {
   const settings = data.settings || {};
   const set = (key, val) => update(d => { if(!d.settings) d.settings={}; d.settings[key]=val; });
 
@@ -5575,13 +5597,6 @@ function SettingsPage({data, update}) {
     setApiKeySaved(true);
     setTimeout(() => setApiKeySaved(false), 2000);
   };
-
-  // Apply font size to root
-  React.useEffect(() => {
-    const size = settings.font_size || 'normal';
-    const map = { small: '13px', normal: '14px', large: '16px', xlarge: '18px' };
-    document.documentElement.style.setProperty('--font-size-base', map[size] || '14px');
-  }, [settings.font_size]);
 
   const Section = ({title, icon, children, badge}) => (
     <div style={{marginBottom:24}}>
@@ -5664,7 +5679,7 @@ function SettingsPage({data, update}) {
       <Section title="Data" icon="ti-database">
         <Field label="Data file location" hint="Where your Lorekeeper data is stored.">
           <div style={{display:'flex',gap:8,alignItems:'center'}}>
-            <code style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:11,color:'var(--text3)',fontFamily:'monospace'}}>I:\Lorekeeper\lorekeeper-data.json</code>
+            <code style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:11,color:'var(--text3)',fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{dataPath||'I:\\Lorekeeper\\lorekeeper-data.json'}</code>
             <button className="btn" style={{flexShrink:0}} onClick={()=>window.lorekeeper.openFolder('')}><i className="ti ti-folder-open"></i>Open</button>
           </div>
         </Field>

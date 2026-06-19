@@ -1,8 +1,15 @@
+lorekeeper-data.json
+lorekeeper-data.lastgood.json
+lorekeeper-data.SUSPICIOUS.json
 Companions/
 Lorebooks/
 Collections/
 Worlds/
 Personas/
 Templates/
+Notes/
 node_modules/
 assets/
+*.ico
+*.png
+*.svg

@@ -391,6 +391,21 @@ ipcMain.handle('save-notes-file', async (event, { filename, content: noteContent
   } catch (e) { console.error('save-notes-file:', e); return false; }
 });
 
+// Standalone template backup — same reasoning as Notes: templates only ever lived
+// inside the single big data file with no independent file of their own, the same
+// gap notes had before being fixed. Each template now also auto-saves to its own
+// JSON file in Templates\, independent of the main data file write.
+ipcMain.handle('save-template-file', async (event, { filename, data: templateData }) => {
+  try {
+    const dir = path.join(DATA_DIR, 'Templates');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const safeName = filename.replace(/[\\/:*?"<>|]/g, '_');
+    const filePath = path.join(dir, safeName.endsWith('.json') ? safeName : safeName + '.json');
+    await fs.promises.writeFile(filePath, JSON.stringify(templateData, null, 2), 'utf-8');
+    return true;
+  } catch (e) { console.error('save-template-file:', e); return false; }
+});
+
 
 // ── Helpers for backup ───────────────────────────────────
 function addDirToZip(zip, dirPath, zipPrefix) {
@@ -441,13 +456,22 @@ ipcMain.handle('export-backup', async (event, { worldId }) => {
     const zip = new AdmZip();
     zip.addFile('lorekeeper-data.json', Buffer.from(JSON.stringify(exportData, null, 2), 'utf-8'));
 
-    const folders = ['Companions', 'Lorebooks', 'Collections', 'Worlds', 'Personas'];
+    const folders = ['Companions', 'Lorebooks', 'Collections', 'Worlds', 'Personas', 'Notes', 'Templates'];
     if (worldId) {
       exportData.characters.forEach(c => {
         if (c.companion_folder) addDirToZip(zip, path.join(DATA_DIR, 'Companions', c.companion_folder), 'Companions/' + c.companion_folder);
       });
       if (exportData.lorebooks.length) addDirToZip(zip, path.join(DATA_DIR, 'Lorebooks'), 'Lorebooks');
       if (exportData.collections.length) addDirToZip(zip, path.join(DATA_DIR, 'Collections'), 'Collections');
+      // Templates don't have a per-world subfolder the way Companions does, so when this
+      // world has any templates, include the whole standalone Templates\ backup folder
+      // rather than trying to guess which files belong to which world.
+      if (exportData.templates.length) addDirToZip(zip, path.join(DATA_DIR, 'Templates'), 'Templates');
+      // Include this world's standalone notes backup file if it exists, even though notes
+      // are also embedded in lorekeeper-data.json above — the standalone .md file is the
+      // independent safety net and should travel with any backup of this world.
+      const worldNotesFile = path.join(DATA_DIR, 'Notes', (world.name || ('world-' + worldId)).replace(/[\\/:*?"<>|]/g, '_') + '.md');
+      if (fs.existsSync(worldNotesFile)) zip.addLocalFile(worldNotesFile, 'Notes');
     } else {
       for (const folder of folders) addDirToZip(zip, path.join(DATA_DIR, folder), folder);
     }
