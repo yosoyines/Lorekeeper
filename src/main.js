@@ -50,8 +50,43 @@ ipcMain.handle('load-data', async () => {
   } catch (e) { console.error('load-data:', e); return null; }
 });
 
+// Safety net: refuse to silently overwrite a substantial existing data file with
+// something drastically smaller (e.g. an empty/default shape from a race condition
+// on app startup). This is a defense-in-depth check on top of the renderer-side
+// dataLoaded guard — if the renderer guard ever fails for any reason, this is the
+// last line of defense protecting the user's actual data on disk.
+const DATA_BACKUP_FILE = path.join(DATA_DIR, 'lorekeeper-data.lastgood.json');
+const SHRINK_REFUSE_RATIO = 0.5; // refuse if new size < 50% of old size
+const MIN_SIZE_TO_PROTECT = 5000; // only protect files already bigger than ~5KB
+
 ipcMain.handle('save-data', async (event, data) => {
-  try { fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8'); return true; }
+  try {
+    const newContent = JSON.stringify(data);
+    const newSize = Buffer.byteLength(newContent, 'utf-8');
+
+    if (fs.existsSync(DATA_FILE)) {
+      const oldSize = fs.statSync(DATA_FILE).size;
+      if (oldSize > MIN_SIZE_TO_PROTECT && newSize < oldSize * SHRINK_REFUSE_RATIO) {
+        console.error(
+          'save-data REFUSED: new write (' + newSize + ' bytes) is drastically smaller than ' +
+          'the existing file (' + oldSize + ' bytes). This looks like a data-loss bug, not an ' +
+          'intentional deletion. Writing the would-be content to lorekeeper-data.SUSPICIOUS.json ' +
+          'for manual review instead of overwriting the real file.'
+        );
+        const suspiciousFile = path.join(DATA_DIR, 'lorekeeper-data.SUSPICIOUS.json');
+        await fs.promises.writeFile(suspiciousFile, newContent, 'utf-8');
+        return false;
+      }
+    }
+
+    await fs.promises.writeFile(DATA_FILE, newContent, 'utf-8');
+
+    // Keep a rolling last-known-good backup of any write that passed the safety check above.
+    // This is a cheap extra layer of recovery in case of any other unforeseen issue.
+    fs.promises.writeFile(DATA_BACKUP_FILE, newContent, 'utf-8').catch(() => {});
+
+    return true;
+  }
   catch (e) { console.error('save-data:', e); return false; }
 });
 
@@ -59,9 +94,21 @@ ipcMain.handle('get-data-path', () => DATA_FILE);
 
 // ── File export ──────────────────────────────────────────
 ipcMain.handle('export-file', async (event, { defaultName, content }) => {
+  // Pick the right save-dialog filter based on the file's actual extension, instead of
+  // always hardcoding JSON. This is shared by every Export button in the app (characters,
+  // lorebooks, collections, personas, templates) — both JSON and Markdown exports.
+  const ext = (defaultName.split('.').pop() || '').toLowerCase();
+  const filterMap = {
+    json: { name: 'JSON', extensions: ['json'] },
+    md: { name: 'Markdown', extensions: ['md'] },
+    txt: { name: 'Text', extensions: ['txt'] },
+  };
+  const primaryFilter = filterMap[ext] || { name: 'All Files', extensions: ['*'] };
+  const filters = [primaryFilter, { name: 'All Files', extensions: ['*'] }];
+
   const { filePath } = await dialog.showSaveDialog(mainWindow, {
-    defaultPath: defaultName,
-    filters: [{ name: 'JSON', extensions: ['json'] }]
+    defaultPath: path.join(DATA_DIR, defaultName),
+    filters
   });
   if (!filePath) return false;
   fs.writeFileSync(filePath, content, 'utf-8');
@@ -326,6 +373,22 @@ ipcMain.handle('save-collection-json', async (event, { filename, data }) => {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
     return true;
   } catch (e) { console.error('save-collection-json:', e); return false; }
+});
+
+// ── Save notes to standalone text files (independent of lorekeeper-data.json) ──
+// Notes have no other backup mechanism — unlike characters/lorebooks/collections,
+// which each auto-save to their own file, notes only ever lived inside the single
+// big data file. This gives every world's notes (and the global scratchpad) their
+// own plain-text file on disk, so they survive even if the main data file is lost.
+ipcMain.handle('save-notes-file', async (event, { filename, content: noteContent }) => {
+  try {
+    const dir = path.join(DATA_DIR, 'Notes');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const safeName = filename.replace(/[\\/:*?"<>|]/g, '_');
+    const filePath = path.join(dir, safeName.endsWith('.md') ? safeName : safeName + '.md');
+    await fs.promises.writeFile(filePath, noteContent || '', 'utf-8');
+    return true;
+  } catch (e) { console.error('save-notes-file:', e); return false; }
 });
 
 

@@ -1,11 +1,8 @@
-lorekeeper-data.json
 Companions/
 Lorebooks/
 Collections/
 Worlds/
 Personas/
+Templates/
 node_modules/
 assets/
-*.ico
-*.png
-*.svg

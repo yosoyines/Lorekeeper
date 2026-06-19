@@ -186,7 +186,7 @@
   .plot-tag { display:inline-flex; align-items:center; gap:4px; font-size:11px; padding:2px 7px; border-radius:4px; background:var(--accent-dim); border:1px solid var(--accent2); color:var(--accent); }
   .plot-tag button { background:none; border:none; color:var(--accent); cursor:pointer; padding:0 0 0 2px; font-size:12px; line-height:1; }
   .delete-zone { margin-top:4px; padding-top:12px; border-top:1px solid var(--border); }
-  .tpl-editor { max-width:700px; display:flex; flex-direction:column; gap:14px; }
+  .tpl-editor { display:flex; flex-direction:column; gap:14px; }
   .tpl-hint { font-size:12px; color:var(--text3); padding:0 2px; }
   .lore-tab-bar { display:flex; border-bottom:1px solid var(--border); margin-bottom:0; }
   .coll-tab-bar { display:flex; border-bottom:1px solid var(--border); margin-bottom:16px; }
@@ -282,6 +282,21 @@
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 const uuid = () => ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
 const BS = String.fromCharCode(92);
+// Robust timestamp parser. Saucepan exports use a format like
+// "2026-06-18 03:01:00.455294 +00:00:00" which native Date() cannot parse (returns NaN).
+// Normalize: space -> T, truncate microseconds to milliseconds, fix the timezone offset
+// from "+00:00:00" to "+00:00" before handing off to Date().
+const parseTimestamp = (s) => {
+  if (!s) return 0;
+  let t = new Date(s).getTime();
+  if (!isNaN(t)) return t;
+  let norm = String(s).trim();
+  norm = norm.replace(' ', 'T');
+  norm = norm.replace(/(\.\d{3})\d+/, '$1');
+  norm = norm.replace(/([+-]\d{2}:\d{2}):\d{2}$/, '$1');
+  t = new Date(norm).getTime();
+  return isNaN(t) ? 0 : t;
+};
 const loreHint = (filename) => "I:" + BS + "Lorekeeper" + BS + "Lorebooks" + BS + filename;
 const charFolderHint = (folder) => "Saves to: I:" + BS + "Lorekeeper" + BS + "Companions" + BS + folder + BS + "character.json";
 const now = () => new Date().toISOString();
@@ -313,18 +328,25 @@ function App() {
   const [rightPanel, setRightPanel] = useState(false);
   const [newTemplate, setNewTemplate] = useState(false);
   const [ctxMenu, setCtxMenu] = useState(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const saveTimer = useRef();
 
   // Load data from disk on startup
   useEffect(() => {
     window.lorekeeper.loadData().then(d => {
       if (d) setData(d);
+      setDataLoaded(true);
+    }).catch(() => {
+      console.error('Failed to load data — autosave will remain blocked to avoid overwriting the real file.');
     });
     window.lorekeeper.getDataPath().then(p => setDataPath(p));
   }, []);
 
-  // Autosave to disk on every change
+  // Autosave to disk on every change — NEVER fires until the initial load has completed,
+  // otherwise the default empty initData could overwrite the real file on disk (race condition
+  // that caused real data loss once; see Performance/Safety notes in the spec).
   useEffect(() => {
+    if (!dataLoaded) return;
     clearTimeout(saveTimer.current);
     const debounceMs = (data.settings?.autosave_debounce || 600);
     saveTimer.current = setTimeout(() => {
@@ -342,7 +364,7 @@ function App() {
     if (selectedWorld) { const fresh = data.worlds.find(w=>w.id===selectedWorld.id); if(fresh) setSelectedWorld(fresh); }
   }, [data.worlds]);
 
-  const update = (fn) => setData(d => { const nd = JSON.parse(JSON.stringify(d)); fn(nd); return nd; });
+  const update = (fn) => setData(d => { const nd = structuredClone(d); fn(nd); return nd; });
 
   const searchResults = useMemo(() => {
     if (!searchQ.trim()) return [];
@@ -598,13 +620,6 @@ function App() {
   const postedOnDay=(d)=>data.characters.filter(c=>{const hasPostedDate=(c.posted_dates||[]).some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;});const isPostedAndScheduled=c.status==='posted'&&(c.schedule_dates||[]).some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;});return hasPostedDate||isPostedAndScheduled;});
   const upcoming=data.characters.filter(c=>c.status!=='posted'&&c.schedule_dates&&c.schedule_dates.length>0).flatMap(c=>c.schedule_dates.map(d=>({char:c,date:parseLocalDate(d)}))).filter(x=>x.date>=new Date(today.getFullYear(),today.getMonth(),today.getDate())).sort((a,b)=>a.date-b.date).slice(0,10);
 
-  // Apply font size globally whenever settings change
-  React.useEffect(() => {
-    const size = (data.settings||{}).font_size || 'normal';
-    const map = {small:'13px', normal:'14px', large:'16px', xlarge:'18px'};
-    document.documentElement.style.fontSize = map[size] || '14px';
-  }, [(data.settings||{}).font_size]);
-
   const navTo=(p)=>{setPage(p);setSelectedWorld(null);setSelectedChar(null);setSelectedLore(null);setSelectedPersona(null);};
   const openColl=(c)=>{
     setSelectedColl(c);
@@ -732,6 +747,7 @@ function App() {
             {page==='world'&&worldTab==='collections'&&<button className="btn primary" onClick={()=>setModal({type:'new-coll',worldId:selectedWorld.id})}><i className="ti ti-plus"></i>New Collection</button>}
             {page==='world'&&selectedWorld&&<button className="btn" onClick={()=>exportWorldPlatformZip(selectedWorld)} title="Export all posted characters + public lorebooks + public collections as a ZIP ready for site upload"><i className="ti ti-package-export"></i>Export ZIP</button>}
             {page==='templates'&&<button className="btn primary" onClick={()=>setNewTemplate(true)}><i className="ti ti-plus"></i>New Template</button>}
+            {page==='personas'&&!selectedPersona&&<button className="btn primary" onClick={()=>setModal({type:'new-persona'})}><i className="ti ti-plus"></i>New Persona</button>}
             {page==='personas'&&selectedPersona&&<button className="btn" onClick={()=>{
               const p=selectedPersona;
               const lines=["# "+p.name];
@@ -772,7 +788,7 @@ function App() {
             {page==='personas'&&!selectedPersona&&<PersonasPage data={data} setSelectedPersona={p=>{setSelectedPersona(p);}} />}
             {page==='personas'&&selectedPersona&&<PersonaDetailPage persona={selectedPersona} data={data} update={update} onBack={()=>setSelectedPersona(null)} />}
           </div>
-          {rightPanel&&<RightPanel tab={rightTab} setTab={setRightTab} data={data} update={update} currentWorld={selectedWorld} currentChar={selectedChar} currentPage={page} />}
+          {rightPanel&&<RightPanel tab={rightTab} setTab={setRightTab} data={data} update={update} currentWorld={selectedWorld} currentChar={selectedChar} currentPage={page} setPage={setPage} />}
         </div>
       </div>
 
@@ -2436,7 +2452,7 @@ function getImgSrc(imgObj) {
 }
 
 
-function ClaudePanel({data, currentWorld, currentChar, currentPage}) {
+function ClaudePanel({data, currentWorld, currentChar, currentPage, setPage}) {
   const [messages, setMessages] = React.useState([]);
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
@@ -2580,7 +2596,7 @@ function ClaudePanel({data, currentWorld, currentChar, currentPage}) {
       {/* API key nudge */}
       {!data.settings?.anthropic_api_key&&<div style={{padding:'8px 12px',background:'rgba(251,191,36,0.08)',borderBottom:'1px solid rgba(251,191,36,0.2)',fontSize:11,color:'var(--amber)',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
         <i className="ti ti-key" style={{fontSize:12}}></i>
-        No API key set — <span style={{textDecoration:'underline',cursor:'pointer'}} onClick={()=>{}}>add in Settings</span>
+        No API key set — <span style={{textDecoration:'underline',cursor:'pointer'}} onClick={()=>setPage('settings')}>add in Settings</span>
       </div>}
       {/* Context indicator */}
       <div style={{padding:'8px 12px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
@@ -2657,12 +2673,26 @@ function ClaudePanel({data, currentWorld, currentChar, currentPage}) {
 }
 
 // Add pulse animation to CSS
-function RightPanel({tab,setTab,data,update,currentWorld,currentChar,currentPage}) {
+function RightPanel({tab,setTab,data,update,currentWorld,currentChar,currentPage,setPage}) {
+  // Notes have no independent file backup elsewhere — unlike characters/lorebooks/
+  // collections, which each auto-save to their own JSON, notes only ever lived inside
+  // the single big data file. Debounced-write a standalone .md backup per world (and
+  // one for the global scratchpad) so notes survive even if the main data file is lost.
+  const notesFileSaveTimer = React.useRef();
+  const saveNotesBackupFile = (filename, content) => {
+    clearTimeout(notesFileSaveTimer.current);
+    notesFileSaveTimer.current = setTimeout(() => {
+      window.lorekeeper.saveNotesFile(filename, content).catch(()=>{});
+    }, 800);
+  };
+
   const saveNote=(val)=>{
     if(currentWorld){
       update(d=>{const w=d.worlds.find(x=>x.id===currentWorld.id);if(w)w.notes=val;});
+      saveNotesBackupFile(currentWorld.name||'world-'+currentWorld.id, val);
     } else {
       update(d=>{d.notes=val;});
+      saveNotesBackupFile('_global', val);
     }
   };
   const noteValue = currentWorld
@@ -2704,8 +2734,64 @@ function RightPanel({tab,setTab,data,update,currentWorld,currentChar,currentPage
           </>
         )}
         {tab==='tools'&&<ToolsPanel data={data}/>}
-        {tab==='claude'&&<ClaudePanel data={data} currentWorld={currentWorld} currentChar={currentChar} currentPage={currentPage}/>}
+        {tab==='claude'&&<ClaudePanel data={data} currentWorld={currentWorld} currentChar={currentChar} currentPage={currentPage} setPage={setPage}/>}
         {tab==='map'&&<RelationshipsPage data={data} update={update} initialWorld={currentWorld?.id||null}/>}
+      </div>
+    </div>
+  );
+}
+
+function SiteChecklistPanel({data, setSelectedChar, setSelectedLore}) {
+  const [helpOpen, setHelpOpen] = useState(false);
+
+  const pending = [];
+  data.characters.filter(c=>c.status==='posted'&&(!c.site_last_synced_at||c.updated_at>c.site_last_synced_at)).forEach(c=>{
+    const world=data.worlds.find(w=>w.id===c.world_id);
+    pending.push({key:'sc-'+c.id,type:'character',id:c.id,thumb:c.image,thumbIcon:'ti-user',name:c.display_name||c.name,sub:world?.name||'—',onClick:()=>setSelectedChar(c)});
+  });
+  data.lorebooks.filter(l=>l.has_been_public&&(!l.site_last_synced_at||l.updated_at>l.site_last_synced_at)).forEach(l=>{
+    const world=data.worlds.find(w=>w.id===l.world_id);
+    pending.push({key:'sl-'+l.id,type:'lorebook',id:l.id,thumb:null,thumbIcon:'ti-book',thumbColor:'var(--amber)',name:l.name,sub:world?.name||'Standalone',onClick:()=>setSelectedLore(l)});
+  });
+  data.collections.filter(c=>c.has_been_public&&(!c.site_last_synced_at||c.updated_at>c.site_last_synced_at)).forEach(c=>{
+    const world=data.worlds.find(w=>w.id===c.world_id);
+    pending.push({key:'sc2-'+c.id,type:'collection',id:c.id,thumb:null,thumbIcon:'ti-folders',thumbColor:'var(--accent)',name:c.name,sub:world?.name||'Standalone',onClick:null});
+  });
+
+  if (pending.length === 0) return null;
+
+  return (
+    <div style={{marginTop:16}}>
+      <div style={{marginBottom:10}}>
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <div style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Site Checklist</div>
+          <span style={{fontSize:10,background:'rgba(239,68,68,0.15)',color:'#fca5a5',border:'1px solid rgba(239,68,68,0.3)',borderRadius:4,padding:'1px 6px'}}>{pending.length}</span>
+          <span style={{fontSize:10,color:'var(--text3)',flex:1}}>needs re-export</span>
+          <button onClick={()=>setHelpOpen(h=>!h)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:12,padding:'0 2px',lineHeight:1}} title="How does this work?">?</button>
+        </div>
+        {helpOpen?<div style={{marginTop:8,padding:'8px 10px',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',fontSize:11,color:'var(--text3)',lineHeight:1.7}}>
+          <strong style={{color:'var(--text)',display:'block',marginBottom:4}}>How to clear an item:</strong>
+          1. Click the item — go to character / lorebook<br/>
+          2. Click <strong style={{color:'var(--text)'}}>Export</strong> to download the JSON<br/>
+          3. Upload the JSON to the site<br/>
+          4. Item disappears from this list<br/>
+          <span style={{color:'var(--text3)',fontSize:10,marginTop:4,display:'block'}}>Items appear here when you edit something after its last export, or if it has never been exported at all.</span>
+        </div>:null}
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:6}}>
+        {pending.map(item=>(
+          <div key={item.key} style={{display:'flex',gap:10,padding:'8px 12px',background:'var(--bg2)',border:'1px solid rgba(239,68,68,0.15)',borderRadius:'var(--r)',cursor:item.onClick?'pointer':'default',alignItems:'center'}}
+            onClick={item.onClick||undefined}>
+            <div style={{width:36,height:36,borderRadius:'var(--r)',overflow:'hidden',flexShrink:0,background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              {item.thumb?<ImgFromPath src={item.thumb.data||item.thumb.relPath} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<i className={"ti "+item.thumbIcon} style={{color:item.thumbColor||'var(--text3)',fontSize:16}}></i>}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:12,fontWeight:500,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.name}</div>
+              <div style={{fontSize:11,color:'var(--text3)'}}>{item.sub} - edited since last export</div>
+            </div>
+            {item.onClick?<span style={{fontSize:11,color:'#fca5a5',alignSelf:'center',flexShrink:0}}>go -&gt;</span>:null}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -2908,61 +2994,7 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
             </div>;
           })()}
           {/* Site Checklist */}
-          {(()=>{
-            const pending=[];
-            // Characters: posted, has been synced before, updated since last sync
-            data.characters.filter(c=>c.status==='posted'&&c.site_last_synced_at&&c.updated_at>c.site_last_synced_at).forEach(c=>{
-              const world=data.worlds.find(w=>w.id===c.world_id);
-              pending.push({key:'sc-'+c.id,type:'character',id:c.id,thumb:c.image,thumbIcon:'ti-user',name:c.display_name||c.name,sub:world?.name||'—',onClick:()=>setSelectedChar(c)});
-            });
-            // Lorebooks: has been public, synced before, updated since
-            data.lorebooks.filter(l=>l.has_been_public&&l.site_last_synced_at&&l.updated_at>l.site_last_synced_at).forEach(l=>{
-              const world=data.worlds.find(w=>w.id===l.world_id);
-              pending.push({key:'sl-'+l.id,type:'lorebook',id:l.id,thumb:null,thumbIcon:'ti-book',thumbColor:'var(--amber)',name:l.name,sub:world?.name||'Standalone',onClick:()=>setSelectedLore(l)});
-            });
-            // Collections: has been public, synced before, updated since
-            data.collections.filter(c=>c.has_been_public&&c.site_last_synced_at&&c.updated_at>c.site_last_synced_at).forEach(c=>{
-              const world=data.worlds.find(w=>w.id===c.world_id);
-              pending.push({key:'sc2-'+c.id,type:'collection',id:c.id,thumb:null,thumbIcon:'ti-folders',thumbColor:'var(--accent)',name:c.name,sub:world?.name||'Standalone',onClick:null});
-            });
-            if(pending.length===0) return null;
-            return <div style={{marginTop:16}}>
-              {(()=>{
-                const [helpOpen,setHelpOpen]=useState(false);
-                return <div style={{marginBottom:10}}>
-                  <div style={{display:'flex',alignItems:'center',gap:6}}>
-                    <div style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Site Checklist</div>
-                    <span style={{fontSize:10,background:'rgba(239,68,68,0.15)',color:'#fca5a5',border:'1px solid rgba(239,68,68,0.3)',borderRadius:4,padding:'1px 6px'}}>{pending.length}</span>
-                    <span style={{fontSize:10,color:'var(--text3)',flex:1}}>needs re-export</span>
-                    <button onClick={()=>setHelpOpen(h=>!h)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:12,padding:'0 2px',lineHeight:1}} title="How does this work?">?</button>
-                  </div>
-                  {helpOpen&&<div style={{marginTop:8,padding:'8px 10px',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',fontSize:11,color:'var(--text3)',lineHeight:1.7}}>
-                    <strong style={{color:'var(--text)',display:'block',marginBottom:4}}>How to clear an item:</strong>
-                    1. Click the item → go to character / lorebook<br/>
-                    2. Click <strong style={{color:'var(--text)'}}>Export</strong> to download the JSON<br/>
-                    3. Upload the JSON to the site<br/>
-                    4. Item disappears from this list ✓<br/>
-                    <span style={{color:'var(--text3)',fontSize:10,marginTop:4,display:'block'}}>Items appear here when you edit something after its last export.</span>
-                  </div>}
-                </div>;
-              })()}
-              <div style={{display:'flex',flexDirection:'column',gap:6}}>
-                {pending.map(item=>(
-                  <div key={item.key} style={{display:'flex',gap:10,padding:'8px 12px',background:'var(--bg2)',border:'1px solid rgba(239,68,68,0.15)',borderRadius:'var(--r)',cursor:item.onClick?'pointer':'default',alignItems:'center'}}
-                    onClick={item.onClick||undefined}>
-                    <div style={{width:36,height:36,borderRadius:'var(--r)',overflow:'hidden',flexShrink:0,background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                      {item.thumb?<ImgFromPath src={item.thumb.data||item.thumb.relPath} alt={item.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<i className={`ti ${item.thumbIcon}`} style={{color:item.thumbColor||'var(--text3)',fontSize:16}}></i>}
-                    </div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:12,fontWeight:500,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.name}</div>
-                      <div style={{fontSize:11,color:'var(--text3)'}}>{item.sub} · edited since last export</div>
-                    </div>
-                    {item.onClick&&<span style={{fontSize:11,color:'#fca5a5',alignSelf:'center',flexShrink:0}}>go →</span>}
-                  </div>
-                ))}
-              </div>
-            </div>;
-          })()}
+          <SiteChecklistPanel data={data} setSelectedChar={setSelectedChar} setSelectedLore={setSelectedLore}/>
 
           {/* Lorekeeper Checklist */}
           {(()=>{
@@ -3112,6 +3144,13 @@ function WorldsPage({data,setSelectedWorld,setModal}) {
 
 function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worldGallery,setSelectedChar,setSelectedLore,openLore,openColl,selectedLore,update,setModal,exportChar,exportLore,exportColl,setPage,setSelectedWorld,data,initialCollId,clearInitialCollId}) {
   const tabs=[['characters','ti-users','Characters'],['lorebooks','ti-book','Lorebooks'],['collections','ti-folders','Collections'],['gallery','ti-photo','Gallery'],['info','ti-info-circle','World Info']];
+  const notesFileTimer = React.useRef();
+  const saveWorldNotesBackup = (val) => {
+    clearTimeout(notesFileTimer.current);
+    notesFileTimer.current = setTimeout(() => {
+      window.lorekeeper.saveNotesFile(world.name||('world-'+world.id), val).catch(()=>{});
+    }, 800);
+  };
   const handleBannerUpload=async()=>{
     const _r=await window.lorekeeper.importImage();
     if(!_r) return;
@@ -3232,8 +3271,8 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
             <PlotArchetypeInput worldId={world.id} update={update}/>
           </div>
           <div className="field-block">
-            <label>Notes <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— also editable in the Notes panel</span></label>
-            <textarea value={world.notes||''} onChange={e=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.notes=e.target.value;})} style={{minHeight:120}} placeholder="Ideas, plot threads, reminders…"/>
+            <label>Notes <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— also editable in the Notes panel; backed up to Notes\{world.name}.md</span></label>
+            <textarea value={world.notes||''} onChange={e=>{const val=e.target.value;update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.notes=val;});saveWorldNotesBackup(val);}} style={{minHeight:120}} placeholder="Ideas, plot threads, reminders…"/>
           </div>
           <div className="delete-zone">
             <button className="btn danger" onClick={()=>{update(d=>{d.worlds=d.worlds.filter(x=>x.id!==world.id);d.characters=d.characters.filter(c=>c.world_id!==world.id);d.lorebooks=d.lorebooks.filter(l=>l.world_id!==world.id);});setPage('worlds');setSelectedWorld(null);}}><i className="ti ti-trash"></i>Delete World</button>
@@ -3987,7 +4026,16 @@ function CharDetailPage({char,data,update,initialTab,exportChar,onBack}) {
           )}
           {tab==='schedule'&&(
             <div style={{display:'flex',flexDirection:'column',gap:12}}>
-              <div className="field-block"><label>Status</label><select value={charData.status||'draft'} onChange={e=>updChar(c=>c.status=e.target.value)}><option value="draft">Draft</option><option value="ready">Ready</option><option value="posted">Posted</option></select></div>
+              <div className="field-block"><label>Status</label><select value={charData.status||'draft'} onChange={e=>updChar(c=>{
+                const newStatus=e.target.value;
+                c.status=newStatus;
+                if(newStatus==='posted'&&(!c.posted_dates||c.posted_dates.length===0)){
+                  const t=new Date();
+                  const td=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+                  if(!c.posted_dates)c.posted_dates=[];
+                  c.posted_dates.push(td);
+                }
+              })}><option value="draft">Draft</option><option value="ready">Ready</option><option value="posted">Posted</option></select></div>
               {charData.status!=='posted'&&<div className="field-block">
                 <label>Schedule Dates</label>
                 {(charData.schedule_dates||[]).map((d,i)=>(
@@ -4787,6 +4835,20 @@ function BackupRestorePanel({data, update}) {
   );
 }
 
+function NotesBackupPanel({data}) {
+  return (
+    <div style={{marginTop:24,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:16}}>
+      <div style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:12}}>Notes Backups</div>
+      <p style={{fontSize:12,color:'var(--text3)',marginBottom:12,lineHeight:1.6}}>
+        Notes have no other independent backup — unlike characters, lorebooks, and collections, they only live inside the main data file. To protect against that, every world's notes (and the global scratchpad) are also auto-saved as plain text files in <code style={{background:'var(--bg3)',padding:'1px 5px',borderRadius:3,fontFamily:'monospace'}}>Notes\</code>, independent of the main save. If the main data file is ever lost, your notes can be recovered from there.
+      </p>
+      <button className="btn" style={{fontSize:12}} onClick={()=>window.lorekeeper.openFolder('Notes')}>
+        <i className="ti ti-folder-open"></i>Open Notes folder
+      </button>
+    </div>
+  );
+}
+
 function ImageMigrationPanel({data, update}) {
   const [status, setStatus] = useState(null); // null | 'scanning' | 'scanned' | 'migrating' | 'done'
   const [report, setReport] = useState([]);
@@ -4971,7 +5033,7 @@ function BatchImportHelp() {
       <div style={{paddingLeft:12,marginBottom:4,fontSize:11}}>
         <span style={{color:'#6ee7b7'}}>new</span> — not in Lorekeeper yet<br/>
         <span style={{color:'var(--accent)'}}>update ↓</span> — site version is newer<br/>
-        <span style={{color:'var(--amber)'}}>local newer ↑</span> — your edits are newer (skipped)<br/>
+        <span style={{color:'var(--amber)'}}>local newer ↑</span> — your edits are newer (skipped by default; use "Import anyway" on an item, or "Force import all" to override)<br/>
         <span style={{color:'var(--text3)'}}>up to date</span> — no changes
       </div>
       <div style={{marginBottom:4}}>3. Assign worlds to items that need one</div>
@@ -4990,6 +5052,8 @@ function BatchImportPage({data,update}) {
   const [scanned,setScanned]=useState(false);
   const [assignments,setAssignments]=useState({}); // id -> worldId
   const [importing,setImporting]=useState(false);
+  const [forceImport,setForceImport]=useState(false); // global override: ignore "local newer" protection
+  const [forceItems,setForceItems]=useState(new Set()); // per-item override ids
   const [done,setDone]=useState(null);
 
   const scan=async()=>{
@@ -5044,8 +5108,9 @@ function BatchImportPage({data,update}) {
         const obj=item.jsonData;
         const existing=d.collections.find(x=>x.id===obj.id);
         if(existing){
-          const pts=s=>{if(!s)return 0;const t=new Date(s).getTime();return isNaN(t)?0:t;};
-          if(pts(existing.updated_at)>pts(obj.updated_at)&&pts(existing.updated_at)>0){skipCount++;return;}
+          const pts=parseTimestamp;
+          const forced=forceImport||forceItems.has(obj.id||item.filename);
+          if(!forced&&pts(existing.updated_at)>pts(obj.updated_at)&&pts(existing.updated_at)>0){skipCount++;return;}
           existing.name=obj.name||existing.name;
           existing.definition=obj.description||existing.definition;
           existing.tags=obj.tags||existing.tags;
@@ -5069,8 +5134,9 @@ function BatchImportPage({data,update}) {
         const obj=item.jsonData;
         const existing=d.lorebooks.find(x=>x.id===obj.id);
         if(existing){
-          const pts=s=>{if(!s)return 0;const t=new Date(s).getTime();return isNaN(t)?0:t;};
-          if(pts(existing.updated_at)>pts(obj.updated_at)&&pts(existing.updated_at)>0){skipCount++;return;}
+          const pts=parseTimestamp;
+          const forced=forceImport||forceItems.has(obj.id||item.filename);
+          if(!forced&&pts(existing.updated_at)>pts(obj.updated_at)&&pts(existing.updated_at)>0){skipCount++;return;}
           existing.content=obj.content||existing.content;
           existing.tags=obj.tags||existing.tags;
           existing.name=obj.name||existing.name;
@@ -5109,17 +5175,29 @@ function BatchImportPage({data,update}) {
 
         const existing=d.characters.find(x=>x.id===obj.id);
         if(existing){
-          const parseTs=s=>{if(!s)return 0;const t=new Date(s).getTime();return isNaN(t)?0:t;};
+          const parseTs=parseTimestamp;
           const localTime = parseTs(existing.updated_at);
           const importTime = parseTs(obj.updated_at);
-          // Skip if local is newer — user has edited since last platform export
-          if(localTime > importTime && localTime > 0){ skipCount++; return; }
-          const mainImage = portraits[0]?.relPath ? {relPath:portraits[0].relPath} : existing.image;
+          const forced=forceImport||forceItems.has(obj.id||item.folderName);
+          // Skip if local is newer — user has edited since last platform export (unless forced)
+          if(!forced && localTime > importTime && localTime > 0){ skipCount++; return; }
+          // Preserve the platform image UUID from the import if present; only fall back to a
+          // local-file relPath when the site export genuinely has no UUID (e.g. unposted/private).
+          const mainImage = obj.image?.id ? {id:obj.image.id} : (portraits[0]?.relPath ? {relPath:portraits[0].relPath} : existing.image);
           const folderName = item.folderName || existing.companion_folder;
-          Object.assign(existing,{name:obj.name||existing.name,display_name:obj.display_name||existing.display_name,short_description:obj.short_description||existing.short_description,full_description:obj.full_description||existing.full_description,card:obj.card||existing.card,example_dialogue:obj.example_dialogue||existing.example_dialogue,tags:obj.tags||existing.tags,fandom_tags:obj.fandom_tags||existing.fandom_tags,sus:obj.sus!==undefined?obj.sus:existing.sus,very_sus:obj.very_sus!==undefined?obj.very_sus:existing.very_sus,starting_scenarios:obj.starting_scenarios||existing.starting_scenarios,formatting_instructions:obj.formatting_instructions||existing.formatting_instructions,advanced_prompt:obj.advanced_prompt||existing.advanced_prompt,access_level:obj.access_level||existing.access_level,status,image:mainImage,portraits,updated_at:now(),companion_folder:folderName||existing.companion_folder||null});
+          // posted_dates: if the site export shows this is posted and we don't already have a
+          // posted date locally, derive one from posted_at (or updated_at as a fallback) instead
+          // of leaving posted_dates empty and forcing a manual "Add Posted Date" later.
+          const sitePostedDates = (status==='posted'&&(!existing.posted_dates||existing.posted_dates.length===0)&&(obj.posted_at||obj.updated_at))
+            ? [(obj.posted_at||obj.updated_at).split(/[ T]/)[0]]
+            : existing.posted_dates;
+          Object.assign(existing,{name:obj.name||existing.name,display_name:obj.display_name||existing.display_name,short_description:obj.short_description||existing.short_description,full_description:obj.full_description||existing.full_description,card:obj.card||existing.card,example_dialogue:obj.example_dialogue||existing.example_dialogue,tags:obj.tags||existing.tags,fandom_tags:obj.fandom_tags||existing.fandom_tags,sus:obj.sus!==undefined?obj.sus:existing.sus,very_sus:obj.very_sus!==undefined?obj.very_sus:existing.very_sus,starting_scenarios:obj.starting_scenarios||existing.starting_scenarios,formatting_instructions:obj.formatting_instructions||existing.formatting_instructions,advanced_prompt:obj.advanced_prompt||existing.advanced_prompt,access_level:obj.access_level||existing.access_level,status,image:mainImage,portraits,posted_dates:sitePostedDates,updated_at:obj.updated_at||now(),companion_folder:folderName||existing.companion_folder||null});
           charCount++;
         } else {
-          const char={id:obj.id||uuid(),world_id:worldId,name:obj.name||item.folderName,display_name:obj.display_name||obj.name||'',short_description:obj.short_description||'',full_description:obj.full_description||'',card:obj.card||'',example_dialogue:obj.example_dialogue||'',tags:obj.tags||[],fandom_tags:obj.fandom_tags||[],sus:obj.sus||false,very_sus:obj.very_sus||false,starting_scenarios:obj.starting_scenarios||[],formatting_instructions:obj.formatting_instructions||'',advanced_prompt:obj.advanced_prompt||'',access_level:obj.access_level||'private',open_definition:obj.open_definition||false,external_model_policy:obj.external_model_policy||'vetted_only',locked_starting_message:obj.locked_starting_message||false,unlocked_portraits:obj.unlocked_portraits!==undefined?obj.unlocked_portraits:true,hide_on_owner_profile:obj.hide_on_owner_profile||false,suppress_companion_profile_banner:obj.suppress_companion_profile_banner||false,preserve_existing_chats:obj.preserve_existing_chats!==undefined?obj.preserve_existing_chats:true,posted_at:obj.posted_at||now(),created_at:obj.created_at||now(),updated_at:now(),voice_catalog_id:obj.voice_catalog_id||null,temperature_offset_percentage:obj.temperature_offset_percentage||0,status,schedule_dates:[],collections:[],linked_lorebooks:[],image:portraits[0]?.relPath?{relPath:portraits[0].relPath}:null,portraits,companion_profile_banner_image:null,author_id:obj.author_id||'',author_handle:obj.author_handle||'',companion_folder:item.folderName||null};
+          // posted_dates: derive from the site's posted_at (or updated_at as fallback) when this
+          // character comes in already posted, so it's not left empty requiring manual entry.
+          const newCharPostedDates = (status==='posted'&&(obj.posted_at||obj.updated_at)) ? [(obj.posted_at||obj.updated_at).split(/[ T]/)[0]] : [];
+          const char={id:obj.id||uuid(),world_id:worldId,name:obj.name||item.folderName,display_name:obj.display_name||obj.name||'',short_description:obj.short_description||'',full_description:obj.full_description||'',card:obj.card||'',example_dialogue:obj.example_dialogue||'',tags:obj.tags||[],fandom_tags:obj.fandom_tags||[],sus:obj.sus||false,very_sus:obj.very_sus||false,starting_scenarios:obj.starting_scenarios||[],formatting_instructions:obj.formatting_instructions||'',advanced_prompt:obj.advanced_prompt||'',access_level:obj.access_level||'private',open_definition:obj.open_definition||false,external_model_policy:obj.external_model_policy||'vetted_only',locked_starting_message:obj.locked_starting_message||false,unlocked_portraits:obj.unlocked_portraits!==undefined?obj.unlocked_portraits:true,hide_on_owner_profile:obj.hide_on_owner_profile||false,suppress_companion_profile_banner:obj.suppress_companion_profile_banner||false,preserve_existing_chats:obj.preserve_existing_chats!==undefined?obj.preserve_existing_chats:true,posted_at:obj.posted_at||now(),created_at:obj.created_at||now(),updated_at:obj.updated_at||now(),voice_catalog_id:obj.voice_catalog_id||null,temperature_offset_percentage:obj.temperature_offset_percentage||0,status,schedule_dates:[],posted_dates:newCharPostedDates,collections:[],linked_lorebooks:[],image:obj.image?.id?{id:obj.image.id}:(portraits[0]?.relPath?{relPath:portraits[0].relPath}:null),portraits,companion_profile_banner_image:null,author_id:obj.author_id||'',author_handle:obj.author_handle||'',companion_folder:item.folderName||null};
           // Auto-link collections
           d.collections.forEach(col=>{if((col.companions||[]).includes(char.id))char.collections.push(col.id);});
           d.characters.push(char);
@@ -5168,6 +5246,7 @@ function BatchImportPage({data,update}) {
       </div>
       <ImageMigrationPanel data={data} update={update}/>
     <BackupRestorePanel data={data} update={update}/>
+    <NotesBackupPanel data={data}/>
     </div>
   );
 
@@ -5188,9 +5267,10 @@ function BatchImportPage({data,update}) {
     </div>
   );
 
-  const pts=s=>{if(!s)return 0;const t=new Date(s).getTime();return isNaN(t)?0:t;};
-  const willImport=(item,existingLocal)=>{
+  const pts=parseTimestamp;
+  const willImport=(item,existingLocal,id)=>{
     if(!existingLocal) return true; // new
+    if(forceImport||forceItems.has(id)) return true; // forced override
     const localTime=pts(existingLocal.updated_at);
     const importTime=pts(item.jsonData?.updated_at);
     return !(localTime>importTime&&localTime>0); // skip if local is newer
@@ -5201,35 +5281,42 @@ function BatchImportPage({data,update}) {
       const a=assignments[id];
       if(!a||a==='__skip__') return false;
       const existing=item.jsonData?.id&&data.characters.find(x=>x.id===item.jsonData.id);
-      return willImport(item,existing);
+      return willImport(item,existing,id);
     }),
     ...lorebooks.filter(item=>{
       const id=item.jsonData?.id||item.filename;
       const a=assignments[id];
       if(!a||a==='__skip__') return false;
       const existing=item.jsonData?.id&&data.lorebooks.find(x=>x.id===item.jsonData.id);
-      return willImport(item,existing);
+      return willImport(item,existing,id);
     }),
     ...collections.filter(item=>{
       const id=item.jsonData?.id||item.filename;
       const a=assignments[id];
       if(!a||a==='__skip__') return false;
       const existing=item.jsonData?.id&&data.collections.find(x=>x.id===item.jsonData.id);
-      return willImport(item,existing);
+      return willImport(item,existing,id);
     }),
   ].length;
 
   return (
     <div>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
         <div style={{fontSize:13,color:'var(--text3)'}}>{companions.length} companions · {lorebooks.length} lorebooks · {collections.length} collections found</div>
-        <div style={{display:'flex',gap:8}}>
+        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+          <label style={{display:'flex',alignItems:'center',gap:6,fontSize:12,color:forceImport?'var(--amber)':'var(--text3)',cursor:'pointer'}} title="Ignore the 'local newer' protection and overwrite local edits with the scanned files">
+            <input type="checkbox" checked={forceImport} onChange={e=>setForceImport(e.target.checked)}/>
+            Force import all (overwrite local edits)
+          </label>
           <button className="btn" onClick={scan}><i className="ti ti-refresh"></i>Rescan</button>
           <button className="btn primary" disabled={totalToImport===0||importing} onClick={importAll}>
             <i className="ti ti-download"></i>{importing?'Importing…':`Import ${totalToImport} items`}
           </button>
         </div>
       </div>
+      {forceImport?<div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:'rgba(251,191,36,0.1)',border:'1px solid rgba(251,191,36,0.3)',borderRadius:'var(--r)',marginBottom:16,fontSize:12,color:'var(--amber)'}}>
+        <i className="ti ti-alert-triangle"></i>Force import is ON — every item will overwrite local data, even items marked "local newer ↑".
+      </div>:null}
 
       {collections.length>0&&<div style={{marginBottom:24}}>
         <div style={{fontSize:11,color:'var(--text3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:10}}>Collections ({collections.length})</div>
@@ -5248,7 +5335,8 @@ function BatchImportPage({data,update}) {
               <ScanTagChips tags={item.jsonData?.tags}/>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-              <ScanBadge isNew={isNew} localNewer={localNewer} upToDate={upToDate}/>
+              <ScanBadge isNew={isNew} localNewer={localNewer&&!forceImport&&!forceItems.has(id)} upToDate={upToDate}/>
+              {localNewer&&!forceImport?(forceItems.has(id)?<span style={{fontSize:10,color:'var(--amber)'}}><i className="ti ti-alert-triangle"></i> will overwrite</span>:<button className="btn" style={{fontSize:11,padding:'4px 8px'}} onClick={()=>setForceItems(s=>new Set([...s,id]))} title="Import this item anyway, overwriting your local edits">Import anyway</button>):null}
               <WorldSelect id={id}/>
             </div>
           </div>;
@@ -5272,7 +5360,8 @@ function BatchImportPage({data,update}) {
               <ScanTagChips tags={item.jsonData?.tags}/>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-              <ScanBadge isNew={isNew} localNewer={localNewer} upToDate={upToDate}/>
+              <ScanBadge isNew={isNew} localNewer={localNewer&&!forceImport&&!forceItems.has(id)} upToDate={upToDate}/>
+              {localNewer&&!forceImport?(forceItems.has(id)?<span style={{fontSize:10,color:'var(--amber)'}}><i className="ti ti-alert-triangle"></i> will overwrite</span>:<button className="btn" style={{fontSize:11,padding:'4px 8px'}} onClick={()=>setForceItems(s=>new Set([...s,id]))} title="Import this item anyway, overwriting your local edits">Import anyway</button>):null}
               <WorldSelect id={id}/>
             </div>
           </div>;
@@ -5284,11 +5373,11 @@ function BatchImportPage({data,update}) {
         {companions.map(item=>{
           const id=item.jsonData?.id||item.folderName;
           const existing=item.jsonData?.id&&data.characters.find(x=>x.id===item.jsonData.id);
-          const pts=s=>{if(!s)return 0;const t=new Date(s).getTime();return isNaN(t)?0:t;};
+          const pts=parseTimestamp;
           const localTime=pts(existing?.updated_at);
           const importTime=pts(item.jsonData?.updated_at);
           const isNew=!existing;
-          const localNewer=!isNew&&localTime>importTime;
+          const localNewer=!isNew&&localTime>importTime&&localTime>0;
           const upToDate=!isNew&&localTime===importTime;
           const updateAvail=!isNew&&importTime>localTime;
           return <div key={id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:'var(--bg2)',border:localNewer?'1px solid rgba(251,191,36,0.3)':'1px solid var(--border)',borderRadius:'var(--r)',marginBottom:6,opacity:upToDate?0.6:1}}>
@@ -5299,7 +5388,8 @@ function BatchImportPage({data,update}) {
               <ScanTagChips tags={item.jsonData?.tags}/>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
-              <ScanBadge isNew={isNew} localNewer={localNewer} upToDate={upToDate}/>
+              <ScanBadge isNew={isNew} localNewer={localNewer&&!forceImport&&!forceItems.has(id)} upToDate={upToDate}/>
+              {localNewer&&!forceImport?(forceItems.has(id)?<span style={{fontSize:10,color:'var(--amber)'}}><i className="ti ti-alert-triangle"></i> will overwrite</span>:<button className="btn" style={{fontSize:11,padding:'4px 8px'}} onClick={()=>setForceItems(s=>new Set([...s,id]))} title="Import this item anyway, overwriting your local edits">Import anyway</button>):null}
               <WorldSelect id={id}/>
             </div>
           </div>;
@@ -5485,6 +5575,13 @@ function SettingsPage({data, update}) {
     setApiKeySaved(true);
     setTimeout(() => setApiKeySaved(false), 2000);
   };
+
+  // Apply font size to root
+  React.useEffect(() => {
+    const size = settings.font_size || 'normal';
+    const map = { small: '13px', normal: '14px', large: '16px', xlarge: '18px' };
+    document.documentElement.style.setProperty('--font-size-base', map[size] || '14px');
+  }, [settings.font_size]);
 
   const Section = ({title, icon, children, badge}) => (
     <div style={{marginBottom:24}}>
@@ -5716,7 +5813,7 @@ function HelpPage() {
         <HelpStep n={1} text="Copy files into I:\Lorekeeper\Companions\CharName\, Lorebooks\, or Collections\."/>
         <HelpStep n={2} text="Click Scan Folders. Each item shows a badge: new / update ↓ / local newer ↑ / up to date."/>
         <HelpStep n={3} text="Assign worlds to items that need one, then click Import."/>
-        <HelpTip text="Items marked 'local newer' are skipped — your local edits won't be overwritten. Images alongside JSONs are automatically linked as image_relpath." />
+        <HelpTip text="Items marked 'local newer' are skipped by default — your local edits won't be overwritten. To bring in a scanned version anyway (e.g. restoring from a site export), click 'Import anyway' on that item, or check 'Force import all' to override every local-newer item at once. Images alongside JSONs are automatically linked as image_relpath." />
       </HelpSection>
 
       <HelpSection title="Auto-save to disk" icon="ti-device-floppy">
