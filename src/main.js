@@ -93,7 +93,7 @@ ipcMain.handle('save-data', async (event, data) => {
 ipcMain.handle('get-data-path', () => DATA_FILE);
 
 // ── File export ──────────────────────────────────────────
-ipcMain.handle('export-file', async (event, { defaultName, content }) => {
+ipcMain.handle('export-file', async (event, { defaultName, content, folder }) => {
   // Pick the right save-dialog filter based on the file's actual extension, instead of
   // always hardcoding JSON. This is shared by every Export button in the app (characters,
   // lorebooks, collections, personas, templates) — both JSON and Markdown exports.
@@ -106,8 +106,14 @@ ipcMain.handle('export-file', async (event, { defaultName, content }) => {
   const primaryFilter = filterMap[ext] || { name: 'All Files', extensions: ['*'] };
   const filters = [primaryFilter, { name: 'All Files', extensions: ['*'] }];
 
+  // Default to the relevant subfolder (Companions/Lorebooks/Collections/etc) when the
+  // caller knows which one applies, so the save dialog opens in the right place instead
+  // of always landing at the Lorekeeper root.
+  const baseDir = folder ? path.join(DATA_DIR, folder) : DATA_DIR;
+  if (folder && !fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
+
   const { filePath } = await dialog.showSaveDialog(mainWindow, {
-    defaultPath: path.join(DATA_DIR, defaultName),
+    defaultPath: path.join(baseDir, defaultName),
     filters
   });
   if (!filePath) return false;
@@ -483,10 +489,12 @@ ipcMain.handle('export-backup', async (event, { worldId }) => {
 });
 
 // ── Export platform ZIP (stripped JSONs ready for upload) ──
-ipcMain.handle('export-platform-zip', async (event, { defaultName, files }) => {
+ipcMain.handle('export-platform-zip', async (event, { defaultName, files, folder }) => {
   try {
+    const baseDir = folder ? path.join(DATA_DIR, folder) : DATA_DIR;
+    if (folder && !fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
     const { filePath } = await dialog.showSaveDialog(mainWindow, {
-      defaultPath: path.join(DATA_DIR, defaultName),
+      defaultPath: path.join(baseDir, defaultName),
       filters: [{ name: 'ZIP Archive', extensions: ['zip'] }]
     });
     if (!filePath) return { success: false, cancelled: true };

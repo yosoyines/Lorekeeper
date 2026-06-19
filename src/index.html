@@ -504,7 +504,7 @@ function App() {
   };
   const exportColl = (c) => {
     const {world_id,image_data,image_relpath,collection_filename,...rest}=c;
-    window.lorekeeper.exportFile({ defaultName:`${c.name}-collection.json`, content:JSON.stringify(rest,null,2) });
+    window.lorekeeper.exportFile({ defaultName:`${c.name}-collection.json`, content:JSON.stringify(rest,null,2), folder:"Collections" });
     update(d=>{const cl=d.collections.find(x=>x.id===c.id);if(cl)cl.site_last_synced_at=new Date().toISOString();});
   };
   // Save platform fields back to Companions/FolderName/character.json
@@ -542,12 +542,12 @@ function App() {
     if(!exportImage) warnings.push('image (portrait) ID not set — site will reject import');
     if(!c.card) warnings.push('card is empty — site requires it, exporting a placeholder space');
     if(warnings.length>0){const proceed=window.confirm(`Export warnings for ${c.name}:\n\n${warnings.map(w=>'• '+w).join('\n')}\n\nExport anyway?`);if(!proceed)return;}
-    window.lorekeeper.exportFile({ defaultName:`${c.name}-companion.json`, content:JSON.stringify(safe,null,2) });
+    window.lorekeeper.exportFile({ defaultName:`${c.name}-companion.json`, content:JSON.stringify(safe,null,2), folder:"Companions" });
     update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch)ch.site_last_synced_at=new Date().toISOString();});
   };
   const exportLore = (l) => {
     const {world_id,lorebook_filename,image_data,image_relpath,selected_chapter_index,...rest}=l;
-    window.lorekeeper.exportFile({ defaultName: l.name+"-lorebook.json", content: JSON.stringify(rest, null, 2) });
+    window.lorekeeper.exportFile({ defaultName: l.name+"-lorebook.json", content: JSON.stringify(rest, null, 2), folder:"Lorebooks" });
     update(d=>{const lb=d.lorebooks.find(x=>x.id===l.id);if(lb)lb.site_last_synced_at=new Date().toISOString();});
   };
 
@@ -588,7 +588,7 @@ function App() {
     const worldName = (world.name||"world").replace(/[^a-zA-Z0-9_-]/g, "_");
     const date = new Date().toISOString().split("T")[0];
     const defaultName = worldName + "-platform-export-" + date + ".zip";
-    const res = await window.lorekeeper.exportPlatformZip({defaultName, files});
+    const res = await window.lorekeeper.exportPlatformZip({defaultName, files, folder:"Worlds"});
     if (res && res.success) {
       const mb = (res.size/1048576).toFixed(1);
       update(d => {
@@ -622,12 +622,14 @@ function App() {
 
   // Apply font size globally whenever settings change — this lives at App level (not inside
   // SettingsPage) so it stays in effect on every page, not just while Settings is open.
-  // It sets the real document root font-size directly, since the app's CSS uses hardcoded
-  // pixel values rather than a CSS variable, so a --custom-property here would do nothing.
+  // NOTE: the app's CSS uses ~435 hardcoded pixel font-size values and almost no rem/em units,
+  // so changing the root font-size does nothing visible (nothing scales relative to it).
+  // Using CSS zoom on the whole app root instead — this uniformly scales every pixel value
+  // (text, padding, icons, layout) regardless of how the underlying CSS was authored.
   React.useEffect(() => {
     const size = (data.settings||{}).font_size || 'normal';
-    const map = {small:'13px', normal:'14px', large:'16px', xlarge:'18px'};
-    document.documentElement.style.fontSize = map[size] || '14px';
+    const zoomMap = {small:0.9, normal:1, large:1.125, xlarge:1.25};
+    document.documentElement.style.zoom = zoomMap[size] || 1;
   }, [(data.settings||{}).font_size]);
 
   const navTo=(p)=>{setPage(p);setSelectedWorld(null);setSelectedChar(null);setSelectedLore(null);setSelectedPersona(null);};
@@ -758,17 +760,7 @@ function App() {
             {page==='world'&&selectedWorld&&<button className="btn" onClick={()=>exportWorldPlatformZip(selectedWorld)} title="Export all posted characters + public lorebooks + public collections as a ZIP ready for site upload"><i className="ti ti-package-export"></i>Export ZIP</button>}
             {page==='templates'&&<button className="btn primary" onClick={()=>setNewTemplate(true)}><i className="ti ti-plus"></i>New Template</button>}
             {page==='personas'&&!selectedPersona&&<button className="btn primary" onClick={()=>setModal({type:'new-persona'})}><i className="ti ti-plus"></i>New Persona</button>}
-            {page==='personas'&&selectedPersona&&<button className="btn" onClick={()=>{
-              const p=selectedPersona;
-              const lines=["# "+p.name];
-              if(p.pronouns){lines.push("");lines.push("**Pronouns:** "+p.pronouns);}
-              if(p.description){lines.push("");lines.push("## Description");lines.push(p.description);}
-              const lb=data.lorebooks.find(x=>x.id===p.linked_lorebook);
-              if(lb){lines.push("");lines.push("**Linked Lorebook:** "+lb.name);}
-              const safeName=(p.name||"persona").replace(/[^a-zA-Z0-9_-]/g,"_");
-              window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n")});
-            }}><i className="ti ti-file-text"></i>Export MD</button>}
-            {page==='personas'&&selectedPersona&&<button className="btn" onClick={()=>{const p=selectedPersona;const lines=["# "+p.name];if(p.pronouns){lines.push("");lines.push("**Pronouns:** "+p.pronouns);}if(p.description){lines.push("");lines.push("## Description");lines.push(p.description);}const lb=data.lorebooks.find(x=>x.id===p.linked_lorebook);if(lb){lines.push("");lines.push("**Linked Lorebook:** "+lb.name);}const safeName=(p.name||"persona").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n")});}}><i className="ti ti-file-text"></i>Export MD</button>}
+            {page==='personas'&&selectedPersona&&<button className="btn" onClick={()=>{const p=selectedPersona;const lines=["# "+p.name];if(p.pronouns){lines.push("");lines.push("**Pronouns:** "+p.pronouns);}if(p.description){lines.push("");lines.push("## Description");lines.push(p.description);}const lb=data.lorebooks.find(x=>x.id===p.linked_lorebook);if(lb){lines.push("");lines.push("**Linked Lorebook:** "+lb.name);}const safeName=(p.name||"persona").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n"),folder:"Personas"});}}><i className="ti ti-file-text"></i>Export MD</button>}
             {page==='personas'&&selectedPersona&&<button className="btn danger" onClick={()=>setModal({type:'confirm-delete-persona',persona:selectedPersona,onBack:()=>setSelectedPersona(null)})}><i className="ti ti-trash"></i>Delete</button>}
             {page==='char'&&selectedChar&&<>
               <button className="btn" onClick={importJSON}><i className="ti ti-refresh"></i>Update from JSON</button>
@@ -3325,7 +3317,7 @@ function LoreboookEditor({lorebook,update,exportLore}) {
   };
   const exportLoreMd = () => {
     const safeName = (lorebook.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");
-    window.lorekeeper.exportFile({defaultName: safeName + ".md", content: buildLoreMd()});
+    window.lorekeeper.exportFile({defaultName: safeName + ".md", content: buildLoreMd(), folder:"Lorebooks"});
   };
   const [loreMdPreview,setLoreMdPreview]=useState(false);
   const loreTabBar = (
@@ -3641,7 +3633,7 @@ function LorePage({lorebook,data,update,exportLore,onBack}) {
           </div>
           {loreTab==='chapters'&&<LoreChaptersTab lore={lore} updLore={updLore}/>}
           {loreTab==='settings'&&<LoreSettingsTab lore={lore} updLore={updLore} data={data}/>}
-          {loreTab==='export'&&<LoreExportPanel lorebook={lore} exportLore={exportLore} exportLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];if(lore.short_description){lines.push("");lines.push(lore.short_description);}(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});const safeName=(lore.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n")});}} loreMdPreview={false} setLoreMdPreview={()=>{}} buildLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});return lines.join("\n");}}/>}
+          {loreTab==='export'&&<LoreExportPanel lorebook={lore} exportLore={exportLore} exportLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];if(lore.short_description){lines.push("");lines.push(lore.short_description);}(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});const safeName=(lore.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n"),folder:"Lorebooks"});}} loreMdPreview={false} setLoreMdPreview={()=>{}} buildLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});return lines.join("\n");}}/>}
         </div>
       </div>
     </div>
@@ -3777,12 +3769,53 @@ function AllLorebooksPage({data,update,exportLore,openLore}) {
 
 function CharactersPage({data,setSelectedChar}) {
   const [filter,setFilter]=useState('all');
-  const chars=filter==='all'?data.characters:data.characters.filter(c=>c.world_id===filter);
+  const [statusFilter,setStatusFilter]=useState('all');
+  const [worldOpen,setWorldOpen]=useState(false);
+  const [statusOpen,setStatusOpen]=useState(false);
+  const worldRef=useRef(null);
+  const statusRef=useRef(null);
+  React.useEffect(()=>{
+    if(!worldOpen&&!statusOpen)return;
+    const onClick=e=>{
+      if(worldRef.current&&!worldRef.current.contains(e.target))setWorldOpen(false);
+      if(statusRef.current&&!statusRef.current.contains(e.target))setStatusOpen(false);
+    };
+    document.addEventListener('mousedown',onClick);
+    return ()=>document.removeEventListener('mousedown',onClick);
+  },[worldOpen,statusOpen]);
+  const chars=data.characters
+    .filter(c=>filter==='all'||c.world_id===filter)
+    .filter(c=>statusFilter==='all'||(c.status||'draft')===statusFilter);
+  const statusOptions=[['all','All statuses'],['draft','Draft'],['ready','Ready'],['posted','Posted']];
+  const worldLabel=filter==='all'?'All worlds':(data.worlds.find(w=>w.id===filter)?.name||'All worlds');
   return (
     <div>
-      <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-        <button className={`btn ${filter==='all'?'primary':''}`} onClick={()=>setFilter('all')}>All</button>
-        {data.worlds.map(w=><button key={w.id} className={`btn ${filter===w.id?'primary':''}`} onClick={()=>setFilter(w.id)}>{w.name}</button>)}
+      <div style={{display:'flex',gap:8,marginBottom:16}}>
+        <div ref={worldRef} style={{position:'relative'}}>
+          <button className={`btn ${filter!=='all'?'primary':''}`} onClick={()=>setWorldOpen(o=>!o)} title="Filter by world">
+            <i className="ti ti-world"></i>{worldLabel}
+          </button>
+          {worldOpen&&<div style={{position:'absolute',top:'calc(100% + 4px)',left:0,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:4,zIndex:20,minWidth:180,maxHeight:300,overflowY:'auto',boxShadow:'0 4px 16px rgba(0,0,0,0.3)'}}>
+            <div onClick={()=>{setFilter('all');setWorldOpen(false);}} style={{padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,cursor:'pointer',color:filter==='all'?'var(--accent)':'var(--text)',background:filter==='all'?'var(--accent-dim)':'transparent'}}>All worlds</div>
+            {data.worlds.map(w=>(
+              <div key={w.id} onClick={()=>{setFilter(w.id);setWorldOpen(false);}} style={{padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,cursor:'pointer',color:filter===w.id?'var(--accent)':'var(--text)',background:filter===w.id?'var(--accent-dim)':'transparent'}}>
+                {w.emoji?w.emoji+' ':''}{w.name}
+              </div>
+            ))}
+          </div>}
+        </div>
+        <div ref={statusRef} style={{position:'relative'}}>
+          <button className={`btn ${statusFilter!=='all'?'primary':''}`} onClick={()=>setStatusOpen(o=>!o)} title="Filter by status">
+            <i className="ti ti-filter"></i>{statusFilter==='all'?'All statuses':statusOptions.find(([v])=>v===statusFilter)[1]}
+          </button>
+          {statusOpen&&<div style={{position:'absolute',top:'calc(100% + 4px)',left:0,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:4,zIndex:20,minWidth:140,boxShadow:'0 4px 16px rgba(0,0,0,0.3)'}}>
+            {statusOptions.map(([v,label])=>(
+              <div key={v} onClick={()=>{setStatusFilter(v);setStatusOpen(false);}} style={{padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,cursor:'pointer',color:statusFilter===v?'var(--accent)':'var(--text)',background:statusFilter===v?'var(--accent-dim)':'transparent'}}>
+                {label}
+              </div>
+            ))}
+          </div>}
+        </div>
       </div>
       {chars.length===0?<div className="empty"><i className="ti ti-users"></i><h3>No characters</h3></div>:<div className="chars-grid">{chars.map(c=><CharCard key={c.id} char={c} onClick={()=>setSelectedChar(c)}/>)}</div>}
     </div>
@@ -4371,7 +4404,7 @@ function CollExportPanel({coll,data,exportColl}) {
     if(members.length>0){lines.push(""); lines.push("## Characters"); members.forEach(ch=>lines.push("- "+(ch.display_name||ch.name)));}
     if((coll.tags||[]).length>0){lines.push(""); lines.push("## Tags"); lines.push(coll.tags.join(", "));}
     const safeName = (coll.name||"collection").replace(/[^a-zA-Z0-9_-]/g,"_");
-    window.lorekeeper.exportFile({defaultName: safeName+".md", content: lines.join("\n")});
+    window.lorekeeper.exportFile({defaultName: safeName+".md", content: lines.join("\n"), folder:"Collections"});
   };
   return (
     <div className="export-panel">
@@ -4415,7 +4448,7 @@ function CharExportTab({charData, data, exportChar}) {
   const exportMd = () => {
     const md = buildMd();
     const safeName = (charData.display_name||charData.name||"character").replace(/[^a-zA-Z0-9_-]/g,"_");
-    window.lorekeeper.exportFile({defaultName: safeName + "-sheet.md", content: md});
+    window.lorekeeper.exportFile({defaultName: safeName + "-sheet.md", content: md, folder:"Companions"});
   };
   const [mdPreview, setMdPreview] = React.useState(false);
   const md = buildMd();
@@ -5547,7 +5580,7 @@ function TemplateEditor({template,data,update,onBack}) {
               lines.push(typeof v==="boolean"?"Yes":Array.isArray(v)?v.join(", "):String(v));
             });
             const safeName=(name||"template").replace(/[^a-zA-Z0-9_-]/g,"_");
-            window.lorekeeper.exportFile({defaultName:safeName+"-template.md",content:lines.join("\n")});
+            window.lorekeeper.exportFile({defaultName:safeName+"-template.md",content:lines.join("\n"),folder:"Templates"});
           }}><i className="ti ti-file-text"></i>Export MD</button>}
         </div>
       </div>
