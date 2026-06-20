@@ -1,5 +1,5 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 19, 2026 (session 17)**
+**Last updated: June 19, 2026 (session 18)**
 
 ---
 
@@ -42,9 +42,15 @@ I:\Lorekeeper\
     WorldName.jpg         <- world banners
   Personas\
     PersonaName.jpg       <- persona portraits
+  Notes\
+    WorldName.md           <- per-world notes backup, auto-saved independent of lorekeeper-data.json
+    _global.md             <- global scratchpad backup
+  Templates\
+    TemplateName.json       <- per-template backup, auto-saved independent of lorekeeper-data.json
   node_modules\
     adm-zip\
 ```
+`lorekeeper-data.lastgood.json` and `lorekeeper-data.SUSPICIOUS.json` also appear at the root alongside `lorekeeper-data.json` once the app has run — see Data Safety Architecture.
 
 ---
 
@@ -53,8 +59,9 @@ I:\Lorekeeper\
 |---|---|
 | `loadData()` | Load lorekeeper-data.json |
 | `saveData(data)` | Async write to lorekeeper-data.json (compact JSON, no pretty-print) |
-| `exportFile({defaultName, content})` | Save dialog -> write file. Filter is chosen dynamically from `defaultName`'s extension (json/md/txt/fallback to All Files) — fixed June 19, was previously hardcoded to always show "JSON" even for `.md` exports. Defaults to opening in `I:\Lorekeeper\` rather than Windows' last-remembered folder. |
+| `exportFile({defaultName, content, folder?})` | Save dialog -> write file. Filter is chosen dynamically from `defaultName`'s extension (json/md/txt/fallback to All Files) — fixed session 17, was previously hardcoded to always show "JSON" even for `.md` exports. `folder` (added session 17/18) defaults the save dialog to the relevant subfolder (`Companions`/`Lorebooks`/`Collections`/`Personas`/`Templates`) instead of always `I:\Lorekeeper\`; creates the folder if it doesn't exist yet. |
 | `saveNotesFile(filename, content)` | Write a standalone `.md` backup to `Notes\{filename}.md`, independent of the main data file — see Data Safety Architecture |
+| `saveTemplateFile(filename, data)` | Write a standalone JSON backup to `Templates\{filename}.json`, independent of the main data file — same reasoning as `saveNotesFile`, added session 17/18 |
 | `importFile()` | Open dialog -> read JSON string |
 | `importImage()` | Open dialog -> returns `{base64, srcPath}` |
 | `importImages()` | Multi-select -> returns `[{name, base64, srcPath}]` |
@@ -70,7 +77,7 @@ I:\Lorekeeper\
 | `copyImageToFolder(srcPath, destFolder, filename)` | Copy image locally; skips if already in Lorekeeper folder or dest exists; returns `{relPath, base64}` |
 | `writeImageFromBase64({base64, destFolder, filename})` | Write base64 to image file; checks dest exists first; returns `{relPath}` |
 | `exportBackup({worldId?})` | Create zip — full or per-world; returns `{success, size, path}` |
-| `exportPlatformZip({defaultName, files[]})` | Save dialog -> zip pre-built JSON strings; returns `{success, size, path}` |
+| `exportPlatformZip({defaultName, files[], folder?})` | Save dialog -> zip pre-built JSON strings; returns `{success, size, path}`. `folder` (added session 18) defaults to `Worlds\` for the world Export ZIP. |
 | `restoreBackup()` | Open zip picker, extract files, return data for merge/replace |
 
 ---
@@ -120,10 +127,10 @@ I:\Lorekeeper\
 - `definition_protection` — `'open'` | `'copy_protection'` | `'hidden'` (default: `copy_protection`)
 - `access_level` — `'private'` | `'public'`
 - `collaboration_type`, `has_been_public`, `posted_at`, `updated_at`, `hide_on_owner_profile`, `site_last_synced_at`
-- **App-only:** `lorebook_filename`, `selected_chapter_index`
+- **App-only:** `lorebook_filename`, `selected_chapter_index`, `status` (`'draft'` | `'ready'` — added session 18, purely organizational, never sent to the site)
 
 ### Collection
-- `id`, `world_id` (null = standalone), `name`, `definition`
+- `id`, `world_id` (null = standalone), `name`, `definition` — internal field name; the platform calls this `description`, see Platform Export Requirements for the rename that happens at export time
 - `tags[]`, `fandom_tags[]`, `access_level`
 - `image` — `{ id }` platform ref; `image_relpath` — `Collections\banner.ext`; `image_data` — base64 (legacy)
 - `companions[]` — platform IDs for auto-linking on import
@@ -163,11 +170,11 @@ I:\Lorekeeper\
 ## Navigation (Sidebar)
 - **Dashboard** — calendar, today banner, upcoming, release cycle, site checklist, lorekeeper checklist, drafts in progress
 - **Worlds** — world card grid; click -> WorldDetailPage (Characters/Lorebooks/Collections/Gallery/World Info tabs)
-- **Characters** — all characters, filter by world; click -> CharDetailPage (13 tabs)
-- **Lorebooks** — all lorebooks, filter by world or Standalone; click -> LorePage (Chapters/Settings/Export tabs)
-- **Collections** — all collections, filter by world or Standalone; click -> CollPage (Edit/Export tabs)
+- **Characters** — world filter dropdown + status filter dropdown (Draft/Ready/Posted), both via shared `WorldFilterDropdown`/funnel pattern (added session 18 — scales to any number of worlds without the filter row wrapping or growing); click -> CharDetailPage (13 tabs)
+- **Lorebooks** — world filter dropdown (includes Standalone), same shared component; click -> LorePage (Chapters/Settings/Export tabs)
+- **Collections** — world filter dropdown (includes Standalone), same shared component; click -> CollPage (Edit/Export tabs)
 - **Personas** — player characters, independent from worlds; click -> PersonaDetailPage; "New Persona" button in topbar (added June 19 — was missing entirely, only Export/Delete existed once a persona was already selected)
-- **Templates** — global and per-world character creation templates; card list grouped by world
+- **Templates** — global and per-world character creation templates; card list grouped by world, with a world filter dropdown to narrow the grouped sections shown (added session 18)
 - **Batch Import** — scan folders, import, image audit, backup/restore
 - **Settings** — API key, model, font size (applied globally), debounce, theme/colorblind (placeholders); full-width layout
 - **Help** — 15 collapsible sections covering all features
@@ -226,6 +233,21 @@ All three exist so that opening any item — from the dashboard, quick find, a c
 11. **Schedule** — status (draft/ready/posted), schedule dates, posted date. Setting status to "Posted" from this dropdown auto-stamps today's date into `posted_dates` if it's empty (fixed June 19 — previously only the Dashboard's "Mark posted" banner button did this; the dropdown left `posted_dates` empty, requiring a manual follow-up "Add Posted Date" click)
 12. **Lorebook Entry** — fill world lorebook template for this character; save directly to lorebook
 13. **Export** — Export JSON (platform-ready, stripped) and Export MD (sheet with descriptions, card, prompt, scenarios, tags) with in-app preview and a field-completeness checklist
+
+Quick Info sidebar shows: World, Status, Content rating, Access, Scenarios count, Lorebooks count, Collections count, **Last updated** (added session 18 — local `updated_at` date only, no site-sync framing, since this is purely "when did I last touch this in Lorekeeper").
+
+---
+
+## Lorebook Detail (tabs)
+1. **Chapters** — chapter list (left) + editor (right); add/delete chapters; **drag-and-drop reordering** (added session 18 — was click-to-select only, no way to reorder without manually re-creating chapters); each chapter has a title and a markdown body
+2. **Settings** — name, short description, world, **Status** (Draft/Ready — app-only, not sent to the site, added session 18 to fill a gap where new lorebooks had no way to signal "still in progress" since `access_level` only has private/public), Access Level, Definition Protection, auto-save filename, tags
+3. **Export** — Export JSON and Export MD, both with warnings (added session 18 — previously only characters had pre-export warnings; lorebooks silently exported with a missing image UUID, no tags, or Open definition protection with no nudge). MD preview toggle, fixed session 18 (previously the preview button called a hardcoded no-op — see Session Log).
+
+Quick Info sidebar shows: World, **Status** (added session 18), Access, Chapters count, Updated date.
+
+## Collection Detail (tabs)
+1. **Edit** — name, description (labeled "Description" in the UI; stored internally as `definition`, see Collection data model), world, access level, tags, auto-save filename, character picker
+2. **Export** — Export JSON and Export MD
 
 ---
 
@@ -303,14 +325,23 @@ See Data Safety Architecture section — independent `.md` backup per world plus
 ---
 
 ## Platform Export Requirements
+All three export paths — `exportChar`/`exportLore`/`exportColl` (single-item Export JSON buttons) and `exportWorldPlatformZip` (world topbar Export ZIP) — must stay in sync with each other. They duplicate the same stripping/field-mapping logic rather than sharing one function, so a fix applied to one must be applied to both; this has been a repeated source of bugs (see session 18).
+
 **Characters:** `display_name`, `name`, `short_description`, `full_description`, `card`, `tags[]` (min 5), `image.id`, `portraits[]`, `starting_scenarios[]`
-Strips: `world_id`, `status`, `schedule_dates`, `posted_dates`, `collections`, `linked_lorebooks`, `companion_folder`, `site_last_synced_at`, `lorebook_entry_text`, `lorebook_entry_title`, all base64
+Strips: `world_id`, `status`, `schedule_dates`, `posted_dates`, `collections`, `linked_lorebooks`, `companion_folder`, `site_last_synced_at`, `lorebook_entry_text`, `lorebook_entry_title`, `voice_catalog_id`, all base64
+`exportChar` was missing `posted_dates`/`companion_folder`/`site_last_synced_at`/`lorebook_entry_text`/`lorebook_entry_title`/`voice_catalog_id` from its strip list until session 18 — only `exportWorldPlatformZip` had the complete list. Fixed by matching `exportChar`'s strip list to `exportWorldPlatformZip`'s.
 
-**Lorebooks:** `image_id` (mandatory), `tags[]` (mandatory), `definition_protection` != open
-Strips: `world_id`, `lorebook_filename`, `image_data`, `image_relpath`, `selected_chapter_index`, `site_last_synced_at`
+**Lorebooks:** `image_id` (mandatory — export now warns if missing, see below), `tags[]` (mandatory — warns if empty), `definition_protection` != open (warns if Open)
+Strips: `world_id`, `lorebook_filename`, `image_data`, `image_relpath`, `selected_chapter_index`, `site_last_synced_at`, `status` (app-only draft/ready field, added session 18)
+`collaboration_type` is **derived fresh at export time** from `access_level` (`'public'` → `'public'`, else `'private'`) rather than passed through whatever stale value was stored locally — fixed session 18 after a real lorebook was found exporting `collaboration_type:'private'` while `access_level:'public'`, an internal contradiction.
+`exportLore` had no warning system at all before session 18 (unlike `exportChar`) — a lorebook with no cover image UUID would silently export `image_id: null`. Now warns (same confirm-to-proceed pattern as characters) for: missing image UUID, no tags, Open definition protection.
 
-**Collections:** `image.id` (mandatory), `tags[]` (mandatory), `definition` (mandatory)
+**Collections:** `image.id` (mandatory), `tags[]` (mandatory), `description` (mandatory — see field rename below)
 Strips: `world_id`, `collection_filename`, `image_data`, `image_relpath`, `site_last_synced_at`
+**Field rename, fixed session 18:** Lorekeeper's internal field is `definition`; the platform's field is `description`. The export was passing `definition` straight through unrenamed for the entire project history up to this point — meaning **every collection export before session 18 had no description on Saucepan's side** (or silently kept whatever stale `description` value was already there from a previous successful import). Both `exportColl` and `exportWorldPlatformZip` now explicitly map `definition` → `description` at export time.
+
+### How to verify an export is actually clean
+Don't assume the strip lists above are exhaustive just because they're documented — diff an actual Lorekeeper export against the corresponding Saucepan export for the same item (`Settings → Export` on the site, vs `Export JSON` in Lorekeeper) and look for: (1) keys only in the Lorekeeper file (these are app-only fields that leaked through), (2) keys with different *names* but the same intent (field-mapping bugs, like `definition`/`description`), (3) keys with different *values* that should logically agree (derived-field bugs, like `collaboration_type`/`access_level`). This is exactly how the session 18 bugs were found — by diffing real exported files rather than re-reading the strip list and assuming it was complete.
 
 ---
 
@@ -327,11 +358,13 @@ Strips: `world_id`, `collection_filename`, `image_data`, `image_relpath`, `site_
 - Marking posted stamps `posted_dates` and sets `status = 'posted'`
 
 ### Site Checklist
-- Shows items edited since last export: characters (status=posted), lorebooks/collections (has_been_public)
-- Condition: stale (`updated_at > site_last_synced_at`) **or never synced** (`site_last_synced_at` doesn't exist yet). The "never synced" half was added June 19 — previously an item that had never been through Lorekeeper's export flow (e.g. posted some other way, or batch-imported already-posted) would never appear here no matter how many times it was edited, since the old condition required `site_last_synced_at` to already exist.
+- Shows items edited since last export: characters (`status==='posted'`), lorebooks/collections (`has_been_public` **or** `access_level==='public'`)
+- Character condition: stale (`updated_at > site_last_synced_at`) **or never synced** (`site_last_synced_at` doesn't exist yet). The "never synced" half was added June 19 — previously an item that had never been through Lorekeeper's export flow (e.g. posted some other way, or batch-imported already-posted) would never appear here no matter how many times it was edited, since the old condition required `site_last_synced_at` to already exist.
+- Lorebook/collection condition (fixed session 18): same stale-or-never-synced logic, but the eligibility check used to require `has_been_public===true` — which only becomes true *after* a successful first export. A **brand-new** lorebook or collection set to `access_level:'public'` for the first time had no way to ever appear here, since it had never been public before and thus had no chance to flip `has_been_public`. Now also catches `access_level==='public'` directly, independent of `has_been_public`, so new public items get caught for their first export.
 - Export button stamps `site_last_synced_at` -> item disappears from list
 - Help button explains the workflow
 - Implemented as its own component, `SiteChecklistPanel`, rather than an inline IIFE inside `DashboardPage`. This is a hard requirement, not a style preference: the panel's "show help" toggle needs a `useState`, and a `useState` called conditionally inside an IIFE that early-returns (`if (pending.length===0) return null`) violates React's Rules of Hooks — the hook count differs between renders depending on whether `pending` is empty, which crashes the entire Dashboard the moment `pending.length` changes between 0 and 1+. This crashed in production once. Any future "list panel with a local UI toggle" pattern on the Dashboard must be its own component for the same reason.
+- **Note on "why is X flagged but I didn't change anything important":** the checklist tracks `updated_at`, not "did a platform-relevant field change." Any edit bumps `updated_at`, including changes to app-only fields. If a character/lorebook/collection is flagged but feels like nothing meaningful changed, it's usually because `updated_at` was already stale from before a related export bug was fixed (see Platform Export Requirements) — re-exporting once should resolve it for good going forward.
 
 ### Lorekeeper Checklist
 - Characters: posted with no `posted_dates`
@@ -447,6 +480,13 @@ These pages/components were explicitly changed to fill the available content are
 - `.tpl-editor` CSS class (TemplateEditor, used when creating/editing a template) — was `max-width:700px`
 
 If any of these show up capped again, it is a sync/regression issue, not a design decision — restore full width.
+
+## Shared Filter Component
+`WorldFilterDropdown` (added session 18) is a single reusable component used by Characters, Lorebooks, Collections, and Templates list pages for world filtering. Props: `worlds`, `value`, `onChange`, `includeStandalone` (bool — Characters omits this since every character has a world; Lorebooks/Collections/Templates include it). Renders as a funnel-style button showing the current selection, opening a scrollable dropdown on click (click-outside closes it). This replaced an earlier pattern of one button per world rendered inline in a wrapping flex row, which looked fine with ~8 worlds but would have visibly broken (excessive wrapping, inconsistent row heights) once the world count grew further. Any new list page that needs to filter by world should use this component rather than reimplementing the inline-button-row pattern.
+
+---
+
+## Babel Standalone Gotchas (hard-won, do not relitigate)
 These caused repeated regressions across sessions — treat as fixed rules:
 - **Never** put `style={{...}}` inside a ternary or `&&` conditional's JSX consequent — Babel standalone reliably fails to parse it. Use a CSS class instead, or extract the conditional content to its own component.
 - **Never** put a literal backslash in a JSX string (e.g. a Windows path) — Babel misreads it as a regex/escape sequence. Build the string outside JSX with a `BS = String.fromCharCode(92)` constant and plain string concatenation (see `loreHint`, `charFolderHint` helper functions), then just reference the result in JSX.
@@ -630,6 +670,7 @@ This has happened multiple times this project: a chat session's fixes only exist
 | 15 | Jun 19 | Performance fix for Notes/text-field lag: `update()` switched from `JSON.parse(JSON.stringify())` to `structuredClone()`; `main.js` `saveData` switched from sync to async write with compact (non-pretty-printed) JSON; spec fully reviewed and cleaned up — removed duplicate/out-of-order entries, added Relationship Map section, added Babel Gotchas reference section, added Performance Notes section |
 | 16 | Jun 19 | **Data-loss incident and recovery.** A race condition (autosave firing before initial load resolved) overwrote the real 30MB+ data file with the empty default shape. Recovered characters via independent Companions/Lorebooks/Collections auto-save files; notes and app-only fields (schedule status etc.) were not recoverable. Built three-layer data safety architecture: (1) `dataLoaded` guard blocks autosave until load completes, (2) `main.js` shrink-refuse check rejects any write under 50% of the existing file's size and redirects it to a `.SUSPICIOUS.json` file instead, (3) rolling `lastgood.json` backup on every successful write. Added independent standalone `.md` notes backup per world + global scratchpad (`Notes\` folder), wired from both the right-panel Notes tab and World Info tab, with a "Notes Backups" panel on Batch Import. Also fixed a separate pre-existing bug surfaced during this incident: the inline Site Checklist IIFE inside `DashboardPage` called `useState` after a conditional early-return, violating React's Rules of Hooks and crashing the Dashboard whenever the checklist's item count changed between zero and nonzero — extracted to its own `SiteChecklistPanel` component. Fixed Site Checklist to also flag posted/public items that have never been synced (previously required `site_last_synced_at` to already exist, so never-synced items could never be flagged no matter how many edits). Fixed Schedule tab's status dropdown to auto-stamp `posted_dates` when set to Posted (previously only the Dashboard banner button did this). Discovered and fixed `parseTimestamp()` bug: Saucepan's timestamp format is unparseable by native `Date()`, silently breaking every "local newer" comparison involving a site-imported timestamp. Fixed batch import to preserve the platform image UUID from site exports (was being discarded in favor of local file paths), derive `posted_dates` from the site's `posted_at`/`updated_at` instead of leaving it empty, and use the site's real `updated_at` instead of overwriting it with import time. Added force-import overrides (per-item "Import anyway" button + global "Force import all" toggle) for restoring from a Saucepan companion backup export. Re-fixed four UI width regressions that had silently reverted across project re-uploads (Settings, World Info, Template editor, Persona "New" button) — root cause identified as chat-session fixes not yet being re-synced to project knowledge between turns. |
 | 17 | Jun 19 | Fixed dead "add in Settings" link in the Claude panel's no-API-key nudge (was a no-op `onClick={()=>{}}` stub; threaded `setPage` through `RightPanel` -> `ClaudePanel`). Fixed `export-file` IPC handler in `main.js`, which was hardcoded to always show a "JSON" filter in the save dialog regardless of the actual file being exported — affected every Export MD button in the app (characters, lorebooks, collections, personas, templates); now picks the filter from the file's real extension and defaults the save dialog to `I:\Lorekeeper\`. Updated `.gitignore` to include the new `Templates\` and `Notes\` auto-save folders and the safety-net backup files. Rewrote the GitHub section of this spec with an explicit, repeatable, verified command sequence (status check -> explicit `git add` of named files, never `git add .` -> commit -> push -> status verify -> optional tag), plus a "how to tell if project knowledge is stale" troubleshooting note, directly in response to the repeated-regression problem from session 16. |
+| 18 | Jun 19 | **Export field-accuracy pass, found by diffing real Lorekeeper-vs-Saucepan exports of the same items.** Fixed `exportChar`'s incomplete strip list (was missing `posted_dates`/`companion_folder`/`site_last_synced_at`/`lorebook_entry_text`/`lorebook_entry_title`/`voice_catalog_id` — only `exportWorldPlatformZip` had the complete list). Fixed `exportColl`'s field-name bug: Lorekeeper's `definition` field was never renamed to the platform's `description` field, meaning every collection export before this fix had no description on the site's side. Fixed `exportLore`'s stale `collaboration_type`: now derived fresh from `access_level` at export time instead of passed through a potentially-contradictory stored value. Added export warnings to `exportLore` (missing image UUID, no tags, Open definition protection) matching the existing character warning pattern, which lorebooks never had before. Fixed Site Checklist to catch brand-new public lorebooks/collections that have never been synced (previously gated on `has_been_public`, which only becomes true *after* a first successful export, creating a chicken-and-egg gap for first-time exports). Added an app-only `status` field (Draft/Ready) for lorebooks, shown in Quick Info and excluded from export, to give new lorebooks a way to signal "still in progress" since `access_level` only distinguishes private/public. Added drag-and-drop chapter reordering to `LoreChaptersTab` (was click-to-select only). Fixed the lorebook MD export Preview button, which had been silently broken since session 11: `LorePage` was passing a hardcoded `loreMdPreview={false}` and a no-op `setLoreMdPreview={()=>{}}` into `LoreExportPanel` instead of real state, so clicking Preview updated nothing. Added a "Last updated" row to the character Quick Info sidebar. Added a shared `WorldFilterDropdown` component and migrated Characters/Lorebooks/Collections/Templates list pages to use it instead of one-button-per-world inline rows, which would have broken visually as the world count grows; Characters also got a matching funnel-style status filter dropdown (Draft/Ready/Posted). |
 
 ---
 

@@ -27,7 +27,7 @@
   html, body, #root { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); }
   #root { display: flex; flex-direction: column; height: 100vh; }
   .app { display: flex; height: 100%; overflow: hidden; }
-  .sidebar { width: 220px; min-width: 220px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; transition: width 0.2s; overflow: hidden; }
+  .sidebar { width: 220px; min-width: 220px; height: 100vh; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; transition: width 0.2s; overflow: hidden; }
   .sidebar.collapsed { width: 52px; min-width: 52px; }
   .sidebar-header { padding: 16px 12px 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
   .logo-mark { width: 28px; height: 28px; background: var(--accent-dim); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -39,9 +39,6 @@
   .nav-item:hover { background: var(--bg3); color: var(--text); }
   .nav-item.active { background: var(--accent-dim); color: var(--accent); }
   .nav-item i { font-size: 17px; flex-shrink: 0; }
-  .sidebar-footer { padding: 12px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
-  .sidebar-footer button { flex: 1; background: transparent; border: 1px solid var(--border2); color: var(--text2); padding: 6px; border-radius: var(--r); cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all 0.15s; white-space: nowrap; }
-  .sidebar-footer button:hover { background: var(--bg3); color: var(--text); }
   .collapse-btn { background: transparent; border: none; color: var(--text3); cursor: pointer; padding: 4px; margin-left: auto; flex-shrink: 0; }
   .collapse-btn:hover { color: var(--text); }
   .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -315,6 +312,8 @@ function App() {
   const [selectedChar, setSelectedChar] = useState(null);
   const [selectedColl, setSelectedColl] = useState(null);
   const [charInitialTab, setCharInitialTab] = useState(null);
+  const [loreInitialTab, setLoreInitialTab] = useState(null);
+  const [collInitialTab, setCollInitialTab] = useState(null);
   const [initialCollId, setInitialCollId] = useState(null);
   const [selectedLore, setSelectedLore] = useState(null);
   const [worldTab, setWorldTab] = useState('characters');
@@ -503,8 +502,12 @@ function App() {
     if (res && res.success) { const mb=(res.size/1048576).toFixed(1); alert("Backup saved ("+mb+" MB)"); }
   };
   const exportColl = (c) => {
-    const {world_id,image_data,image_relpath,collection_filename,...rest}=c;
-    window.lorekeeper.exportFile({ defaultName:`${c.name}-collection.json`, content:JSON.stringify(rest,null,2), folder:"Collections" });
+    const {world_id,image_data,image_relpath,collection_filename,definition,...rest}=c;
+    // The platform's field for this text is "description", not "definition" — Lorekeeper's
+    // internal data model uses "definition" but that name was leaking straight through to
+    // the export, so Saucepan never actually received the collection's description text.
+    const safe = {...rest, description: definition||''};
+    window.lorekeeper.exportFile({ defaultName:`${c.name}-collection.json`, content:JSON.stringify(safe,null,2), folder:"Collections" });
     update(d=>{const cl=d.collections.find(x=>x.id===c.id);if(cl)cl.site_last_synced_at=new Date().toISOString();});
   };
   // Save platform fields back to Companions/FolderName/character.json
@@ -519,7 +522,7 @@ function App() {
   };
 
   const exportChar = (c) => {
-    const {world_id,status,schedule_dates,collections,linked_lorebooks,...rest}=c;
+    const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,...rest}=c;
     // Strip base64 image data — site only accepts {id: "uuid"}
     const exportImage = rest.image?.id ? {id: rest.image.id} : null;
     const exportPortraits = (rest.portraits||[]).map(p => {
@@ -546,8 +549,18 @@ function App() {
     update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch)ch.site_last_synced_at=new Date().toISOString();});
   };
   const exportLore = (l) => {
-    const {world_id,lorebook_filename,image_data,image_relpath,selected_chapter_index,...rest}=l;
-    window.lorekeeper.exportFile({ defaultName: l.name+"-lorebook.json", content: JSON.stringify(rest, null, 2), folder:"Lorebooks" });
+    const {world_id,lorebook_filename,image_data,image_relpath,selected_chapter_index,collaboration_type,status,...rest}=l;
+    // collaboration_type on the site tracks public/private the same way access_level does —
+    // Lorekeeper was passing through whatever stale value it had stored locally instead of
+    // deriving it fresh from the current access_level, so it could silently disagree with
+    // what the lorebook actually is at export time.
+    const safe = {...rest, collaboration_type: l.access_level==='public' ? 'public' : 'private'};
+    const warnings=[];
+    if(!l.image_id) warnings.push('image (cover) ID not set — site will reject import');
+    if(!l.tags||l.tags.length===0) warnings.push('no tags set');
+    if(l.definition_protection==='open') warnings.push('definition protection is Open — anyone can copy the full lorebook text');
+    if(warnings.length>0){const proceed=window.confirm(`Export warnings for ${l.name}:\n\n${warnings.map(w=>'• '+w).join('\n')}\n\nExport anyway?`);if(!proceed)return;}
+    window.lorekeeper.exportFile({ defaultName: l.name+"-lorebook.json", content: JSON.stringify(safe, null, 2), folder:"Lorebooks" });
     update(d=>{const lb=d.lorebooks.find(x=>x.id===l.id);if(lb)lb.site_last_synced_at=new Date().toISOString();});
   };
 
@@ -572,14 +585,16 @@ function App() {
       files.push({name: "Companions/" + safeName + "-companion.json", content: JSON.stringify(safe, null, 2)});
     });
     wLores.forEach(l => {
-      const {world_id,lorebook_filename,image_data,image_relpath,selected_chapter_index,site_last_synced_at,...rest} = l;
+      const {world_id,lorebook_filename,image_data,image_relpath,selected_chapter_index,site_last_synced_at,collaboration_type,status,...rest} = l;
+      const safe = {...rest, collaboration_type: l.access_level==='public' ? 'public' : 'private'};
       const safeName = (l.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g, "_");
-      files.push({name: "Lorebooks/" + safeName + "-lorebook.json", content: JSON.stringify(rest, null, 2)});
+      files.push({name: "Lorebooks/" + safeName + "-lorebook.json", content: JSON.stringify(safe, null, 2)});
     });
     wColls.forEach(c => {
-      const {world_id,image_data,image_relpath,collection_filename,site_last_synced_at,...rest} = c;
+      const {world_id,image_data,image_relpath,collection_filename,site_last_synced_at,definition,...rest} = c;
+      const safe = {...rest, description: definition||''};
       const safeName = (c.name||"collection").replace(/[^a-zA-Z0-9_-]/g, "_");
-      files.push({name: "Collections/" + safeName + "-collection.json", content: JSON.stringify(rest, null, 2)});
+      files.push({name: "Collections/" + safeName + "-collection.json", content: JSON.stringify(safe, null, 2)});
     });
     if (warnings.length > 0) {
       const proceed = window.confirm("Export warnings:\n\n" + warnings.map(function(w){return "- "+w;}).join("\n") + "\n\nExport anyway?");
@@ -610,14 +625,20 @@ function App() {
   const daysInPrev=new Date(calYear,calMonth,0).getDate();
   const today=new Date();
   const calCells=[];
-  for(let i=firstDay-1;i>=0;i--) calCells.push({d:daysInPrev-i,cur:false,prev:true});
-  for(let i=1;i<=daysInMonth;i++) calCells.push({d:i,cur:true});
-  while(calCells.length%7!==0) calCells.push({d:calCells.length-firstDay-daysInMonth+1,cur:false,next:true});
+  const prevMonthYear=calMonth===0?calYear-1:calYear, prevMonth=calMonth===0?11:calMonth-1;
+  const nextMonthYear=calMonth===11?calYear+1:calYear, nextMonth=calMonth===11?0:calMonth+1;
+  for(let i=firstDay-1;i>=0;i--) calCells.push({d:daysInPrev-i,cur:false,prev:true,year:prevMonthYear,month:prevMonth});
+  for(let i=1;i<=daysInMonth;i++) calCells.push({d:i,cur:true,year:calYear,month:calMonth});
+  while(calCells.length%7!==0) calCells.push({d:calCells.length-firstDay-daysInMonth+1,cur:false,next:true,year:nextMonthYear,month:nextMonth});
 
   // Parse date string safely in local time (avoid UTC off-by-one)
   const parseLocalDate=(sd)=>{ const p=sd.split('T')[0].split('-'); return new Date(+p[0],+p[1]-1,+p[2]); };
-  const charsOnDay=(d)=>data.characters.filter(c=>c.status!=='posted'&&c.schedule_dates&&c.schedule_dates.some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;}));
-  const postedOnDay=(d)=>data.characters.filter(c=>{const hasPostedDate=(c.posted_dates||[]).some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;});const isPostedAndScheduled=c.status==='posted'&&(c.schedule_dates||[]).some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===calYear&&dt.getMonth()===calMonth&&dt.getDate()===d;});return hasPostedDate||isPostedAndScheduled;});
+  // year/month default to the currently-displayed month, but overflow cells (prev/next month
+  // days shown grayed-out at the edges of the grid) need to query their *actual* month —
+  // previously these always hardcoded to [] for any non-current cell, so a character scheduled
+  // for e.g. the 2nd of next month never showed a pill until you actually navigated there.
+  const charsOnDay=(d,year=calYear,month=calMonth)=>data.characters.filter(c=>c.status!=='posted'&&c.schedule_dates&&c.schedule_dates.some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===year&&dt.getMonth()===month&&dt.getDate()===d;}));
+  const postedOnDay=(d,year=calYear,month=calMonth)=>data.characters.filter(c=>{const hasPostedDate=(c.posted_dates||[]).some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===year&&dt.getMonth()===month&&dt.getDate()===d;});const isPostedAndScheduled=c.status==='posted'&&(c.schedule_dates||[]).some(sd=>{const dt=parseLocalDate(sd);return dt.getFullYear()===year&&dt.getMonth()===month&&dt.getDate()===d;});return hasPostedDate||isPostedAndScheduled;});
   const upcoming=data.characters.filter(c=>c.status!=='posted'&&c.schedule_dates&&c.schedule_dates.length>0).flatMap(c=>c.schedule_dates.map(d=>({char:c,date:parseLocalDate(d)}))).filter(x=>x.date>=new Date(today.getFullYear(),today.getMonth(),today.getDate())).sort((a,b)=>a.date-b.date).slice(0,10);
 
   // Apply font size globally whenever settings change — this lives at App level (not inside
@@ -633,16 +654,18 @@ function App() {
   }, [(data.settings||{}).font_size]);
 
   const navTo=(p)=>{setPage(p);setSelectedWorld(null);setSelectedChar(null);setSelectedLore(null);setSelectedPersona(null);};
-  const openColl=(c)=>{
+  const openColl=(c,tab)=>{
     setSelectedColl(c);
+    if(tab) setCollInitialTab(tab); else setCollInitialTab(null);
     if(c.world_id){
       const w=data.worlds.find(x=>x.id===c.world_id);
       if(w&&(!selectedWorld||selectedWorld.id!==c.world_id)) setSelectedWorld(w);
     }
     setPage('collection');
   };
-  const openLore=(l)=>{
+  const openLore=(l,tab)=>{
     setSelectedLore(l);
+    if(tab) setLoreInitialTab(tab); else setLoreInitialTab(null);
     if(l.world_id){
       const w=data.worlds.find(x=>x.id===l.world_id);
       if(w&&(!selectedWorld||selectedWorld.id!==l.world_id)) setSelectedWorld(w);
@@ -689,7 +712,7 @@ function App() {
         </div>
         <div className="sidebar-nav">
           {sidebarOpen&&<div className="nav-section">Navigate</div>}
-          {[['dashboard','ti-layout-dashboard','Dashboard'],['worlds','ti-world','Worlds'],['characters','ti-users','Characters'],['lorebooks','ti-book','Lorebooks'],['collections','ti-folders','Collections'],['personas','ti-masks-theater','Personas'],['templates','ti-template','Templates'],['batch','ti-file-import','Batch Import'],['settings','ti-settings','Settings'],['help','ti-help-circle','Help']].map(([p,icon,label])=>(
+          {[['dashboard','ti-layout-dashboard','Dashboard'],['worlds','ti-world','Worlds'],['characters','ti-users','Characters'],['lorebooks','ti-book','Lorebooks'],['collections','ti-folders','Collections'],['personas','ti-masks-theater','Personas'],['templates','ti-template','Templates'],['batch','ti-file-import','Import/Export'],['settings','ti-settings','Settings'],['help','ti-help-circle','Help']].map(([p,icon,label])=>(
             <div key={p} className={`nav-item ${page===p&&!selectedWorld&&!selectedChar?'active':''}`} onClick={()=>navTo(p)}>
               <i className={`ti ${icon}`}></i>{sidebarOpen&&<span>{label}</span>}
             </div>
@@ -707,12 +730,6 @@ function App() {
               </div>
             ))}
           </>}
-        </div>
-        <div className="sidebar-footer">
-          {sidebarOpen?<>
-            <button onClick={importJSON}><i className="ti ti-upload"></i>Import</button>
-            <button onClick={exportAll}><i className="ti ti-archive"></i>Backup</button>
-          </>:<button onClick={importJSON} style={{padding:'6px'}}><i className="ti ti-upload"></i></button>}
         </div>
       </div>
 
@@ -774,7 +791,7 @@ function App() {
 
         <div style={{display:'flex',flex:1,overflow:'hidden'}}>
           <div className="content" style={{flex:1}}>
-            {page==='dashboard'&&<DashboardPage calCells={calCells} calYear={calYear} calMonth={calMonth} today={today} selDay={selDay} setSelDay={setSelDay} charsOnDay={charsOnDay} postedOnDay={postedOnDay} calDate={calDate} setCalDate={setCalDate} upcoming={upcoming} data={data} update={update} setSelectedChar={(c,tab)=>openChar(c,tab)} setSelectedLore={(l)=>{setSelectedLore(l);setPage('lore');}} setSelectedWorld={(w,tab)=>{setSelectedWorld(w);if(tab)setWorldTab(tab);setPage('world');}} />}
+            {page==='dashboard'&&<DashboardPage calCells={calCells} calYear={calYear} calMonth={calMonth} today={today} selDay={selDay} setSelDay={setSelDay} charsOnDay={charsOnDay} postedOnDay={postedOnDay} calDate={calDate} setCalDate={setCalDate} upcoming={upcoming} data={data} update={update} setSelectedChar={(c,tab)=>openChar(c,tab)} openChar={openChar} openLore={openLore} openColl={openColl} setSelectedWorld={(w,tab)=>{setSelectedWorld(w);if(tab)setWorldTab(tab);setPage('world');}} />}
             {page==='worlds'&&<WorldsPage data={data} setSelectedWorld={w=>{setSelectedWorld(w);setWorldTab('characters');setPage('world');}} setModal={setModal} />}
             {page==='world'&&selectedWorld&&<WorldDetailPage world={selectedWorld} tab={worldTab} setTab={setWorldTab} worldChars={worldChars} worldLores={worldLores} worldColls={worldColls} worldGallery={worldGallery} setSelectedChar={c=>openChar(c)} setSelectedLore={setSelectedLore} openLore={openLore} openColl={openColl} selectedLore={selectedLore} update={update} setModal={setModal} exportChar={exportChar} exportLore={exportLore} exportColl={exportColl} setPage={setPage} setSelectedWorld={setSelectedWorld} data={data} initialCollId={initialCollId} clearInitialCollId={()=>setInitialCollId(null)} />}
             {page==='characters'&&<CharactersPage data={data} setSelectedChar={c=>{setSelectedChar(c);setPage('char');}} />}
@@ -782,10 +799,10 @@ function App() {
             {page==='collections'&&<AllCollectionsPage data={data} update={update} openColl={openColl} exportColl={exportColl} />}
             {page==='settings'&&<SettingsPage data={data} update={update} dataPath={dataPath}/>}
             {page==='help'&&<HelpPage/>}
-            {page==='lore'&&selectedLore&&<LorePage lorebook={selectedLore} data={data} update={update} exportLore={exportLore} onBack={()=>{setPage(selectedWorld?'world':'lorebooks');setSelectedLore(null);}} />}
-            {page==='collection'&&selectedColl&&<CollPage coll={selectedColl} data={data} update={update} exportColl={exportColl} onBack={()=>{setPage(selectedWorld?'world':'collections');setSelectedColl(null);}} />}
+            {page==='lore'&&selectedLore&&<LorePage lorebook={selectedLore} data={data} update={update} exportLore={exportLore} initialTab={loreInitialTab} onBack={()=>{setPage(selectedWorld?'world':'lorebooks');setSelectedLore(null);setLoreInitialTab(null);}} />}
+            {page==='collection'&&selectedColl&&<CollPage coll={selectedColl} data={data} update={update} exportColl={exportColl} initialTab={collInitialTab} onBack={()=>{setPage(selectedWorld?'world':'collections');setSelectedColl(null);setCollInitialTab(null);}} />}
             {page==='char'&&selectedChar&&<CharDetailPage char={selectedChar} data={data} update={update} initialTab={charInitialTab} exportChar={exportChar} onBack={()=>{setCharInitialTab(null);setPage(selectedWorld?'world':'characters');}} />}
-            {page==='batch'&&<BatchImportPage data={data} update={update} />}
+            {page==='batch'&&<BatchImportPage data={data} update={update} importJSON={importJSON} exportAll={exportAll} />}
             {page==='templates'&&<TemplatesPage data={data} update={update} newTemplate={newTemplate} clearNew={()=>setNewTemplate(false)} />}
             {page==='personas'&&!selectedPersona&&<PersonasPage data={data} setSelectedPersona={p=>{setSelectedPersona(p);}} />}
             {page==='personas'&&selectedPersona&&<PersonaDetailPage persona={selectedPersona} data={data} update={update} onBack={()=>setSelectedPersona(null)} />}
@@ -2743,21 +2760,27 @@ function RightPanel({tab,setTab,data,update,currentWorld,currentChar,currentPage
   );
 }
 
-function SiteChecklistPanel({data, setSelectedChar, setSelectedLore}) {
+function SiteChecklistPanel({data, openChar, openLore, openColl}) {
   const [helpOpen, setHelpOpen] = useState(false);
 
   const pending = [];
   data.characters.filter(c=>c.status==='posted'&&(!c.site_last_synced_at||c.updated_at>c.site_last_synced_at)).forEach(c=>{
     const world=data.worlds.find(w=>w.id===c.world_id);
-    pending.push({key:'sc-'+c.id,type:'character',id:c.id,thumb:c.image,thumbIcon:'ti-user',name:c.display_name||c.name,sub:world?.name||'—',onClick:()=>setSelectedChar(c)});
+    pending.push({key:'sc-'+c.id,type:'character',id:c.id,thumb:c.image,thumbIcon:'ti-user',name:c.display_name||c.name,sub:world?.name||'—',onClick:()=>openChar(c,'export')});
   });
-  data.lorebooks.filter(l=>l.has_been_public&&(!l.site_last_synced_at||l.updated_at>l.site_last_synced_at)).forEach(l=>{
+  // Lorebooks/collections: flag anything currently public that's either never been synced
+  // or has changed since its last sync. Previously this only checked has_been_public, which
+  // meant a brand-new lorebook/collection set to public for the first time would never show
+  // up here at all (has_been_public only becomes true after a first successful export) —
+  // there was no way to discover "this new public item needs its first export" through the
+  // checklist. Now it also catches access_level==='public' on its own.
+  data.lorebooks.filter(l=>(l.has_been_public||l.access_level==='public')&&(!l.site_last_synced_at||l.updated_at>l.site_last_synced_at)).forEach(l=>{
     const world=data.worlds.find(w=>w.id===l.world_id);
-    pending.push({key:'sl-'+l.id,type:'lorebook',id:l.id,thumb:null,thumbIcon:'ti-book',thumbColor:'var(--amber)',name:l.name,sub:world?.name||'Standalone',onClick:()=>setSelectedLore(l)});
+    pending.push({key:'sl-'+l.id,type:'lorebook',id:l.id,thumb:null,thumbIcon:'ti-book',thumbColor:'var(--amber)',name:l.name,sub:world?.name||'Standalone',onClick:()=>openLore(l,'export')});
   });
-  data.collections.filter(c=>c.has_been_public&&(!c.site_last_synced_at||c.updated_at>c.site_last_synced_at)).forEach(c=>{
+  data.collections.filter(c=>(c.has_been_public||c.access_level==='public')&&(!c.site_last_synced_at||c.updated_at>c.site_last_synced_at)).forEach(c=>{
     const world=data.worlds.find(w=>w.id===c.world_id);
-    pending.push({key:'sc2-'+c.id,type:'collection',id:c.id,thumb:null,thumbIcon:'ti-folders',thumbColor:'var(--accent)',name:c.name,sub:world?.name||'Standalone',onClick:null});
+    pending.push({key:'sc2-'+c.id,type:'collection',id:c.id,thumb:null,thumbIcon:'ti-folders',thumbColor:'var(--accent)',name:c.name,sub:world?.name||'Standalone',onClick:()=>openColl(c,'export')});
   });
 
   if (pending.length === 0) return null;
@@ -2799,7 +2822,7 @@ function SiteChecklistPanel({data, setSelectedChar, setSelectedLore}) {
   );
 }
 
-function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOnDay,postedOnDay,calDate,setCalDate,upcoming,data,update,setSelectedChar,setSelectedLore,setSelectedWorld}) {
+function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOnDay,postedOnDay,calDate,setCalDate,upcoming,data,update,setSelectedChar,openChar,openLore,openColl,setSelectedWorld}) {
   const [schedPicker,setSchedPicker]=useState(null); // cellDateStr when open
   const [schedSearch,setSchedSearch]=useState('');
   const selChars=selDay?charsOnDay(selDay):[];
@@ -2857,9 +2880,9 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
           <div className="cal-grid" onClick={e=>e.stopPropagation()}>
             {DAYS.map(d=><div key={d} className="cal-dow">{d}</div>)}
             {calCells.map((cell,i)=>{
-              const chars=cell.cur?charsOnDay(cell.d):[];
+              const chars=charsOnDay(cell.d,cell.year,cell.month);
               const isToday=cell.cur&&cell.d===today.getDate()&&calYear===today.getFullYear()&&calMonth===today.getMonth();
-              const cellDateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(cell.d).padStart(2,'0')}`;
+              const cellDateStr=`${cell.year}-${String(cell.month+1).padStart(2,'0')}-${String(cell.d).padStart(2,'0')}`;
               return <div key={i} className={`cal-day${!cell.cur?' other-month':''}${isToday?' today':''}${chars.length>0?' has-events':''}${selDay===cell.d&&cell.cur?' selected':''}`} onClick={()=>{
                   if(cell.cur){setSelDay(s=>s===cell.d?null:cell.d);}
                   else if(cell.prev){setCalDate(d=>new Date(d.getFullYear(),d.getMonth()-1,1));setSelDay(cell.d);}
@@ -2875,7 +2898,7 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
                   >{isDraft?'[d] ':''}{c.name}{note?' ·':''}</div>;
                 })}
                 {chars.length>3&&<div className="day-char">+{chars.length-3}</div>}
-                {cell.cur&&postedOnDay(cell.d).slice(0,2).map(c=>(
+                {postedOnDay(cell.d,cell.year,cell.month).slice(0,2).map(c=>(
                   <div key={'p'+c.id} className="day-char" title={c.name+' (posted)'}
                     style={{opacity:0.5,background:'rgba(110,231,183,0.15)',cursor:'pointer'}}
                     onClick={e=>{e.stopPropagation();setSelectedChar(c);}}
@@ -2996,7 +3019,7 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
             </div>;
           })()}
           {/* Site Checklist */}
-          <SiteChecklistPanel data={data} setSelectedChar={setSelectedChar} setSelectedLore={setSelectedLore}/>
+          <SiteChecklistPanel data={data} openChar={openChar} openLore={openLore} openColl={openColl}/>
 
           {/* Lorekeeper Checklist */}
           {(()=>{
@@ -3018,7 +3041,7 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
               if(!(l.tags||[]).length) issues.push('no tags');
               if(!l.definition_protection||l.definition_protection==='open') issues.push('definition protection: open');
               if(issues.length===0) return;
-              items.push({key:'l-'+l.id,thumb:l.image_data?{data:l.image_data}:null,thumbIcon:'ti-book',thumbColor:'var(--amber)',name:l.name,sub:world?.name||'Standalone',issues,onClick:()=>setSelectedLore(l)});
+              items.push({key:'l-'+l.id,thumb:l.image_data?{data:l.image_data}:null,thumbIcon:'ti-book',thumbColor:'var(--amber)',name:l.name,sub:world?.name||'Standalone',issues,onClick:()=>openLore(l,'settings')});
             });
             // Collections: only flag if public or has been public
             data.collections.forEach(col=>{
@@ -3031,7 +3054,7 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
               if(!(col.tags||[]).length) issues.push('no tags');
               if(!col.definition) issues.push('no description');
               if(issues.length===0) return;
-              items.push({key:'col-'+col.id,thumb:col.image_data?{data:col.image_data}:null,thumbIcon:'ti-folders',thumbColor:'var(--accent)',name:col.name,sub:world?.name||'Standalone',issues,onClick:world?()=>setSelectedWorld(world,'collections'):null});
+              items.push({key:'col-'+col.id,thumb:col.image_data?{data:col.image_data}:null,thumbIcon:'ti-folders',thumbColor:'var(--accent)',name:col.name,sub:world?.name||'Standalone',issues,onClick:()=>openColl(col,'edit')});
             });
             if(items.length===0) return null;
             return <div style={{marginTop:16}}>
@@ -3566,8 +3589,9 @@ function CharCard({char,onClick}) {
   );
 }
 
-function LorePage({lorebook,data,update,exportLore,onBack}) {
-  const [loreTab, setLoreTab] = useState('chapters');
+function LorePage({lorebook,data,update,exportLore,initialTab,onBack}) {
+  const [loreTab, setLoreTab] = useState(initialTab||'chapters');
+  const [loreMdPreview, setLoreMdPreview] = useState(false);
   const lore = (data.lorebooks.find(x=>x.id===lorebook.id))||lorebook;
   const world = data.worlds.find(w=>w.id===lore.world_id);
 
@@ -3618,6 +3642,7 @@ function LorePage({lorebook,data,update,exportLore,onBack}) {
           <div className="info-card">
             <h4>Quick Info</h4>
             {world&&<div className="info-row"><span className="label">World</span><span className="value">{world.emoji?world.emoji+' ':''}{world.name}</span></div>}
+            <div className="info-row"><span className="label">Status</span><span className={"status-badge status-"+(lore.status||'draft')}>{lore.status||'draft'}</span></div>
             <div className="info-row"><span className="label">Access</span><span className={"status-badge status-"+(lore.access_level==='public'?'posted':'draft')}>{lore.access_level||'private'}</span></div>
             <div className="info-row"><span className="label">Chapters</span><span className="value">{(lore.content||[]).length}</span></div>
             <div className="info-row"><span className="label">Updated</span><span className="value">{lore.updated_at?lore.updated_at.split('T')[0]:'—'}</span></div>
@@ -3633,7 +3658,7 @@ function LorePage({lorebook,data,update,exportLore,onBack}) {
           </div>
           {loreTab==='chapters'&&<LoreChaptersTab lore={lore} updLore={updLore}/>}
           {loreTab==='settings'&&<LoreSettingsTab lore={lore} updLore={updLore} data={data}/>}
-          {loreTab==='export'&&<LoreExportPanel lorebook={lore} exportLore={exportLore} exportLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];if(lore.short_description){lines.push("");lines.push(lore.short_description);}(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});const safeName=(lore.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n"),folder:"Lorebooks"});}} loreMdPreview={false} setLoreMdPreview={()=>{}} buildLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});return lines.join("\n");}}/>}
+          {loreTab==='export'&&<LoreExportPanel lorebook={lore} exportLore={exportLore} exportLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];if(lore.short_description){lines.push("");lines.push(lore.short_description);}(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});const safeName=(lore.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n"),folder:"Lorebooks"});}} loreMdPreview={loreMdPreview} setLoreMdPreview={setLoreMdPreview} buildLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});return lines.join("\n");}}/>}
         </div>
       </div>
     </div>
@@ -3644,6 +3669,8 @@ function LoreChaptersTab({lore, updLore}) {
   const [activeIdx, setActiveIdx] = useState(0);
   const chapters = lore.content||[];
   const chapter = chapters[activeIdx]||null;
+  const dragIdx = React.useRef(null);
+  const dragOverIdx = React.useRef(null);
   return (
     <div className="lore-layout">
       <div className="lore-chapters">
@@ -3652,7 +3679,20 @@ function LoreChaptersTab({lore, updLore}) {
           <button className="btn" style={{padding:'3px 8px',fontSize:11}} onClick={()=>{updLore(l=>{l.content.push({id:uuid(),title:'New Chapter',text:''});});setActiveIdx(chapters.length);}}><i className="ti ti-plus"></i></button>
         </div>
         {chapters.map((ch,i)=>(
-          <div key={ch.id} className={"chapter-item "+(activeIdx===i?'active':'')} onClick={()=>setActiveIdx(i)}>
+          <div key={ch.id} className={"chapter-item "+(activeIdx===i?'active':'')} onClick={()=>setActiveIdx(i)}
+            draggable
+            onDragStart={()=>{dragIdx.current=i;}}
+            onDragOver={e=>{e.preventDefault();dragOverIdx.current=i;}}
+            onDrop={()=>{
+              const from=dragIdx.current,to=dragOverIdx.current;
+              if(from===null||to===null||from===to)return;
+              updLore(l=>{const arr=[...l.content];const[item]=arr.splice(from,1);arr.splice(to,0,item);l.content=arr;});
+              setActiveIdx(to);
+              dragIdx.current=null;dragOverIdx.current=null;
+            }}
+            style={{cursor:'grab'}}
+          >
+            <i className="ti ti-grip-vertical" style={{color:'var(--text3)',fontSize:13,flexShrink:0,marginRight:4}}></i>
             <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{ch.title||'Untitled'}</span>
             <button className="ch-del" onClick={e=>{e.stopPropagation();updLore(l=>{l.content.splice(i,1)});if(activeIdx>=i&&activeIdx>0)setActiveIdx(a=>a-1);}}><i className="ti ti-x"></i></button>
           </div>
@@ -3688,20 +3728,27 @@ function LoreSettingsTab({lore, updLore, data}) {
       </div>
       <div className="field-row">
         <div className="field-block">
+          <label>Status <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— Lorekeeper-only, not sent to the site</span></label>
+          <select value={lore.status||'draft'} onChange={e=>updLore(l=>{l.status=e.target.value;})}>
+            <option value="draft">Draft</option>
+            <option value="ready">Ready</option>
+          </select>
+        </div>
+        <div className="field-block">
           <label>Access Level</label>
           <select value={lore.access_level||'private'} onChange={e=>updLore(l=>{l.access_level=e.target.value;})}>
             <option value="private">Private</option>
             <option value="public">Public</option>
           </select>
         </div>
-        <div className="field-block">
-          <label>Definition Protection</label>
-          <select value={lore.definition_protection||'copy_protection'} onChange={e=>updLore(l=>{l.definition_protection=e.target.value;})}>
-            <option value="open">Open</option>
-            <option value="copy_protection">Copy Protection (recommended)</option>
-            <option value="hidden">Hidden</option>
-          </select>
-        </div>
+      </div>
+      <div className="field-block">
+        <label>Definition Protection</label>
+        <select value={lore.definition_protection||'copy_protection'} onChange={e=>updLore(l=>{l.definition_protection=e.target.value;})}>
+          <option value="open">Open</option>
+          <option value="copy_protection">Copy Protection (recommended)</option>
+          <option value="hidden">Hidden</option>
+        </select>
       </div>
       <div className="field-block">
         <label>Auto-save filename <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— saves to Lorebooks\</span></label>
@@ -3726,14 +3773,8 @@ function AllLorebooksPage({data,update,exportLore,openLore}) {
 
   return (
     <div>
-      <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-        <button className={"btn "+(filter==='all'?'primary':'')} onClick={()=>setFilter('all')}>All</button>
-        <button className={"btn "+(filter==='none'?'primary':'')} onClick={()=>setFilter('none')}>Standalone</button>
-        {worlds.map(w=>{
-          const count=data.lorebooks.filter(l=>l.world_id===w.id).length;
-          if(count===0) return null;
-          return <button key={w.id} className={"btn "+(filter===w.id?'primary':'')} onClick={()=>setFilter(w.id)}>{w.name}</button>;
-        })}
+      <div style={{display:'flex',gap:8,marginBottom:16}}>
+        <WorldFilterDropdown worlds={worlds} value={filter} onChange={setFilter} includeStandalone/>
       </div>
       {lorebooks.length===0?<div className="empty"><i className="ti ti-book"></i><h3>No lorebooks</h3></div>:
       <div className="chars-grid">
@@ -3767,43 +3808,54 @@ function AllLorebooksPage({data,update,exportLore,openLore}) {
   );
 }
 
+function WorldFilterDropdown({worlds, value, onChange, includeStandalone}) {
+  const [open,setOpen]=useState(false);
+  const ref=useRef(null);
+  React.useEffect(()=>{
+    if(!open)return;
+    const onClick=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
+    document.addEventListener('mousedown',onClick);
+    return ()=>document.removeEventListener('mousedown',onClick);
+  },[open]);
+  const selectedWorld=worlds.find(w=>w.id===value);
+  const label=value==='all'?'All worlds':value==='none'?'Standalone':(selectedWorld?.name||'All worlds');
+  return (
+    <div ref={ref} style={{position:'relative'}}>
+      <button className={`btn ${value!=='all'?'primary':''}`} onClick={()=>setOpen(o=>!o)} title="Filter by world">
+        <i className="ti ti-world"></i>{label}
+      </button>
+      {open&&<div style={{position:'absolute',top:'calc(100% + 4px)',left:0,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:4,zIndex:20,minWidth:180,maxHeight:300,overflowY:'auto',boxShadow:'0 4px 16px rgba(0,0,0,0.3)'}}>
+        <div onClick={()=>{onChange('all');setOpen(false);}} style={{padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,cursor:'pointer',color:value==='all'?'var(--accent)':'var(--text)',background:value==='all'?'var(--accent-dim)':'transparent'}}>All worlds</div>
+        {includeStandalone&&<div onClick={()=>{onChange('none');setOpen(false);}} style={{padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,cursor:'pointer',color:value==='none'?'var(--accent)':'var(--text)',background:value==='none'?'var(--accent-dim)':'transparent'}}>Standalone</div>}
+        {worlds.map(w=>(
+          <div key={w.id} onClick={()=>{onChange(w.id);setOpen(false);}} style={{padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,cursor:'pointer',color:value===w.id?'var(--accent)':'var(--text)',background:value===w.id?'var(--accent-dim)':'transparent'}}>
+            {w.emoji?w.emoji+' ':''}{w.name}
+          </div>
+        ))}
+      </div>}
+    </div>
+  );
+}
+
 function CharactersPage({data,setSelectedChar}) {
   const [filter,setFilter]=useState('all');
   const [statusFilter,setStatusFilter]=useState('all');
-  const [worldOpen,setWorldOpen]=useState(false);
   const [statusOpen,setStatusOpen]=useState(false);
-  const worldRef=useRef(null);
   const statusRef=useRef(null);
   React.useEffect(()=>{
-    if(!worldOpen&&!statusOpen)return;
-    const onClick=e=>{
-      if(worldRef.current&&!worldRef.current.contains(e.target))setWorldOpen(false);
-      if(statusRef.current&&!statusRef.current.contains(e.target))setStatusOpen(false);
-    };
+    if(!statusOpen)return;
+    const onClick=e=>{if(statusRef.current&&!statusRef.current.contains(e.target))setStatusOpen(false);};
     document.addEventListener('mousedown',onClick);
     return ()=>document.removeEventListener('mousedown',onClick);
-  },[worldOpen,statusOpen]);
+  },[statusOpen]);
   const chars=data.characters
     .filter(c=>filter==='all'||c.world_id===filter)
     .filter(c=>statusFilter==='all'||(c.status||'draft')===statusFilter);
   const statusOptions=[['all','All statuses'],['draft','Draft'],['ready','Ready'],['posted','Posted']];
-  const worldLabel=filter==='all'?'All worlds':(data.worlds.find(w=>w.id===filter)?.name||'All worlds');
   return (
     <div>
       <div style={{display:'flex',gap:8,marginBottom:16}}>
-        <div ref={worldRef} style={{position:'relative'}}>
-          <button className={`btn ${filter!=='all'?'primary':''}`} onClick={()=>setWorldOpen(o=>!o)} title="Filter by world">
-            <i className="ti ti-world"></i>{worldLabel}
-          </button>
-          {worldOpen&&<div style={{position:'absolute',top:'calc(100% + 4px)',left:0,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:4,zIndex:20,minWidth:180,maxHeight:300,overflowY:'auto',boxShadow:'0 4px 16px rgba(0,0,0,0.3)'}}>
-            <div onClick={()=>{setFilter('all');setWorldOpen(false);}} style={{padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,cursor:'pointer',color:filter==='all'?'var(--accent)':'var(--text)',background:filter==='all'?'var(--accent-dim)':'transparent'}}>All worlds</div>
-            {data.worlds.map(w=>(
-              <div key={w.id} onClick={()=>{setFilter(w.id);setWorldOpen(false);}} style={{padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,cursor:'pointer',color:filter===w.id?'var(--accent)':'var(--text)',background:filter===w.id?'var(--accent-dim)':'transparent'}}>
-                {w.emoji?w.emoji+' ':''}{w.name}
-              </div>
-            ))}
-          </div>}
-        </div>
+        <WorldFilterDropdown worlds={data.worlds} value={filter} onChange={setFilter}/>
         <div ref={statusRef} style={{position:'relative'}}>
           <button className={`btn ${statusFilter!=='all'?'primary':''}`} onClick={()=>setStatusOpen(o=>!o)} title="Filter by status">
             <i className="ti ti-filter"></i>{statusFilter==='all'?'All statuses':statusOptions.find(([v])=>v===statusFilter)[1]}
@@ -3869,6 +3921,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,onBack}) {
             <div className="info-row"><span className="label">Scenarios</span><span className="value">{(charData.starting_scenarios||[]).length}</span></div>
             <div className="info-row"><span className="label">Lorebooks</span><span className="value">{(charData.linked_lorebooks||[]).length}</span></div>
             <div className="info-row"><span className="label">Collections</span><span className="value">{(charData.collections||[]).length}</span></div>
+            <div className="info-row"><span className="label">Last updated</span><span className="value">{charData.updated_at?charData.updated_at.split('T')[0]:'—'}</span></div>
           </div>
           <div className="info-card">
             <h4>Tags</h4>
@@ -4261,8 +4314,8 @@ function LoreExportPanel({lorebook,exportLore,exportLoreMd,loreMdPreview,setLore
   );
 }
 
-function CollPage({coll,data,update,exportColl,onBack}) {
-  const [collTab,setCollTab]=useState('edit');
+function CollPage({coll,data,update,exportColl,initialTab,onBack}) {
+  const [collTab,setCollTab]=useState(initialTab||'edit');
   const col=(data.collections.find(x=>x.id===coll.id))||coll;
   const world=data.worlds.find(w=>w.id===col.world_id);
   const setCol=(fn)=>update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(!c)return;fn(c);c.updated_at=new Date().toISOString();if(c.collection_filename){const{world_id,image_data,collection_filename,...rest}=c;window.lorekeeper.saveCollectionJson(c.collection_filename,{...rest,updated_at:c.updated_at});}});
@@ -5092,7 +5145,7 @@ function BatchImportHelp() {
   </div>;
 }
 
-function BatchImportPage({data,update}) {
+function BatchImportPage({data,update,importJSON,exportAll}) {
   const [companions,setCompanions]=useState([]);
   const [lorebooks,setLorebooks]=useState([]);
   const [collections,setCollections]=useState([]);
@@ -5272,7 +5325,17 @@ function BatchImportPage({data,update}) {
     <div>
       <div style={{maxWidth:600}}>
         <div className="field-block" style={{marginBottom:16}}>
-          <label>How it works</label>
+          <label>Quick Import / Backup</label>
+          <p style={{fontSize:13,color:'var(--text3)',lineHeight:1.7,marginTop:4,marginBottom:10}}>
+            For single files (a character/lorebook/collection JSON, or a full data restore) and for full app backups. For bulk imports from a Saucepan companion export, scroll down to Batch Import.
+          </p>
+          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+            <button className="btn" onClick={importJSON}><i className="ti ti-upload"></i>Import single file</button>
+            <button className="btn" onClick={exportAll}><i className="ti ti-archive"></i>Backup everything</button>
+          </div>
+        </div>
+        <div className="field-block" style={{marginBottom:16}}>
+          <label>Batch Import — How it works</label>
           <p style={{fontSize:13,color:'var(--text3)',lineHeight:1.7,marginTop:4}}>
             Place your files in <code style={{background:'var(--bg3)',padding:'1px 5px',borderRadius:3,fontSize:12}}>I:\Lorekeeper\</code> like this:<br/><br/>
             <code style={{background:'var(--bg3)',padding:'6px 10px',borderRadius:4,fontSize:11,display:'block',lineHeight:1.8}}>
@@ -5467,6 +5530,7 @@ const TEMPLATE_FIELDS = [
 
 function TemplatesPage({data,update,newTemplate,clearNew}) {
   const [editing,setEditing]=useState(null);
+  const [filter,setFilter]=useState('all');
   React.useEffect(()=>{if(newTemplate){setEditing('new');clearNew();}},[newTemplate]);
   const templates=data.templates||[];
   const worlds=data.worlds;
@@ -5479,6 +5543,8 @@ function TemplatesPage({data,update,newTemplate,clearNew}) {
 
   const globalTemplates=templates.filter(t=>!t.world_id);
   const worldTemplates=templates.filter(t=>!!t.world_id);
+  const visibleWorlds=filter==='all'?worlds:worlds.filter(w=>w.id===filter);
+  const showGlobal=filter==='all'||filter==='none';
 
   const TplCard = ({t, accent}) => (
     <div className="tpl-card" onClick={()=>setEditing(t.id)}>
@@ -5492,12 +5558,15 @@ function TemplatesPage({data,update,newTemplate,clearNew}) {
   );
   return (
     <div>
+      {templates.length>0&&<div style={{display:'flex',gap:8,marginBottom:16}}>
+        <WorldFilterDropdown worlds={worlds} value={filter} onChange={setFilter} includeStandalone/>
+      </div>}
       {templates.length===0&&<div className="empty"><i className="ti ti-template"></i><h3>No templates yet</h3><p>Templates pre-fill character fields on creation. Create a global template or associate one with a world.</p></div>}
-      {globalTemplates.length>0&&<div className="tpl-section">
+      {showGlobal&&globalTemplates.length>0&&<div className="tpl-section">
         <div className="tpl-section-header">Global</div>
         <div className="tpl-list">{globalTemplates.map(t=><TplCard key={t.id} t={t} accent="var(--accent)"/>)}</div>
       </div>}
-      {worlds.map(w=>{
+      {visibleWorlds.map(w=>{
         const wt=worldTemplates.filter(t=>t.world_id===w.id);
         if(wt.length===0) return null;
         return <div key={w.id} className="tpl-section">
@@ -5938,14 +6007,8 @@ function AllCollectionsPage({data,update,openColl,exportColl}) {
   const collections=filter==='all'?data.collections:filter==='none'?data.collections.filter(c=>!c.world_id):data.collections.filter(c=>c.world_id===filter);
   return (
     <div>
-      <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-        <button className={"btn "+(filter==='all'?'primary':'')} onClick={()=>setFilter('all')}>All</button>
-        <button className={"btn "+(filter==='none'?'primary':'')} onClick={()=>setFilter('none')}>Standalone</button>
-        {worlds.map(w=>{
-          const count=data.collections.filter(c=>c.world_id===w.id).length;
-          if(count===0) return null;
-          return <button key={w.id} className={"btn "+(filter===w.id?'primary':'')} onClick={()=>setFilter(w.id)}>{w.name}</button>;
-        })}
+      <div style={{display:'flex',gap:8,marginBottom:16}}>
+        <WorldFilterDropdown worlds={worlds} value={filter} onChange={setFilter} includeStandalone/>
       </div>
       {collections.length===0?<div className="empty"><i className="ti ti-folders"></i><h3>No collections</h3></div>:
       <div className="coll-grid">
