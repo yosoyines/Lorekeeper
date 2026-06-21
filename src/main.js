@@ -456,6 +456,8 @@ ipcMain.handle('export-backup', async (event, { worldId }) => {
       exportData = { worlds: [world], characters: chars, lorebooks: lores, collections: colls,
         gallery: (data.gallery||[]).filter(g => g.world_id === worldId),
         personas: [], templates: (data.templates||[]).filter(t => t.world_id === worldId),
+        lorebook_templates: (data.lorebook_templates||[]).filter(t => t.world_id === worldId),
+        relationships: (data.relationships||[]).filter(r => r.worldId === worldId),
         notes: '', release_cycle: [], schedule_notes: {}, _world_export: true };
     }
 

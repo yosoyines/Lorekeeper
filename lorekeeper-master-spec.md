@@ -1,5 +1,5 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 19, 2026 (session 18)**
+**Last updated: June 20, 2026 (session 20)**
 
 ---
 
@@ -148,6 +148,7 @@ I:\Lorekeeper\
 
 ### Lorebook Template (per-world entry templates)
 - `id`, `world_id`, `name`, `title_template`, `template_text`, `lorebook_id`
+- **Storage note:** unlike `plot_archetypes` (nested directly on the `World` object, see above), this is a **flat top-level array** at `data.lorebook_templates[]`, with each entry tagged with its own `world_id` to associate it. Both patterns correctly scope content per-world functionally, but they're structured differently — worth knowing when writing any code that touches both, since "copy the world object" (which `plot_archetypes` rides along with automatically) does **not** also carry `lorebook_templates`. This caused a real bug — see Backup & Restore.
 
 ### Relationship (relationship map edges)
 - `id`, `worldId`, `charA`, `charB` (character IDs), `label` (free text, e.g. "rivals", "siblings")
@@ -155,7 +156,8 @@ I:\Lorekeeper\
 ### Settings
 - `anthropic_api_key` — for Claude panel
 - `claude_model` — default `claude-sonnet-4-6`
-- `font_size` — `'small'` | `'normal'` | `'large'` | `'xlarge'` — applied globally to `document.documentElement.style.fontSize`
+- `font_size` — `'small'` | `'normal'` | `'large'` | `'xlarge'` — applied via CSS `zoom` on `document.documentElement` (see CSS Gotchas — NOT root font-size, that does nothing given the app's hardcoded-px CSS)
+- `theme` — `{ accent_hex, mode }` where `mode` is `'dark'` | `'light'`; `null`/absent = default theme. Added session 20, see Theme System section.
 - `autosave_debounce` — ms; default 600
 
 ---
@@ -175,11 +177,12 @@ I:\Lorekeeper\
 - **Collections** — world filter dropdown (includes Standalone), same shared component; click -> CollPage (Edit/Export tabs)
 - **Personas** — player characters, independent from worlds; click -> PersonaDetailPage; "New Persona" button in topbar (added June 19 — was missing entirely, only Export/Delete existed once a persona was already selected)
 - **Templates** — global and per-world character creation templates; card list grouped by world, with a world filter dropdown to narrow the grouped sections shown (added session 18)
-- **Batch Import** — scan folders, import, image audit, backup/restore
+- **Import/Export** — renamed from "Batch Import" session 19. Scan folders, import, image audit, backup/restore, plus a "Quick Import / Backup" card at the top for single-file import and full-app backup (moved here from the sidebar footer — see below)
 - **Settings** — API key, model, font size (applied globally), debounce, theme/colorblind (placeholders); full-width layout
 - **Help** — 15 collapsible sections covering all features
 - **Worlds list** — pinned first, emoji icon, right-click -> pin/unpin
-- **Sidebar collapse** — icons only mode; footer has Import + Backup buttons
+- **Sidebar collapse** — icons only mode (52px wide). No footer (removed session 19 — see below). **Collapse/expand button fix, session 19:** at 52px collapsed width, the header's padding (24px) plus the logo icon (28px) already consumed the full available space, squeezing the collapse/expand toggle button to zero width — it was still technically in the DOM but invisible and unclickable, making the sidebar impossible to re-expand once collapsed. Fixed by stacking the logo and the toggle button vertically when collapsed instead of competing for horizontal space.
+- **Topbar action button separator, added session 19:** a thin vertical divider now sits between page-specific action buttons (Delete, Export, Update from JSON, etc.) and the Notes panel toggle button on the far right of every page's topbar. Previously a destructive Delete button could sit directly adjacent to the panel toggle with only the standard 8px gap, on Characters/Lorebooks/Collections in particular — easy to misclick. The divider is positioned globally in the topbar layout (not per-page), so it applies consistently everywhere a topbar exists.
 - **Logo** — clickable -> Dashboard
 
 ### Detail Pages
@@ -195,6 +198,8 @@ All four content-type detail pages share the same `char-detail` layout: a 260px 
 - `openColl(c)` — same pattern for collections, `page='collection'`
 
 All three exist so that opening any item — from the dashboard, quick find, a card grid, or anywhere else — always loads the correct world context, which the right-panel Notes tab depends on.
+
+**This guarantee only holds if every call site actually uses the helpers.** Fixed session 19: the top-level `Characters` nav page (`page==='characters'`, i.e. clicking "Characters" in the sidebar directly rather than through a world) had its own separate, never-updated inline call — `setSelectedChar(c)=>{setSelectedChar(c);setPage('char')}` — that bypassed `openChar` entirely and never set `selectedWorld`. This wasn't a sync regression; it was a call site that was simply missed when `openChar` was introduced and never got audited until a user reported the Notes panel showing the wrong (global) notes when opening a character from that specific page. If "wrong notes panel" or "wrong world context" bugs resurface, audit every `setSelectedChar`/`setSelectedLore`/`setSelectedColl` call site for a raw bypass like this one before assuming it's a deeper bug — search for `setSelectedChar=c=>` / `setSelectedChar={c=>` etc. and confirm each one routes through `openChar`/`openLore`/`openColl`.
 
 ### Right Panel (toggle button in top bar)
 - **Notes** — world notes (synced with World Info tab's Notes field) or global scratchpad when no world is active; auto-saves
@@ -232,7 +237,7 @@ All three exist so that opening any item — from the dashboard, quick find, a c
 10. **Settings** — access level, temperature %, spicy flags, booleans, companion_folder
 11. **Schedule** — status (draft/ready/posted), schedule dates, posted date. Setting status to "Posted" from this dropdown auto-stamps today's date into `posted_dates` if it's empty (fixed June 19 — previously only the Dashboard's "Mark posted" banner button did this; the dropdown left `posted_dates` empty, requiring a manual follow-up "Add Posted Date" click)
 12. **Lorebook Entry** — fill world lorebook template for this character; save directly to lorebook
-13. **Export** — Export JSON (platform-ready, stripped) and Export MD (sheet with descriptions, card, prompt, scenarios, tags) with in-app preview and a field-completeness checklist
+13. **Export** — Export JSON (platform-ready, stripped) and Export MD (sheet with descriptions, card, prompt, scenarios, tags) with in-app preview and a field-completeness checklist; full-width (fixed session 19, see Lorebook Detail Export note — same shared `.export-panel` CSS bug affected all three: characters, lorebooks, collections)
 
 Quick Info sidebar shows: World, Status, Content rating, Access, Scenarios count, Lorebooks count, Collections count, **Last updated** (added session 18 — local `updated_at` date only, no site-sync framing, since this is purely "when did I last touch this in Lorekeeper").
 
@@ -241,13 +246,13 @@ Quick Info sidebar shows: World, Status, Content rating, Access, Scenarios count
 ## Lorebook Detail (tabs)
 1. **Chapters** — chapter list (left) + editor (right); add/delete chapters; **drag-and-drop reordering** (added session 18 — was click-to-select only, no way to reorder without manually re-creating chapters); each chapter has a title and a markdown body
 2. **Settings** — name, short description, world, **Status** (Draft/Ready — app-only, not sent to the site, added session 18 to fill a gap where new lorebooks had no way to signal "still in progress" since `access_level` only has private/public), Access Level, Definition Protection, auto-save filename, tags
-3. **Export** — Export JSON and Export MD, both with warnings (added session 18 — previously only characters had pre-export warnings; lorebooks silently exported with a missing image UUID, no tags, or Open definition protection with no nudge). MD preview toggle, fixed session 18 (previously the preview button called a hardcoded no-op — see Session Log).
+3. **Export** — Export JSON and Export MD, both with warnings (added session 18 — previously only characters had pre-export warnings; lorebooks silently exported with a missing image UUID, no tags, or Open definition protection with no nudge). MD preview toggle, fixed session 18 (previously the preview button called a hardcoded no-op — see Session Log). Export tab is now full-width (fixed session 19 — `.export-panel` CSS, shared by this, `CollExportPanel`, and `CharExportTab`, had a leftover `max-width:600px` that made the tab look half-width on a wide page).
 
-Quick Info sidebar shows: World, **Status** (added session 18), Access, Chapters count, Updated date.
+Quick Info sidebar shows: World, **Status** (added session 18), Access, Chapters count, Updated date. **Image ID field, fixed session 19:** the cover image UUID field used to be `readOnly` and only rendered at all if a UUID already existed (`{lore.image_id && <div>...}`) — meaning there was no way to ever set one in the first place, only to view/copy one that somehow already got there. Now a real editable input matching the character "paste UUID…" pattern.
 
 ## Collection Detail (tabs)
-1. **Edit** — name, description (labeled "Description" in the UI; stored internally as `definition`, see Collection data model), world, access level, tags, auto-save filename, character picker
-2. **Export** — Export JSON and Export MD
+1. **Edit** — name, description (labeled "Description" in the UI; stored internally as `definition`, see Collection data model), world, access level, tags, auto-save filename, character picker. **Image ID field, added session 19:** collections had no editable UUID field at all anywhere in the app — only a checklist warning telling you it was missing, with nothing to actually fix it. Added an Image ID card matching the lorebook/character pattern.
+2. **Export** — Export JSON and Export MD; full-width (same `.export-panel` fix as Lorebook Export, session 19)
 
 ---
 
@@ -269,7 +274,15 @@ Quick Info sidebar shows: World, **Status** (added session 18), Access, Chapters
 
 ---
 
-## Batch Import
+## Import/Export (sidebar page, renamed from "Batch Import" session 19)
+
+### Quick Import / Backup (added session 19)
+A card at the top of the page for actions that aren't bulk folder scans:
+- **Import single file** — the existing smart importer (`importJSON`) that auto-detects a character/lorebook/collection/full-data-restore JSON and routes accordingly
+- **Backup everything** — full app backup zip (`exportAll`)
+Both of these used to live as buttons in the sidebar footer. The footer was removed entirely in session 19 (it was contributing to the sidebar-header-scrolls-off-screen bug — see Babel/CSS notes — and competing for space at the bottom of a long Navigate+Worlds list); moving these two actions onto this page instead both fixed that and gave them more room to be properly labeled instead of cryptic icon-only buttons.
+
+### Batch Import (folder scan)
 1. Place files in `Companions\`, `Lorebooks\`, `Collections\`
 2. **Scan Folders** — finds JSONs + images; badge: **new** / **update** / **local newer** / **up to date**
 3. Auto-links characters to collections via `companions[]`
@@ -299,6 +312,7 @@ Previously, importing a companion from a folder discarded two things it shouldn'
 - World **Export ZIP** (in world topbar) — platform-ready zip of posted characters + public lorebooks + public collections, stripped of app-only fields, stamps `site_last_synced_at`; this is what gets uploaded to Saucepan
 - Restore: global = full replace, world = smart merge
 - Requires `adm-zip` (`npm install adm-zip` in `I:\Lorekeeper\`)
+- **`lorebook_templates` per-world backup gap, fixed session 19:** the per-world backup in `main.js` built a custom `exportData` object listing specific top-level keys (`worlds, characters, lorebooks, collections, gallery, personas, templates, notes, ...`) — `lorebook_templates` was missing from that list entirely, so a per-world backup silently dropped all of that world's lorebook entry templates (global backups were unaffected, since those just copy `data` wholesale). Fixed on both sides: the export now includes `lorebook_templates` filtered to that world, and the restore-side merge logic in `index.html` (which previously only merged `templates`, not `lorebook_templates`) now merges both.
 
 ### Notes Backups
 See Data Safety Architecture section — independent `.md` backup per world plus the global scratchpad, separate from the main data file.
@@ -429,6 +443,7 @@ Right panel Claude tab — full AI chat with world-aware context.
 - Uses model from Settings (default `claude-sonnet-4-6`)
 - API key from Settings -> Claude API; amber nudge if not set, with a working "add in Settings" link that navigates there (fixed June 19 — was previously a dead `onClick={()=>{}}` stub; `setPage` is now threaded through `RightPanel` -> `ClaudePanel`)
 - CSP allows `https:` so API calls work from Electron
+- **Missing required header, fixed session 19:** the fetch call to `api.anthropic.com/v1/messages` only ever sent `Content-Type` and `x-api-key` — the Anthropic API also requires an `anthropic-version` header (`2023-06-01`) on every request, and it was missing entirely. This made every Claude panel request fail regardless of whether the API key was valid, with an error about the missing header rather than anything key-related — easy to misdiagnose as "my key isn't working" when the key was never actually checked.
 
 ---
 
@@ -436,7 +451,7 @@ Right panel Claude tab — full AI chat with world-aware context.
 Full-width layout (no max-width cap).
 
 **Claude API** — API key (show/hide, save), model selector (Sonnet/Opus/Haiku)
-**Appearance** — Font size (Small/Normal/Large/XLarge, applies immediately and globally via `document.documentElement.style.fontSize`); Theme placeholder; Colorblind mode placeholder
+**Appearance** — Font size (Small/Normal/Large/XLarge, applies immediately and globally via CSS `zoom` on `document.documentElement` — see CSS Gotchas section for why `zoom` rather than root font-size); **Theme** (accent color → generated dark + light theme pair, live preview, Apply/Reset — see Theme System section, added session 20); Colorblind mode placeholder (still not built)
 **Data** — Data file path + Open Folder; Auto-save debounce (Fast 300ms / Normal 600ms / Slow 1s / Very Slow 2s)
 **About** — Version info, deps, link to console.anthropic.com
 
@@ -453,7 +468,7 @@ Full-width layout (no max-width cap).
 | Color | `ti-palette` | HSL sliders + 6 harmony modes; click swatches to copy hex |
 | Text Diff | `ti-scan` | Word-level diff; green/red highlights; added/removed counts |
 | Personality | `ti-brain` | Literary Archetypes (77), MBTI (16), Jungian (13), Attachment Styles (4); Roll All + Copy All |
-| Plot | `ti-books` | 100 global archetypes + per-world custom pool; filter global/world/any |
+| Plot | `ti-books` | 100 global archetypes + per-world custom pool; filter global/world/any. World dropdown only lists worlds that actually have custom archetypes set up (fixed session 19 — previously listed every world including ones with none, labeled "(no custom)", which was just noise). No longer shows an always-visible wall of archetype tags below the roll buttons when a world is selected (the `WorldPlotEditor` sub-component that did this was removed — archetypes are edited from World Info, this tool is just for rolling). |
 | Esper Powers | `ti-sparkles` | Rolls ability type, rank (F-S), drawback, codename |
 | Hockey | `ti-trophy` | Rolls position, role description, handedness, character trait |
 | Swim | `ti-send` | Rolls stroke, event distance, description, swimmer archetype |
@@ -494,6 +509,44 @@ These caused repeated regressions across sessions — treat as fixed rules:
 - Apostrophes inside single-quoted JS strings need to become double-quoted strings instead of escaping.
 - Double-curly-brace syntax appearing in literal JSX text (e.g. documentation about macro syntax) must be wrapped as a string literal expression, not typed directly into JSX text.
 - Use `if(tab==='x') return (...)` pattern instead of nesting deep ternaries when a component has 2+ mutually exclusive views — more reliable than ternaries with multi-line JSX.
+
+---
+
+## Theme System (added session 20)
+
+Generates a full dark+light theme pair from a single accent color. Lives in Settings → Appearance → Theme.
+
+### Why this is feasible (and font-size wasn't)
+The app's entire color system already runs through ~11 CSS custom properties consistently: `--bg`, `--bg2`, `--bg3`, `--bg4`, `--accent`, `--accent2`, `--accent-dim`, `--text`, `--text2`, `--text3`, `--border`, `--border2`. Unlike font-size (~435 hardcoded pixel values, almost no `rem`/`em`, required the `zoom` workaround — see CSS Gotchas), swapping these 11 variables at `document.documentElement` genuinely re-themes the whole app with zero per-component rewriting needed.
+
+### `generateTheme(accentHex)`
+Lives in `index.html` near the existing `hexToHsl`/`hslToHex`/`genPalette` color utilities (reuses them directly — same math the Color tool uses for harmony palettes, applied here to build a coherent ramp instead of 5 contrasting swatches). Takes the accent's hue and saturation (clamped to 45–85% saturation so a very washed-out or oversaturated user-picked color doesn't break contrast), and independently derives:
+- **Dark variant** — backgrounds ramp from near-black (`--bg` at ~7% lightness) up through `--bg4` (~20%), accent stays vivid (~68% lightness), text stays light (~92%)
+- **Light variant** — backgrounds ramp from near-white (`--bg` at ~97%) down through `--bg4` (~85%), accent is deepened for contrast on light backgrounds (~42% lightness instead of 68%), text is dark (~12%)
+
+Returns `{ dark: {...}, light: {...} }`, each an object with all 11 properties (camelCase keys: `bg`, `bg2`, `bg3`, `bg4`, `accent`, `accent2`, `accentDim`, `text`, `text2`, `text3`, `border`, `border2`).
+
+### `applyTheme(themeVars)`
+Takes one of the two variants from `generateTheme` and calls `document.documentElement.style.setProperty()` for each of the 11 CSS variables. This is what actually changes what's on screen.
+
+### `ThemeGenerator` component (Settings page)
+- Accent hex input (with live swatch) + Dark/Light toggle
+- **Live preview panel** — a small mock sidebar + content area rendered in the currently-selected (not-yet-applied) theme, so you can see it before committing
+- **Apply theme** button — disabled when the preview already matches what's saved (`data.settings.theme`); writes `{accent_hex, mode}` to settings on click
+- **Reset to default** button (only shown once a theme has been applied) — clears `data.settings.theme` and calls `applyTheme()` directly with the original hardcoded purple dark theme values, so the reset is immediate rather than waiting for the next render cycle
+
+### Persistence
+An App-level `useEffect` (same pattern as the font-size `zoom` effect — must live in `App`, not inside `SettingsPage`, or the theme would revert the moment you navigate away) watches `data.settings.theme` and calls `generateTheme()` + `applyTheme()` whenever it changes, including on initial load. This is what makes the theme survive an app restart.
+
+### Known gaps / not yet done
+- **Colorblind mode** is still a separate placeholder, unbuilt — distinct from this feature (theme = accent color choice; colorblind mode = remapping specific hues like red/green that look identical to certain colorblindness types, which would need either its own palette adjustments or CSS filters, not yet designed)
+- No "save multiple custom themes" / theme gallery — only one active theme at a time, overwritten each time Apply is clicked
+- Generated themes aren't currently exported/backed up anywhere beyond living in `data.settings.theme` inside the main data file (same backup coverage as any other setting — fine for global/per-world backups since those copy `data` wholesale, but worth knowing if a dedicated settings-export feature is ever built)
+
+---
+
+## CSS Gotchas (hard-won, do not relitigate)
+- **`vh` units don't reliably scale with CSS `zoom`.** The font-size feature (Settings → Appearance) is implemented via `document.documentElement.style.zoom` (chosen because the app's CSS uses ~435 hardcoded pixel values and almost no `rem`/`em`, so changing the root font-size alone does nothing — see Performance Notes). `zoom` scales rendered pixels, but `vh` is computed against the raw device viewport in a way that doesn't reliably co-scale with it. `.sidebar` was set to `height: 100vh` to fix a header-scrolls-off-screen bug (session 18) — that fix was correct in isolation, but at any font size other than "Normal," the sidebar's rendered height would exceed the actually-visible area, recreating the exact same header-scrolling bug it was meant to fix (session 19 root-caused this). Fixed by using `height: 100%` instead (inherited from `.app`, itself `100%` of `#root`'s `100vh`) — percentage units are relative to the parent's computed box, not the raw viewport, so they scale correctly under `zoom`. **Any future "fixed-height sidebar/panel" CSS should use `%` chained from a `100vh` ancestor, never `vh` directly on an element that needs to coexist with the zoom-based font scaling.**
 
 ---
 
@@ -545,8 +598,8 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 ### UI Overhaul (mostly done)
 Consistency pass complete across list pages, detail pages, and World Info/Settings. Remaining:
 - **CharDetailPage** — has the most inline styles of any component (it's the oldest and most complex); structurally fine, worth a cleanup pass later when there's time, not urgent
-- **Global themes** — light/dark + accent color
-- **Colorblind mode** — deuteranopia, protanopia, tritanopia
+- ~~Global themes~~ ✓ **done session 20** — see Theme System section. Accent-color-driven dark+light generation, live preview, Apply/Reset, persists across restarts.
+- **Colorblind mode** — deuteranopia, protanopia, tritanopia. Distinct problem from the theme system above (that's accent-color choice; this needs specific hue remapping or CSS filters for color pairs that read as identical under certain colorblindness types) — not yet designed.
 - **Standalone / Public Version** — configurable data path, strip Saucepan-specific stuff, packaged `.exe`, optional rename/theming; README.md goes here
 
 ### Won't do
@@ -671,6 +724,8 @@ This has happened multiple times this project: a chat session's fixes only exist
 | 16 | Jun 19 | **Data-loss incident and recovery.** A race condition (autosave firing before initial load resolved) overwrote the real 30MB+ data file with the empty default shape. Recovered characters via independent Companions/Lorebooks/Collections auto-save files; notes and app-only fields (schedule status etc.) were not recoverable. Built three-layer data safety architecture: (1) `dataLoaded` guard blocks autosave until load completes, (2) `main.js` shrink-refuse check rejects any write under 50% of the existing file's size and redirects it to a `.SUSPICIOUS.json` file instead, (3) rolling `lastgood.json` backup on every successful write. Added independent standalone `.md` notes backup per world + global scratchpad (`Notes\` folder), wired from both the right-panel Notes tab and World Info tab, with a "Notes Backups" panel on Batch Import. Also fixed a separate pre-existing bug surfaced during this incident: the inline Site Checklist IIFE inside `DashboardPage` called `useState` after a conditional early-return, violating React's Rules of Hooks and crashing the Dashboard whenever the checklist's item count changed between zero and nonzero — extracted to its own `SiteChecklistPanel` component. Fixed Site Checklist to also flag posted/public items that have never been synced (previously required `site_last_synced_at` to already exist, so never-synced items could never be flagged no matter how many edits). Fixed Schedule tab's status dropdown to auto-stamp `posted_dates` when set to Posted (previously only the Dashboard banner button did this). Discovered and fixed `parseTimestamp()` bug: Saucepan's timestamp format is unparseable by native `Date()`, silently breaking every "local newer" comparison involving a site-imported timestamp. Fixed batch import to preserve the platform image UUID from site exports (was being discarded in favor of local file paths), derive `posted_dates` from the site's `posted_at`/`updated_at` instead of leaving it empty, and use the site's real `updated_at` instead of overwriting it with import time. Added force-import overrides (per-item "Import anyway" button + global "Force import all" toggle) for restoring from a Saucepan companion backup export. Re-fixed four UI width regressions that had silently reverted across project re-uploads (Settings, World Info, Template editor, Persona "New" button) — root cause identified as chat-session fixes not yet being re-synced to project knowledge between turns. |
 | 17 | Jun 19 | Fixed dead "add in Settings" link in the Claude panel's no-API-key nudge (was a no-op `onClick={()=>{}}` stub; threaded `setPage` through `RightPanel` -> `ClaudePanel`). Fixed `export-file` IPC handler in `main.js`, which was hardcoded to always show a "JSON" filter in the save dialog regardless of the actual file being exported — affected every Export MD button in the app (characters, lorebooks, collections, personas, templates); now picks the filter from the file's real extension and defaults the save dialog to `I:\Lorekeeper\`. Updated `.gitignore` to include the new `Templates\` and `Notes\` auto-save folders and the safety-net backup files. Rewrote the GitHub section of this spec with an explicit, repeatable, verified command sequence (status check -> explicit `git add` of named files, never `git add .` -> commit -> push -> status verify -> optional tag), plus a "how to tell if project knowledge is stale" troubleshooting note, directly in response to the repeated-regression problem from session 16. |
 | 18 | Jun 19 | **Export field-accuracy pass, found by diffing real Lorekeeper-vs-Saucepan exports of the same items.** Fixed `exportChar`'s incomplete strip list (was missing `posted_dates`/`companion_folder`/`site_last_synced_at`/`lorebook_entry_text`/`lorebook_entry_title`/`voice_catalog_id` — only `exportWorldPlatformZip` had the complete list). Fixed `exportColl`'s field-name bug: Lorekeeper's `definition` field was never renamed to the platform's `description` field, meaning every collection export before this fix had no description on the site's side. Fixed `exportLore`'s stale `collaboration_type`: now derived fresh from `access_level` at export time instead of passed through a potentially-contradictory stored value. Added export warnings to `exportLore` (missing image UUID, no tags, Open definition protection) matching the existing character warning pattern, which lorebooks never had before. Fixed Site Checklist to catch brand-new public lorebooks/collections that have never been synced (previously gated on `has_been_public`, which only becomes true *after* a first successful export, creating a chicken-and-egg gap for first-time exports). Added an app-only `status` field (Draft/Ready) for lorebooks, shown in Quick Info and excluded from export, to give new lorebooks a way to signal "still in progress" since `access_level` only distinguishes private/public. Added drag-and-drop chapter reordering to `LoreChaptersTab` (was click-to-select only). Fixed the lorebook MD export Preview button, which had been silently broken since session 11: `LorePage` was passing a hardcoded `loreMdPreview={false}` and a no-op `setLoreMdPreview={()=>{}}` into `LoreExportPanel` instead of real state, so clicking Preview updated nothing. Added a "Last updated" row to the character Quick Info sidebar. Added a shared `WorldFilterDropdown` component and migrated Characters/Lorebooks/Collections/Templates list pages to use it instead of one-button-per-world inline rows, which would have broken visually as the world count grows; Characters also got a matching funnel-style status filter dropdown (Draft/Ready/Posted). |
+| 19 | Jun 20 | **Integrity check session — found genuine new bugs, not sync regressions.** Fixed the top-level Characters nav page bypassing `openChar` entirely (raw `setSelectedChar(c)=>{...}` call that never set `selectedWorld`, causing the right-panel Notes tab to show the wrong/global notes when opening a character from that specific page — see Navigation helpers note). Fixed the sidebar `height:100vh` fix from session 18 silently breaking again at any font size other than "Normal," because `vh` doesn't reliably co-scale with the `zoom`-based font feature — switched to `height:100%` (see new CSS Gotchas section). Fixed a completely missing required `anthropic-version` header on every Claude API call — every request failed regardless of API key validity, easy to misdiagnose as a key problem. Fixed the sidebar collapse/expand button becoming unreachable (zero remaining width at 52px collapsed) by stacking logo + toggle vertically when collapsed instead of horizontally. Renamed "Batch Import" to "Import/Export," removed the sidebar footer entirely (was contributing to the header-scroll bug) and moved its Import/Backup buttons into a new "Quick Import / Backup" card at the top of that page. Added editable Image ID (UUID) fields for lorebooks (was read-only and only rendered if a UUID already existed — impossible to ever set one) and collections (had no field at all, anywhere). Fixed lorebook_templates being silently dropped from per-world backups (flat top-level array, missing from the per-world backup's custom export object) on both the export and restore sides. Fixed `.export-panel`'s leftover `max-width:600px` making the Export tab look half-width on Characters/Lorebooks/Collections. Added a topbar visual separator between page-action buttons and the Notes panel toggle (Delete was sitting flush against it). Cleaned up the Plot tool: world dropdown now only lists worlds with custom archetypes set up, and removed `WorldPlotEditor`'s always-visible full-archetype-list clutter under the roll buttons. |
+| 20 | Jun 20 | **Theme System.** Built `generateTheme(accentHex)` + `applyTheme(themeVars)`, deriving a full dark+light theme pair from one accent color by reusing the existing `hexToHsl`/`hslToHex` color utilities (same math the Color tool already used for harmony palettes). Feasible specifically because — unlike font-size — the app's color system already runs through ~11 consistent CSS custom properties, so swapping them at the root genuinely re-themes everything with no per-component rewrite. Built `ThemeGenerator` UI component in Settings → Appearance: accent hex input, Dark/Light toggle, live mock preview panel before committing, Apply (disabled when preview matches saved state) and Reset to default. Added an App-level `useEffect` (same pattern as the font-size `zoom` effect) that applies the saved theme from `data.settings.theme` on load and whenever it changes, so it persists across restarts. Added `theme` to the Settings data model. Updated What's Next to mark "Global themes" done, distinguishing it from the still-unbuilt Colorblind mode (a related but separate problem — hue remapping for specific colorblindness types, not accent-color choice). |
 
 ---
 

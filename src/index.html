@@ -25,9 +25,9 @@
     --r: 8px; --rl: 12px;
   }
   html, body, #root { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); }
-  #root { display: flex; flex-direction: column; height: 100vh; }
+  #root { display: flex; flex-direction: column; }
   .app { display: flex; height: 100%; overflow: hidden; }
-  .sidebar { width: 220px; min-width: 220px; height: 100vh; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; transition: width 0.2s; overflow: hidden; }
+  .sidebar { width: 220px; min-width: 220px; height: 100%; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; transition: width 0.2s; overflow: hidden; }
   .sidebar.collapsed { width: 52px; min-width: 52px; }
   .sidebar-header { padding: 16px 12px 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
   .logo-mark { width: 28px; height: 28px; background: var(--accent-dim); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -167,7 +167,7 @@
   .export-card-meta { font-size:11px; color:var(--text3); margin-bottom:12px; display:flex; flex-wrap:wrap; gap:6px; }
   .export-field-ok { color:var(--green); }
   .export-field-missing { color:var(--text3); }
-  .export-panel { display:flex; flex-direction:column; gap:16px; max-width:600px; padding:8px 0; }
+  .export-panel { display:flex; flex-direction:column; gap:16px; padding:8px 0; }
   .export-row { display:flex; gap:8px; margin-top:8px; }
   .field-hint { font-size:11px; color:var(--text3); margin-top:4px; }
   .tpl-card { background:var(--bg2); border:1px solid var(--border); border-radius:var(--rl); padding:14px 16px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:border-color 0.15s, transform 0.1s; }
@@ -327,6 +327,7 @@ function App() {
   const [rightPanel, setRightPanel] = useState(false);
   const [newTemplate, setNewTemplate] = useState(false);
   const [ctxMenu, setCtxMenu] = useState(null);
+  const contentRef = React.useRef(null);
   const [dataLoaded, setDataLoaded] = useState(false);
   const saveTimer = useRef();
 
@@ -653,6 +654,23 @@ function App() {
     document.documentElement.style.zoom = zoomMap[size] || 1;
   }, [(data.settings||{}).font_size]);
 
+  // Apply the saved theme (accent color + dark/light mode) globally, same App-level pattern
+  // as font size — must live here, not inside SettingsPage, so it stays applied on every
+  // page rather than reverting the moment you navigate away from Settings.
+  React.useEffect(() => {
+    const themeSettings = (data.settings||{}).theme;
+    if (!themeSettings || !themeSettings.accent_hex) return;
+    const { dark, light } = generateTheme(themeSettings.accent_hex);
+    applyTheme(themeSettings.mode === 'light' ? light : dark);
+  }, [(data.settings||{}).theme]);
+
+  // Reset scroll position whenever the viewed page/item changes — without this, navigating
+  // into a character/lorebook/etc while the previous page was scrolled down renders the new
+  // page already scrolled to wherever you left off, which looks like the page "jumped."
+  React.useEffect(() => {
+    if (contentRef.current) contentRef.current.scrollTop = 0;
+  }, [page, selectedChar?.id, selectedLore?.id, selectedColl?.id, selectedWorld?.id]);
+
   const navTo=(p)=>{setPage(p);setSelectedWorld(null);setSelectedChar(null);setSelectedLore(null);setSelectedPersona(null);};
   const openColl=(c,tab)=>{
     setSelectedColl(c);
@@ -705,10 +723,10 @@ function App() {
       </div>}
       
       <div className={`sidebar ${sidebarOpen?'':'collapsed'}`}>
-        <div className="sidebar-header">
+        <div className="sidebar-header" style={sidebarOpen?{}:{flexDirection:'column',gap:8,padding:'12px 0',alignItems:'center'}}>
           <div className="logo-mark" style={{cursor:'pointer'}} onClick={()=>navTo('dashboard')} title="Dashboard"><i className="ti ti-book-2"></i></div>
           {sidebarOpen&&<span className="logo-text">Lorekeeper</span>}
-          <button className="collapse-btn" onClick={()=>setSidebarOpen(s=>!s)}><i className={`ti ti-layout-sidebar-left-${sidebarOpen?'collapse':'expand'}`} style={{fontSize:17}}></i></button>
+          <button className="collapse-btn" style={sidebarOpen?{}:{marginLeft:0}} onClick={()=>setSidebarOpen(s=>!s)} title={sidebarOpen?'Collapse sidebar':'Expand sidebar'}><i className={`ti ti-layout-sidebar-left-${sidebarOpen?'collapse':'expand'}`} style={{fontSize:17}}></i></button>
         </div>
         <div className="sidebar-nav">
           {sidebarOpen&&<div className="nav-section">Navigate</div>}
@@ -779,29 +797,24 @@ function App() {
             {page==='personas'&&!selectedPersona&&<button className="btn primary" onClick={()=>setModal({type:'new-persona'})}><i className="ti ti-plus"></i>New Persona</button>}
             {page==='personas'&&selectedPersona&&<button className="btn" onClick={()=>{const p=selectedPersona;const lines=["# "+p.name];if(p.pronouns){lines.push("");lines.push("**Pronouns:** "+p.pronouns);}if(p.description){lines.push("");lines.push("## Description");lines.push(p.description);}const lb=data.lorebooks.find(x=>x.id===p.linked_lorebook);if(lb){lines.push("");lines.push("**Linked Lorebook:** "+lb.name);}const safeName=(p.name||"persona").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n"),folder:"Personas"});}}><i className="ti ti-file-text"></i>Export MD</button>}
             {page==='personas'&&selectedPersona&&<button className="btn danger" onClick={()=>setModal({type:'confirm-delete-persona',persona:selectedPersona,onBack:()=>setSelectedPersona(null)})}><i className="ti ti-trash"></i>Delete</button>}
-            {page==='char'&&selectedChar&&<>
-              <button className="btn" onClick={importJSON}><i className="ti ti-refresh"></i>Update from JSON</button>
-              <button className="btn danger" onClick={()=>setModal({type:'confirm-delete-char',char:selectedChar})}><i className="ti ti-trash"></i>Delete</button>
-            </>}
-            {page==='lore'&&selectedLore&&<button className="btn danger" onClick={()=>{if(window.confirm("Delete "+selectedLore.name+"? This cannot be undone.")){update(d=>{d.lorebooks=d.lorebooks.filter(x=>x.id!==selectedLore.id);});setSelectedLore(null);setPage('lorebooks');}}}><i className="ti ti-trash"></i>Delete</button>}
-            {page==='collection'&&selectedColl&&<button className="btn danger" onClick={()=>{if(window.confirm("Delete "+selectedColl.name+"? This cannot be undone.")){update(d=>{d.collections=d.collections.filter(x=>x.id!==selectedColl.id);});setSelectedColl(null);setPage(selectedWorld?'world':'collections');}}}><i className="ti ti-trash"></i>Delete</button>}
+            <div style={{width:1,alignSelf:'stretch',background:'var(--border)',margin:'0 4px'}}></div>
             <button className={`btn ${rightPanel?'primary':''}`} onClick={()=>setRightPanel(p=>!p)} title="Toggle notes panel"><i className={`ti ti-layout-sidebar-right-${rightPanel?'collapse':'expand'}`}></i></button>
           </div>
         </div>
 
         <div style={{display:'flex',flex:1,overflow:'hidden'}}>
-          <div className="content" style={{flex:1}}>
+          <div className="content" style={{flex:1}} ref={contentRef}>
             {page==='dashboard'&&<DashboardPage calCells={calCells} calYear={calYear} calMonth={calMonth} today={today} selDay={selDay} setSelDay={setSelDay} charsOnDay={charsOnDay} postedOnDay={postedOnDay} calDate={calDate} setCalDate={setCalDate} upcoming={upcoming} data={data} update={update} setSelectedChar={(c,tab)=>openChar(c,tab)} openChar={openChar} openLore={openLore} openColl={openColl} setSelectedWorld={(w,tab)=>{setSelectedWorld(w);if(tab)setWorldTab(tab);setPage('world');}} />}
             {page==='worlds'&&<WorldsPage data={data} setSelectedWorld={w=>{setSelectedWorld(w);setWorldTab('characters');setPage('world');}} setModal={setModal} />}
             {page==='world'&&selectedWorld&&<WorldDetailPage world={selectedWorld} tab={worldTab} setTab={setWorldTab} worldChars={worldChars} worldLores={worldLores} worldColls={worldColls} worldGallery={worldGallery} setSelectedChar={c=>openChar(c)} setSelectedLore={setSelectedLore} openLore={openLore} openColl={openColl} selectedLore={selectedLore} update={update} setModal={setModal} exportChar={exportChar} exportLore={exportLore} exportColl={exportColl} setPage={setPage} setSelectedWorld={setSelectedWorld} data={data} initialCollId={initialCollId} clearInitialCollId={()=>setInitialCollId(null)} />}
-            {page==='characters'&&<CharactersPage data={data} setSelectedChar={c=>{setSelectedChar(c);setPage('char');}} />}
+            {page==='characters'&&<CharactersPage data={data} setSelectedChar={(c,tab)=>openChar(c,tab)} />}
             {page==='lorebooks'&&<AllLorebooksPage data={data} update={update} exportLore={exportLore} openLore={openLore} />}
             {page==='collections'&&<AllCollectionsPage data={data} update={update} openColl={openColl} exportColl={exportColl} />}
             {page==='settings'&&<SettingsPage data={data} update={update} dataPath={dataPath}/>}
             {page==='help'&&<HelpPage/>}
-            {page==='lore'&&selectedLore&&<LorePage lorebook={selectedLore} data={data} update={update} exportLore={exportLore} initialTab={loreInitialTab} onBack={()=>{setPage(selectedWorld?'world':'lorebooks');setSelectedLore(null);setLoreInitialTab(null);}} />}
-            {page==='collection'&&selectedColl&&<CollPage coll={selectedColl} data={data} update={update} exportColl={exportColl} initialTab={collInitialTab} onBack={()=>{setPage(selectedWorld?'world':'collections');setSelectedColl(null);setCollInitialTab(null);}} />}
-            {page==='char'&&selectedChar&&<CharDetailPage char={selectedChar} data={data} update={update} initialTab={charInitialTab} exportChar={exportChar} onBack={()=>{setCharInitialTab(null);setPage(selectedWorld?'world':'characters');}} />}
+            {page==='lore'&&selectedLore&&<LorePage lorebook={selectedLore} data={data} update={update} exportLore={exportLore} initialTab={loreInitialTab} importJSON={importJSON} onBack={()=>{setPage(selectedWorld?'world':'lorebooks');setSelectedLore(null);setLoreInitialTab(null);}} />}
+            {page==='collection'&&selectedColl&&<CollPage coll={selectedColl} data={data} update={update} exportColl={exportColl} initialTab={collInitialTab} importJSON={importJSON} onBack={()=>{setPage(selectedWorld?'world':'collections');setSelectedColl(null);setCollInitialTab(null);}} />}
+            {page==='char'&&selectedChar&&<CharDetailPage char={selectedChar} data={data} update={update} initialTab={charInitialTab} exportChar={exportChar} importJSON={importJSON} setModal={setModal} onBack={()=>{setCharInitialTab(null);setPage(selectedWorld?'world':'characters');}} />}
             {page==='batch'&&<BatchImportPage data={data} update={update} importJSON={importJSON} exportAll={exportAll} />}
             {page==='templates'&&<TemplatesPage data={data} update={update} newTemplate={newTemplate} clearNew={()=>setNewTemplate(false)} />}
             {page==='personas'&&!selectedPersona&&<PersonasPage data={data} setSelectedPersona={p=>{setSelectedPersona(p);}} />}
@@ -2045,6 +2058,67 @@ function genPalette(baseHex, mode) {
   return [hslToHex(h,s,Math.max(10,l-30)), hslToHex(h,s,Math.max(10,l-15)), baseHex, hslToHex(h,s,Math.min(90,l+15)), hslToHex(h,s,Math.min(90,l+30))];
 }
 
+// Theme generation: derive a full dark+light theme pair from a single accent color.
+// The app's entire color system already runs through ~11 CSS custom properties (--bg,
+// --bg2, --bg3, --bg4, --accent, --accent2, --accent-dim, --text, --text2, --text3,
+// --border, --border2) consistently — unlike font-size (435 hardcoded px values, no
+// relative units), this means swapping these variables at the root genuinely re-themes
+// the whole app with no per-component rewrite needed.
+function generateTheme(accentHex) {
+  const [h, s] = hexToHsl(accentHex);
+  // Keep the accent's hue and saturation, but control lightness ourselves for contrast —
+  // a very light or very dark user-picked accent would otherwise produce unreadable text.
+  const accentSat = Math.max(45, Math.min(s, 85));
+
+  const dark = {
+    bg: hslToHex(h, Math.min(accentSat, 18), 7),
+    bg2: hslToHex(h, Math.min(accentSat, 16), 11),
+    bg3: hslToHex(h, Math.min(accentSat, 16), 15),
+    bg4: hslToHex(h, Math.min(accentSat, 14), 20),
+    accent: hslToHex(h, accentSat, 68),
+    accent2: hslToHex(h, accentSat, 53),
+    accentDim: hslToHex(h, Math.min(accentSat, 45), 27),
+    text: hslToHex(h, 12, 92),
+    text2: hslToHex(h, 10, 65),
+    text3: hslToHex(h, 8, 43),
+    border: "hsla(" + h + "," + accentSat + "%,68%,0.12)",
+    border2: "hsla(" + h + "," + accentSat + "%,68%,0.22)",
+  };
+
+  const light = {
+    bg: hslToHex(h, Math.min(accentSat, 20), 97),
+    bg2: hslToHex(h, Math.min(accentSat, 18), 94),
+    bg3: hslToHex(h, Math.min(accentSat, 16), 90),
+    bg4: hslToHex(h, Math.min(accentSat, 14), 85),
+    accent: hslToHex(h, accentSat, 42),
+    accent2: hslToHex(h, accentSat, 33),
+    accentDim: hslToHex(h, Math.min(accentSat, 35), 88),
+    text: hslToHex(h, 15, 12),
+    text2: hslToHex(h, 12, 32),
+    text3: hslToHex(h, 8, 52),
+    border: "hsla(" + h + "," + accentSat + "%,30%,0.14)",
+    border2: "hsla(" + h + "," + accentSat + "%,30%,0.24)",
+  };
+
+  return { dark, light };
+}
+
+function applyTheme(themeVars) {
+  const root = document.documentElement.style;
+  root.setProperty('--bg', themeVars.bg);
+  root.setProperty('--bg2', themeVars.bg2);
+  root.setProperty('--bg3', themeVars.bg3);
+  root.setProperty('--bg4', themeVars.bg4);
+  root.setProperty('--accent', themeVars.accent);
+  root.setProperty('--accent2', themeVars.accent2);
+  root.setProperty('--accent-dim', themeVars.accentDim);
+  root.setProperty('--text', themeVars.text);
+  root.setProperty('--text2', themeVars.text2);
+  root.setProperty('--text3', themeVars.text3);
+  root.setProperty('--border', themeVars.border);
+  root.setProperty('--border2', themeVars.border2);
+}
+
 function ColorTool() {
   const [hue, setHue] = useState(262);
   const [sat, setSat] = useState(83);
@@ -2368,6 +2442,10 @@ function PlotTool({data}) {
   const [result, setResult] = useState(null);
   const [source, setSource] = useState('');
 
+  // Only list worlds that actually have custom archetypes set up — worlds with none just
+  // add noise to the dropdown since there's nothing extra to roll from for them.
+  const worldsWithArchetypes = data.worlds.filter(w=>(w.plot_archetypes||[]).length>0);
+
   const worldPool = worldId
     ? (data.worlds.find(w=>w.id===worldId)?.plot_archetypes||[])
     : [];
@@ -2393,8 +2471,9 @@ function PlotTool({data}) {
         <select value={worldId} onChange={e=>setWorldId(e.target.value)}
           style={{width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none'}}>
           <option value="">Global pool ({GLOBAL_PLOT_ARCHETYPES.length})</option>
-          {data.worlds.map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}{(w.plot_archetypes||[]).length>0?` (+${(w.plot_archetypes||[]).length} custom)`:' (no custom)'}</option>)}
+          {worldsWithArchetypes.map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name} (+{(w.plot_archetypes||[]).length} custom)</option>)}
         </select>
+        {worldsWithArchetypes.length===0&&<div style={{fontSize:10,color:'var(--text3)',marginTop:6}}>No worlds have custom archetypes yet — add some from a world's World Info tab.</div>}
       </div>
       <div style={{display:'flex',gap:6}}>
         <button className="btn primary" style={{flex:1,justifyContent:'center'}} onClick={rollAny}>
@@ -2417,31 +2496,6 @@ function PlotTool({data}) {
           <button className="btn" style={{fontSize:10,padding:'2px 8px'}} onClick={()=>navigator.clipboard.writeText(result+(PLOT_DESCRIPTIONS[result]?' — '+PLOT_DESCRIPTIONS[result]:''))}><i className="ti ti-copy" style={{fontSize:10}}></i>Copy</button>
         </div>
       )}
-      {worldId&&(
-        <WorldPlotEditor world={data.worlds.find(w=>w.id===worldId)} data={data}/>
-      )}
-    </div>
-  );
-}
-
-function WorldPlotEditor({world, data}) {
-  const [newEntry, setNewEntry] = useState('');
-  if(!world) return null;
-  const archetypes = world.plot_archetypes||[];
-
-  // We can't call update from here directly — show read-only with note
-  return (
-    <div style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:10}}>
-      <div style={{fontSize:9,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>
-        {world.emoji?world.emoji+' ':''}{world.name} custom archetypes ({archetypes.length})
-      </div>
-      {archetypes.length===0
-        ? <div style={{fontSize:11,color:'var(--text3)',fontStyle:'italic',marginBottom:6}}>None yet — add from World Info tab</div>
-        : <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:6}}>
-            {archetypes.map((a,i)=><span key={i} style={{fontSize:10,padding:'2px 7px',borderRadius:4,background:'var(--accent-dim)',border:'1px solid var(--accent2)',color:'var(--accent)'}}>{a}</span>)}
-          </div>
-      }
-      <div style={{fontSize:10,color:'var(--text3)'}}>Edit custom archetypes in World Info → Plot Archetypes</div>
     </div>
   );
 }
@@ -2576,7 +2630,7 @@ function ClaudePanel({data, currentWorld, currentChar, currentPage, setPage}) {
       const systemPrompt = buildSystemPrompt();
       const apiKey = data.settings?.anthropic_api_key || '';
       const model = data.settings?.claude_model || 'claude-sonnet-4-6';
-      const headers = {'Content-Type':'application/json'};
+      const headers = {'Content-Type':'application/json', 'anthropic-version':'2023-06-01'};
       if(apiKey) headers['x-api-key'] = apiKey;
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -2822,6 +2876,49 @@ function SiteChecklistPanel({data, openChar, openLore, openColl}) {
   );
 }
 
+function LorebookDraftsPanel({data, openLore}) {
+  const drafts = data.lorebooks.filter(l=>(l.status||'draft')==='draft');
+  if(drafts.length===0) return null;
+  const getMissing=(l)=>{
+    const m=[];
+    if(!l.name?.trim()) m.push('name');
+    if(!l.short_description?.trim()) m.push('short desc');
+    if(!(l.content||[]).length) m.push('chapters');
+    if(!l.image_id) m.push('image UUID');
+    if(!(l.tags||[]).length) m.push('tags');
+    return m;
+  };
+  return (
+    <div style={{marginTop:16}}>
+      <div style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:10}}>Lorebook Drafts</div>
+      <div style={{display:'flex',flexDirection:'column',gap:8}}>
+        {drafts.map(l=>{
+          const world=data.worlds.find(w=>w.id===l.world_id);
+          const missing=getMissing(l);
+          return <div key={l.id} style={{display:'flex',gap:12,padding:'10px 12px',background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r)',cursor:'pointer',transition:'border-color 0.15s',overflow:'hidden'}}
+            onClick={()=>openLore(l)}
+            onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent2)'}
+            onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
+          >
+            <div style={{width:48,height:48,borderRadius:'var(--r)',overflow:'hidden',flexShrink:0,background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              {(l.image_data||l.image_relpath)?<ImgFromPath src={l.image_data||l.image_relpath} alt={l.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<i className="ti ti-book" style={{color:'var(--amber)',fontSize:20}}></i>}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:13,fontWeight:600,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.name}{l.short_description&&<span style={{fontWeight:400,color:'var(--text3)'}}> · {l.short_description}</span>}</div>
+              <div style={{fontSize:11,color:'var(--text3)',marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{world?.name||'Standalone'}</div>
+              {missing.length>0&&<div style={{display:'flex',flexWrap:'wrap',gap:3,marginTop:5}}>
+                {missing.map(m=><span key={m} style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(251,191,36,0.12)',color:'var(--amber)',border:'1px solid rgba(251,191,36,0.25)'}}>{m}</span>)}
+              </div>}
+              {missing.length===0&&<div style={{marginTop:5}}><span style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(110,231,183,0.12)',color:'#6ee7b7',border:'1px solid rgba(110,231,183,0.25)'}}>✓ ready</span></div>}
+            </div>
+            <span style={{fontSize:10,color:'#9ca3af',background:'rgba(156,163,175,0.15)',border:'1px solid rgba(156,163,175,0.2)',padding:'2px 7px',borderRadius:4,alignSelf:'flex-start',flexShrink:0,marginTop:2}}>draft</span>
+          </div>;
+        })}
+      </div>
+    </div>
+  );
+}
+
 function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOnDay,postedOnDay,calDate,setCalDate,upcoming,data,update,setSelectedChar,openChar,openLore,openColl,setSelectedWorld}) {
   const [schedPicker,setSchedPicker]=useState(null); // cellDateStr when open
   const [schedSearch,setSchedSearch]=useState('');
@@ -3018,6 +3115,7 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
               </div>
             </div>;
           })()}
+          <LorebookDraftsPanel data={data} openLore={openLore}/>
           {/* Site Checklist */}
           <SiteChecklistPanel data={data} openChar={openChar} openLore={openLore} openColl={openColl}/>
 
@@ -3589,7 +3687,7 @@ function CharCard({char,onClick}) {
   );
 }
 
-function LorePage({lorebook,data,update,exportLore,initialTab,onBack}) {
+function LorePage({lorebook,data,update,exportLore,initialTab,importJSON,onBack}) {
   const [loreTab, setLoreTab] = useState(initialTab||'chapters');
   const [loreMdPreview, setLoreMdPreview] = useState(false);
   const lore = (data.lorebooks.find(x=>x.id===lorebook.id))||lorebook;
@@ -3632,13 +3730,13 @@ function LorePage({lorebook,data,update,exportLore,initialTab,onBack}) {
             <i className="ti ti-upload"></i>{(lore.image_data||lore.image_relpath)?'Change Image':'Set Image'}
           </button>
           {(lore.image_data||lore.image_relpath)?<button className="btn danger" style={{width:'100%',justifyContent:'center',fontSize:12}} onClick={()=>updLore(l=>{l.image_data=null;l.image_relpath=null;})}><i className="ti ti-x"></i>Remove Image</button>:null}
-          {lore.image_id&&<div className="info-card">
-            <h4>Image ID</h4>
+          <div className="info-card">
+            <h4>Portrait Image ID <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:10}}>(from site)</span></h4>
             <div style={{display:'flex',gap:4}}>
-              <input readOnly value={lore.image_id} style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text3)',padding:'4px 6px',borderRadius:'var(--r)',fontSize:10,outline:'none',fontFamily:'monospace',minWidth:0}}/>
-              <button className="btn" style={{padding:'3px 5px',flexShrink:0}} onClick={()=>navigator.clipboard.writeText(lore.image_id)}><i className="ti ti-copy" style={{fontSize:11}}></i></button>
+              <input value={lore.image_id||''} onChange={e=>updLore(l=>{l.image_id=e.target.value||null;})} placeholder="paste UUID..." style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 6px',borderRadius:'var(--r)',fontSize:10,outline:'none',fontFamily:'monospace',minWidth:0}}/>
+              {lore.image_id?<button className="btn" style={{padding:'3px 5px',flexShrink:0}} onClick={()=>navigator.clipboard.writeText(lore.image_id)}><i className="ti ti-copy" style={{fontSize:11}}></i></button>:null}
             </div>
-          </div>}
+          </div>
           <div className="info-card">
             <h4>Quick Info</h4>
             {world&&<div className="info-row"><span className="label">World</span><span className="value">{world.emoji?world.emoji+' ':''}{world.name}</span></div>}
@@ -3657,8 +3755,8 @@ function LorePage({lorebook,data,update,exportLore,initialTab,onBack}) {
             {tabs.map(([t,l])=><div key={t} className={"sub-nav-item "+(loreTab===t?'active':'')} onClick={()=>setLoreTab(t)} style={{fontSize:12,padding:'5px 10px'}}>{l}</div>)}
           </div>
           {loreTab==='chapters'&&<LoreChaptersTab lore={lore} updLore={updLore}/>}
-          {loreTab==='settings'&&<LoreSettingsTab lore={lore} updLore={updLore} data={data}/>}
-          {loreTab==='export'&&<LoreExportPanel lorebook={lore} exportLore={exportLore} exportLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];if(lore.short_description){lines.push("");lines.push(lore.short_description);}(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});const safeName=(lore.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n"),folder:"Lorebooks"});}} loreMdPreview={loreMdPreview} setLoreMdPreview={setLoreMdPreview} buildLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});return lines.join("\n");}}/>}
+          {loreTab==='settings'&&<LoreSettingsTab lore={lore} updLore={updLore} data={data} onBack={onBack} update={update}/>}
+          {loreTab==='export'&&<LoreExportPanel lorebook={lore} exportLore={exportLore} exportLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];if(lore.short_description){lines.push("");lines.push(lore.short_description);}(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});const safeName=(lore.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n"),folder:"Lorebooks"});}} loreMdPreview={loreMdPreview} setLoreMdPreview={setLoreMdPreview} buildLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});return lines.join("\n");}} importJSON={importJSON}/>}
         </div>
       </div>
     </div>
@@ -3708,7 +3806,7 @@ function LoreChaptersTab({lore, updLore}) {
   );
 }
 
-function LoreSettingsTab({lore, updLore, data}) {
+function LoreSettingsTab({lore, updLore, data, onBack, update}) {
   return (
     <div style={{display:'flex',flexDirection:'column',gap:14,maxWidth:600}}>
       <div className="field-block">
@@ -3758,6 +3856,9 @@ function LoreSettingsTab({lore, updLore, data}) {
       <div className="field-block">
         <label>Tags</label>
         <TagSelector value={lore.tags||[]} onChange={v=>updLore(l=>{l.tags=v;})} max={25}/>
+      </div>
+      <div style={{paddingTop:8,borderTop:'1px solid var(--border)'}}>
+        <button className="btn danger" onClick={()=>{if(window.confirm("Delete "+lore.name+"? This cannot be undone.")){update(d=>{d.lorebooks=d.lorebooks.filter(x=>x.id!==lore.id);});if(onBack)onBack();}}}><i className="ti ti-trash"></i>Delete Lorebook</button>
       </div>
     </div>
   );
@@ -3874,7 +3975,7 @@ function CharactersPage({data,setSelectedChar}) {
   );
 }
 
-function CharDetailPage({char,data,update,initialTab,exportChar,onBack}) {
+function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setModal,onBack}) {
   const updChar=(fn)=>update(d=>{
     const c=d.characters.find(x=>x.id===char.id);
     if(c){
@@ -4118,6 +4219,9 @@ function CharDetailPage({char,data,update,initialTab,exportChar,onBack}) {
                   ))}
                 </div>
               </div>
+              <div style={{paddingTop:8,borderTop:'1px solid var(--border)'}}>
+                <button className="btn danger" onClick={()=>setModal({type:'confirm-delete-char',char:charData})}><i className="ti ti-trash"></i>Delete Character</button>
+              </div>
             </div>
           )}
           {tab==='schedule'&&(
@@ -4158,7 +4262,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,onBack}) {
             <LorebookEntryTab charData={charData} data={data} update={update} updChar={updChar}/>
           )}
           {tab==='export'&&(
-            <CharExportTab charData={charData} data={data} exportChar={exportChar}/>
+            <CharExportTab charData={charData} data={data} exportChar={exportChar} importJSON={importJSON}/>
           )}
         </div>
       </div>
@@ -4292,9 +4396,14 @@ function LorebookEntryTab({charData, data, update, updChar}) {
   );
 }
 
-function LoreExportPanel({lorebook,exportLore,exportLoreMd,loreMdPreview,setLoreMdPreview,buildLoreMd}) {
+function LoreExportPanel({lorebook,exportLore,exportLoreMd,loreMdPreview,setLoreMdPreview,buildLoreMd,importJSON}) {
   return (
     <div className="export-panel">
+      {importJSON?<div className="export-card">
+        <div className="export-card-title">Update from JSON</div>
+        <p className="export-card-desc">Re-import this lorebook's JSON to overwrite its fields (keeps world and auto-save filename — app-specific data isn't touched).</p>
+        <button className="btn" onClick={importJSON}><i className="ti ti-refresh"></i>Update from JSON</button>
+      </div>:null}
       <div className="export-card">
         <div className="export-card-title">Export to JSON</div>
         <p className="export-card-desc">Platform-ready JSON stripped of app-only fields. Upload directly to Saucepan.</p>
@@ -4314,7 +4423,7 @@ function LoreExportPanel({lorebook,exportLore,exportLoreMd,loreMdPreview,setLore
   );
 }
 
-function CollPage({coll,data,update,exportColl,initialTab,onBack}) {
+function CollPage({coll,data,update,exportColl,initialTab,importJSON,onBack}) {
   const [collTab,setCollTab]=useState(initialTab||'edit');
   const col=(data.collections.find(x=>x.id===coll.id))||coll;
   const world=data.worlds.find(w=>w.id===col.world_id);
@@ -4343,6 +4452,13 @@ function CollPage({coll,data,update,exportColl,initialTab,onBack}) {
           </button>
           {(col.image_data||col.image_relpath)?<button className="btn danger" style={{width:'100%',justifyContent:'center',fontSize:12}} onClick={()=>setCol(c=>{c.image_data=null;c.image_relpath=null;})}><i className="ti ti-x"></i>Remove Image</button>:null}
           <div className="info-card">
+            <h4>Image ID <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:10}}>(from site)</span></h4>
+            <div style={{display:'flex',gap:4}}>
+              <input value={col.image?.id||''} onChange={e=>setCol(c=>{const v=e.target.value;if(!v){c.image=null;}else{if(!c.image)c.image={};c.image.id=v;}})} placeholder="paste UUID..." style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 6px',borderRadius:'var(--r)',fontSize:10,outline:'none',fontFamily:'monospace',minWidth:0}}/>
+              {col.image?.id?<button className="btn" style={{padding:'3px 5px',flexShrink:0}} onClick={()=>navigator.clipboard.writeText(col.image.id)}><i className="ti ti-copy" style={{fontSize:11}}></i></button>:null}
+            </div>
+          </div>
+          <div className="info-card">
             <h4>Quick Info</h4>
             {world&&<div className="info-row"><span className="label">World</span><span className="value">{world.emoji?world.emoji+' ':''}{world.name}</span></div>}
             <div className="info-row"><span className="label">Characters</span><span className="value">{charCount}</span></div>
@@ -4354,15 +4470,15 @@ function CollPage({coll,data,update,exportColl,initialTab,onBack}) {
           <div style={{display:'flex',gap:4,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:4,flexWrap:'wrap'}}>
             {tabs.map(([t,l])=><div key={t} className={"sub-nav-item "+(collTab===t?'active':'')} onClick={()=>setCollTab(t)} style={{fontSize:12,padding:'5px 10px'}}>{l}</div>)}
           </div>
-          {collTab==='edit'?<CollSettingsTab col={col} setCol={setCol} data={data} world={world} update={update}/>:null}
-          {collTab==='export'?<CollExportPanel coll={col} data={data} exportColl={exportColl}/>:null}
+          {collTab==='edit'?<CollSettingsTab col={col} setCol={setCol} data={data} world={world} update={update} onBack={onBack}/>:null}
+          {collTab==='export'?<CollExportPanel coll={col} data={data} exportColl={exportColl} importJSON={importJSON}/>:null}
         </div>
       </div>
     </div>
   );
 }
 
-function CollSettingsTab({col,setCol,data,world,update}) {
+function CollSettingsTab({col,setCol,data,world,update,onBack}) {
   return (
     <div style={{display:'flex',flexDirection:'column',gap:14}}>
       <div className="field-block">
@@ -4399,6 +4515,9 @@ function CollSettingsTab({col,setCol,data,world,update}) {
         {col.collection_filename?<div className="field-hint">{["I:","Lorekeeper","Collections",col.collection_filename].join(BS)}</div>:null}
       </div>
       <CollectionCharPicker coll={col} data={data} update={update} setSelectedChar={()=>{}}/>
+      <div style={{paddingTop:8,borderTop:'1px solid var(--border)'}}>
+        <button className="btn danger" onClick={()=>{if(window.confirm("Delete "+col.name+"? This cannot be undone.")){update(d=>{d.collections=d.collections.filter(x=>x.id!==col.id);});if(onBack)onBack();}}}><i className="ti ti-trash"></i>Delete Collection</button>
+      </div>
     </div>
   );
 }
@@ -4449,7 +4568,7 @@ function CollEditPanel({coll,data,update,setSelectedColl,world,exportColl}) {
   );
 }
 
-function CollExportPanel({coll,data,exportColl}) {
+function CollExportPanel({coll,data,exportColl,importJSON}) {
   const exportCollMd = () => {
     const lines = ["# " + coll.name];
     if(coll.definition){lines.push(""); lines.push(coll.definition);}
@@ -4461,6 +4580,11 @@ function CollExportPanel({coll,data,exportColl}) {
   };
   return (
     <div className="export-panel">
+      {importJSON?<div className="export-card">
+        <div className="export-card-title">Update from JSON</div>
+        <p className="export-card-desc">Re-import this collection's JSON to overwrite its fields (keeps world and auto-save filename — app-specific data isn't touched).</p>
+        <button className="btn" onClick={importJSON}><i className="ti ti-refresh"></i>Update from JSON</button>
+      </div>:null}
       <div className="export-card">
         <div className="export-card-title">Export to JSON</div>
         <p className="export-card-desc">Platform-ready JSON stripped of app-only fields. Upload directly to Saucepan.</p>
@@ -4475,7 +4599,7 @@ function CollExportPanel({coll,data,exportColl}) {
   );
 }
 
-function CharExportTab({charData, data, exportChar}) {
+function CharExportTab({charData, data, exportChar, importJSON}) {
   const buildMd = () => {
     const c = charData;
     const lines = [];
@@ -4507,6 +4631,11 @@ function CharExportTab({charData, data, exportChar}) {
   const md = buildMd();
   return (
     <div className="export-panel">
+      {importJSON?<div className="export-card">
+        <div className="export-card-title">Update from JSON</div>
+        <p className="export-card-desc">Re-import this character's JSON to overwrite its fields (keeps world, status, schedule, and portrait — app-specific data isn't touched).</p>
+        <button className="btn" onClick={importJSON}><i className="ti ti-refresh"></i>Update from JSON</button>
+      </div>:null}
       <div className="export-card">
         <div className="export-card-title">Export to JSON</div>
         <p className="export-card-desc">Platform-ready JSON stripped of all app-only fields. Upload directly to Saucepan.</p>
@@ -4888,6 +5017,8 @@ function BackupRestorePanel({data, update}) {
           res.data.lorebooks.forEach(l => { if(!d.lorebooks.find(x=>x.id===l.id)) d.lorebooks.push(l); else Object.assign(d.lorebooks.find(x=>x.id===l.id), l); });
           res.data.collections.forEach(c => { if(!d.collections.find(x=>x.id===c.id)) d.collections.push(c); else Object.assign(d.collections.find(x=>x.id===c.id), c); });
           (res.data.templates||[]).forEach(t => { if(!d.templates.find(x=>x.id===t.id)) d.templates.push(t); });
+          (res.data.lorebook_templates||[]).forEach(t => { if(!d.lorebook_templates) d.lorebook_templates=[]; if(!d.lorebook_templates.find(x=>x.id===t.id)) d.lorebook_templates.push(t); });
+          (res.data.relationships||[]).forEach(r => { if(!d.relationships) d.relationships=[]; if(!d.relationships.find(x=>x.id===r.id)) d.relationships.push(r); });
         });
         setStatus('ok'); setMsg('✓ World restored and merged into existing data.');
       } else {
@@ -5687,6 +5818,81 @@ function HelpTip({text}) {
 }
 
 
+function ThemeGenerator({settings, update}) {
+  const savedTheme = settings.theme || {};
+  const [accentHex, setAccentHex] = React.useState(savedTheme.accent_hex || '#a78bfa');
+  const [previewMode, setPreviewMode] = React.useState(savedTheme.mode || 'dark');
+  const [hexInput, setHexInput] = React.useState('');
+  const [hexErr, setHexErr] = React.useState(false);
+
+  const { dark, light } = generateTheme(accentHex);
+  const preview = previewMode === 'light' ? light : dark;
+
+  const handleHexInput = (v) => {
+    setHexInput(v);
+    const val = v.startsWith('#') ? v : '#'+v;
+    if(/^#[0-9a-fA-F]{6}$/.test(val)) { setAccentHex(val); setHexErr(false); }
+    else { setHexErr(v.length>0); }
+  };
+
+  const apply = () => {
+    update(d => { if(!d.settings) d.settings={}; d.settings.theme = {accent_hex: accentHex, mode: previewMode}; });
+  };
+
+  const reset = () => {
+    update(d => { if(d.settings) d.settings.theme = null; });
+    applyTheme({
+      bg:'#0f0e13', bg2:'#1a1825', bg3:'#231f33', bg4:'#2e2a42',
+      accent:'#a78bfa', accent2:'#7c5cbf', accentDim:'#3d2f6e',
+      text:'#e8e4f4', text2:'#a49dc0', text3:'#6b6488',
+      border:'rgba(167,139,250,0.12)', border2:'rgba(167,139,250,0.22)',
+    });
+  };
+
+  const isApplied = savedTheme.accent_hex === accentHex && savedTheme.mode === previewMode;
+
+  return (
+    <div>
+      <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:12}}>
+        <div style={{width:32,height:32,borderRadius:6,background:accentHex,border:'1px solid rgba(255,255,255,0.15)',flexShrink:0}}/>
+        <input value={hexInput||accentHex} onChange={e=>handleHexInput(e.target.value)}
+          style={{flex:1,background:'var(--bg3)',border:hexErr?'1px solid var(--red)':'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',fontFamily:'monospace',maxWidth:160}}/>
+        <div style={{display:'flex',gap:4}}>
+          <button className={"btn"+(previewMode==='dark'?' primary':'')} style={{fontSize:11,padding:'5px 10px'}} onClick={()=>setPreviewMode('dark')}><i className="ti ti-moon"></i>Dark</button>
+          <button className={"btn"+(previewMode==='light'?' primary':'')} style={{fontSize:11,padding:'5px 10px'}} onClick={()=>setPreviewMode('light')}><i className="ti ti-sun"></i>Light</button>
+        </div>
+      </div>
+
+      <div style={{fontSize:9,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>Preview</div>
+      <div style={{display:'flex',border:'1px solid var(--border)',borderRadius:'var(--rl)',overflow:'hidden',marginBottom:12}}>
+        <div style={{width:90,background:preview.bg2,padding:10,display:'flex',flexDirection:'column',gap:6,borderRight:'1px solid '+preview.border}}>
+          <div style={{width:18,height:18,borderRadius:4,background:preview.accentDim,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <div style={{width:8,height:8,borderRadius:2,background:preview.accent}}/>
+          </div>
+          <div style={{height:6,width:'80%',borderRadius:2,background:preview.accent,opacity:0.5}}/>
+          <div style={{height:6,width:'60%',borderRadius:2,background:preview.text3,opacity:0.5}}/>
+          <div style={{height:6,width:'70%',borderRadius:2,background:preview.text3,opacity:0.5}}/>
+        </div>
+        <div style={{flex:1,background:preview.bg,padding:12}}>
+          <div style={{fontSize:12,fontWeight:700,color:preview.text,marginBottom:6}}>Sample heading</div>
+          <div style={{fontSize:10,color:preview.text2,marginBottom:8,lineHeight:1.5}}>This is body text on the main background, showing readability.</div>
+          <div style={{display:'flex',gap:6}}>
+            <div style={{padding:'4px 10px',borderRadius:6,background:preview.accent,color:previewMode==='light'?'#fff':preview.bg,fontSize:10,fontWeight:600}}>Primary</div>
+            <div style={{padding:'4px 10px',borderRadius:6,background:preview.bg3,border:'1px solid '+preview.border,color:preview.text2,fontSize:10}}>Secondary</div>
+          </div>
+          <div style={{marginTop:8,padding:8,borderRadius:6,background:preview.bg3,border:'1px solid '+preview.border,fontSize:9,color:preview.text3}}>Card / panel surface (--bg3)</div>
+        </div>
+      </div>
+
+      <div style={{display:'flex',gap:8}}>
+        <button className="btn primary" style={{fontSize:12}} disabled={isApplied} onClick={apply}><i className="ti ti-check"></i>{isApplied?'Applied':'Apply theme'}</button>
+        {savedTheme.accent_hex&&<button className="btn" style={{fontSize:12}} onClick={reset}><i className="ti ti-refresh"></i>Reset to default</button>}
+      </div>
+      <div style={{fontSize:10,color:'var(--text3)',marginTop:8}}>Generated from the same color logic as the Color tool — pick any accent and Lorekeeper derives a full background/text/border ramp around it for both dark and light mode.</div>
+    </div>
+  );
+}
+
 function SettingsPage({data, update, dataPath}) {
   const settings = data.settings || {};
   const set = (key, val) => update(d => { if(!d.settings) d.settings={}; d.settings[key]=val; });
@@ -5770,8 +5976,8 @@ function SettingsPage({data, update, dataPath}) {
             ))}
           </div>
         </Field>
-        <Field label="Theme" hint="Light, dark, and custom accent colors.">
-          <ComingSoon text="Theme switcher (dark/light + accent color)"/>
+        <Field label="Theme" hint="Pick an accent color to generate a matching dark and light theme. Preview before applying.">
+          <ThemeGenerator settings={settings} update={update}/>
         </Field>
         <Field label="Colorblind Mode" hint="Adjusted color palettes for common colorblindness types.">
           <ComingSoon text="Deuteranopia, protanopia, tritanopia options"/>
