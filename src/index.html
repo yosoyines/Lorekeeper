@@ -821,7 +821,7 @@ function App() {
             {page==='settings'&&<SettingsPage data={data} update={update} dataPath={dataPath}/>}
             {page==='help'&&<HelpPage/>}
             {page==='lore'&&selectedLore&&<LorePage lorebook={selectedLore} data={data} update={update} exportLore={exportLore} initialTab={loreInitialTab} importJSON={importJSON} onBack={()=>{setPage(selectedWorld?'world':'lorebooks');setSelectedLore(null);setLoreInitialTab(null);}} />}
-            {page==='collection'&&selectedColl&&<CollPage coll={selectedColl} data={data} update={update} exportColl={exportColl} initialTab={collInitialTab} importJSON={importJSON} onBack={()=>{setPage(selectedWorld?'world':'collections');setSelectedColl(null);setCollInitialTab(null);}} />}
+            {page==='collection'&&selectedColl&&<CollPage coll={selectedColl} data={data} update={update} exportColl={exportColl} initialTab={collInitialTab} importJSON={importJSON} openChar={openChar} onBack={()=>{setPage(selectedWorld?'world':'collections');setSelectedColl(null);setCollInitialTab(null);}} />}
             {page==='char'&&selectedChar&&<CharDetailPage char={selectedChar} data={data} update={update} initialTab={charInitialTab} exportChar={exportChar} importJSON={importJSON} setModal={setModal} onBack={()=>{setCharInitialTab(null);setPage(selectedWorld?'world':'characters');}} />}
             {page==='batch'&&<BatchImportPage data={data} update={update} importJSON={importJSON} exportAll={exportAll} />}
             {page==='templates'&&<TemplatesPage data={data} update={update} newTemplate={newTemplate} clearNew={()=>setNewTemplate(false)} />}
@@ -4015,7 +4015,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
           <div className="field-block" style={{padding:'10px 12px'}}>
             <label style={{fontSize:10}}>Profile Pic / Portrait 1 ID <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0}}>(from site)</span></label>
             <div style={{display:'flex',gap:6,marginTop:4}}>
-              <input value={charData.image?.id||''} onChange={e=>updChar(c=>{if(!c.image)c.image={};c.image.id=e.target.value;if(c.portraits&&c.portraits[0]){if(!c.portraits[0].image)c.portraits[0].image={};c.portraits[0].image.id=e.target.value||undefined;}})} placeholder="paste UUID…" style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',fontFamily:'monospace',minWidth:0}}/>
+              <input value={charData.image?.id||''} onChange={e=>updChar(c=>{if(!c.image)c.image={};c.image.id=e.target.value;const pp=c.portraits&&c.portraits.find(p=>p.name==='profile_pic');if(pp){if(!pp.image)pp.image={};pp.image.id=e.target.value||undefined;}})} placeholder="paste UUID…" style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',fontFamily:'monospace',minWidth:0}}/>
               {charData.image?.id&&<button className="btn" style={{padding:'4px 6px',fontSize:10,flexShrink:0}} onClick={()=>navigator.clipboard.writeText(charData.image.id)} title="Copy"><i className="ti ti-copy" style={{fontSize:12}}></i></button>}
             </div>
           </div>
@@ -4125,7 +4125,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                     <div style={{padding:'4px 8px',background:'var(--bg2)',borderTop:'1px solid var(--border)'}}>
                       <div style={{fontSize:9,color:'var(--text3)',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.05em'}}>Image ID (from site)</div>
                       <div style={{display:'flex',gap:4}}>
-                        <input value={p.image?.id||''} onChange={e=>updChar(c=>{const v=e.target.value;if(!c.portraits[i].image)c.portraits[i].image={};c.portraits[i].image.id=v||undefined;if(i===0){if(!c.image)c.image={};c.image.id=v;}})} placeholder="paste UUID..." style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'3px 6px',borderRadius:'var(--r)',fontSize:9,outline:'none',fontFamily:'monospace',minWidth:0}}/>
+                        <input value={p.image?.id||''} onChange={e=>updChar(c=>{const v=e.target.value;if(!c.portraits[i].image)c.portraits[i].image={};c.portraits[i].image.id=v||undefined;if(c.portraits[i].name==='profile_pic'){if(!c.image)c.image={};c.image.id=v;}})} placeholder="paste UUID..." style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'3px 6px',borderRadius:'var(--r)',fontSize:9,outline:'none',fontFamily:'monospace',minWidth:0}}/>
                         {p.image?.id?<button className="btn" style={{padding:'3px 5px',fontSize:10,flexShrink:0}} onClick={()=>navigator.clipboard.writeText(p.image.id)} title="Copy ID"><i className="ti ti-copy" style={{fontSize:12}}></i></button>:null}
                       </div>
                     </div>
@@ -4527,7 +4527,7 @@ function LoreExportPanel({lorebook,exportLore,exportLoreMd,loreMdPreview,setLore
   );
 }
 
-function CollPage({coll,data,update,exportColl,initialTab,importJSON,onBack}) {
+function CollPage({coll,data,update,exportColl,initialTab,importJSON,openChar,onBack}) {
   const [collTab,setCollTab]=useState(initialTab||'edit');
   const col=(data.collections.find(x=>x.id===coll.id))||coll;
   const world=data.worlds.find(w=>w.id===col.world_id);
@@ -4574,7 +4574,7 @@ function CollPage({coll,data,update,exportColl,initialTab,importJSON,onBack}) {
           <div style={{display:'flex',gap:4,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:4,flexWrap:'wrap'}}>
             {tabs.map(([t,l])=><div key={t} className={"sub-nav-item "+(collTab===t?'active':'')} onClick={()=>setCollTab(t)} style={{fontSize:12,padding:'5px 10px'}}>{l}</div>)}
           </div>
-          {collTab==='edit'?<CollSettingsTab col={col} setCol={setCol} data={data} world={world} update={update} onBack={onBack}/>:null}
+          {collTab==='edit'?<CollSettingsTab col={col} setCol={setCol} data={data} world={world} update={update} openChar={openChar} onBack={onBack}/>:null}
           {collTab==='export'?<CollExportPanel coll={col} data={data} exportColl={exportColl} importJSON={importJSON} update={update}/>:null}
         </div>
       </div>
@@ -4582,7 +4582,7 @@ function CollPage({coll,data,update,exportColl,initialTab,importJSON,onBack}) {
   );
 }
 
-function CollSettingsTab({col,setCol,data,world,update,onBack}) {
+function CollSettingsTab({col,setCol,data,world,update,openChar,onBack}) {
   return (
     <div style={{display:'flex',flexDirection:'column',gap:14}}>
       <div className="field-block">
@@ -4618,7 +4618,7 @@ function CollSettingsTab({col,setCol,data,world,update,onBack}) {
         <input value={col.collection_filename||''} onChange={e=>setCol(c=>{c.collection_filename=e.target.value||null;})} placeholder="e.g. Guideverse.json"/>
         {col.collection_filename?<div className="field-hint">{["I:","Lorekeeper","Collections",col.collection_filename].join(BS)}</div>:null}
       </div>
-      <CollectionCharPicker coll={col} data={data} update={update} setSelectedChar={()=>{}}/>
+      <CollectionCharPicker coll={col} data={data} update={update} setSelectedChar={openChar}/>
       <div style={{paddingTop:8,borderTop:'1px solid var(--border)'}}>
         <button className="btn danger" onClick={()=>{if(window.confirm("Delete "+col.name+"? This cannot be undone.")){update(d=>{d.collections=d.collections.filter(x=>x.id!==col.id);});if(onBack)onBack();}}}><i className="ti ti-trash"></i>Delete Collection</button>
       </div>
