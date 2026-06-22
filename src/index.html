@@ -545,6 +545,10 @@ function App() {
     if(!c.full_description) warnings.push('full_description is empty');
     if(!exportImage) warnings.push('image (portrait) ID not set — site will reject import');
     if(!c.card) warnings.push('card is empty — site requires it, exporting a placeholder space');
+    (c.portraits||[]).forEach((p,i)=>{
+      if(!p.description||!p.description.trim()) warnings.push(`portrait ${i+1} (${p.name||'unnamed'}): description is required by the site`);
+      if(!p.image?.id) warnings.push(`portrait ${i+1} (${p.name||'unnamed'}): image UUID not set — site will reject import`);
+    });
     if(warnings.length>0){const proceed=window.confirm(`Export warnings for ${c.name}:\n\n${warnings.map(w=>'• '+w).join('\n')}\n\nExport anyway?`);if(!proceed)return;}
     window.lorekeeper.exportFile({ defaultName:`${c.name}-companion.json`, content:JSON.stringify(safe,null,2), folder:"Companions" });
     update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch)ch.site_last_synced_at=new Date().toISOString();});
@@ -582,6 +586,10 @@ function App() {
       const exportBanner = rest.companion_profile_banner_image && rest.companion_profile_banner_image.id ? {id: rest.companion_profile_banner_image.id} : undefined;
       const safe = {...rest, image: exportImage, portraits: exportPortraits, companion_profile_banner_image: exportBanner, card: rest.card||" ", example_dialogue: rest.example_dialogue||"", temperature_offset_percentage: rest.temperature_offset_percentage||0};
       if (!exportImage) warnings.push(c.name + ": no portrait UUID");
+      (c.portraits||[]).forEach((p,i) => {
+        if(!p.description||!p.description.trim()) warnings.push(c.name + ": portrait " + (i+1) + " (" + (p.name||'unnamed') + ") missing description");
+        if(!p.image||!p.image.id) warnings.push(c.name + ": portrait " + (i+1) + " (" + (p.name||'unnamed') + ") missing image UUID");
+      });
       const safeName = (c.name||"character").replace(/[^a-zA-Z0-9_-]/g, "_");
       files.push({name: "Companions/" + safeName + "-companion.json", content: JSON.stringify(safe, null, 2)});
     });
@@ -3756,7 +3764,7 @@ function LorePage({lorebook,data,update,exportLore,initialTab,importJSON,onBack}
           </div>
           {loreTab==='chapters'&&<LoreChaptersTab lore={lore} updLore={updLore}/>}
           {loreTab==='settings'&&<LoreSettingsTab lore={lore} updLore={updLore} data={data} onBack={onBack} update={update}/>}
-          {loreTab==='export'&&<LoreExportPanel lorebook={lore} exportLore={exportLore} exportLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];if(lore.short_description){lines.push("");lines.push(lore.short_description);}(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});const safeName=(lore.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n"),folder:"Lorebooks"});}} loreMdPreview={loreMdPreview} setLoreMdPreview={setLoreMdPreview} buildLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});return lines.join("\n");}} importJSON={importJSON}/>}
+          {loreTab==='export'&&<LoreExportPanel lorebook={lore} exportLore={exportLore} exportLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];if(lore.short_description){lines.push("");lines.push(lore.short_description);}(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});const safeName=(lore.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n"),folder:"Lorebooks"});}} loreMdPreview={loreMdPreview} setLoreMdPreview={setLoreMdPreview} buildLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});return lines.join("\n");}} importJSON={importJSON} update={update}/>}
         </div>
       </div>
     </div>
@@ -4005,9 +4013,9 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
           <div className="char-portrait-lg">{getImgSrc(charData.image)?<ImgFromPath src={getImgSrc(charData.image)} alt={charData.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<i className="ti ti-user"></i>}</div>
           <button className="btn" style={{width:'100%',justifyContent:'center'}} onClick={handlePortrait}><i className="ti ti-camera"></i>Set Portrait</button>
           <div className="field-block" style={{padding:'10px 12px'}}>
-            <label style={{fontSize:10}}>Portrait Image ID <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0}}>(from site)</span></label>
+            <label style={{fontSize:10}}>Profile Pic / Portrait 1 ID <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0}}>(from site)</span></label>
             <div style={{display:'flex',gap:6,marginTop:4}}>
-              <input value={charData.image?.id||''} onChange={e=>updChar(c=>{if(!c.image)c.image={};c.image.id=e.target.value;})} placeholder="paste UUID…" style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',fontFamily:'monospace',minWidth:0}}/>
+              <input value={charData.image?.id||''} onChange={e=>updChar(c=>{if(!c.image)c.image={};c.image.id=e.target.value;if(c.portraits&&c.portraits[0]){if(!c.portraits[0].image)c.portraits[0].image={};c.portraits[0].image.id=e.target.value||undefined;}})} placeholder="paste UUID…" style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',fontFamily:'monospace',minWidth:0}}/>
               {charData.image?.id&&<button className="btn" style={{padding:'4px 6px',fontSize:10,flexShrink:0}} onClick={()=>navigator.clipboard.writeText(charData.image.id)} title="Copy"><i className="ti ti-copy" style={{fontSize:12}}></i></button>}
             </div>
           </div>
@@ -4111,25 +4119,19 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                       <i className="ti ti-grip-vertical" style={{color:'#fff',fontSize:13,opacity:0.8}}></i>
                     </div>
                     {(p.data||p.relPath) ? <ImgFromPath src={p.data||p.relPath} alt={p.name} style={{width:'100%',aspectRatio:'3/4',objectFit:'cover',display:'block'}}/> : 
-                    <div style={{width:'100%',aspectRatio:'3/4',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,padding:8}}>
+                    <div style={{width:'100%',aspectRatio:'3/4',display:'flex',alignItems:'center',justifyContent:'center'}}>
                       <i className="ti ti-user" style={{fontSize:36,color:'var(--text3)'}}></i>
-                      {p.image?.id && <div style={{width:'100%'}}>
-                        <div style={{fontSize:9,color:'var(--text3)',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.05em'}}>Image ID</div>
-                        <div style={{display:'flex',gap:4}}>
-                          <input readOnly value={p.image.id} style={{flex:1,background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text3)',padding:'3px 6px',borderRadius:'var(--r)',fontSize:9,outline:'none',fontFamily:'monospace',minWidth:0}}/>
-                          <button className="btn" style={{padding:'3px 5px',fontSize:10,flexShrink:0}} onClick={()=>navigator.clipboard.writeText(p.image.id)} title="Copy ID"><i className="ti ti-copy" style={{fontSize:12}}></i></button>
-                        </div>
-                      </div>}
                     </div>}
-                    {p.data && p.image?.id && <div style={{padding:'4px 8px',background:'var(--bg2)',borderTop:'1px solid var(--border)'}}>
-                      <div style={{display:'flex',gap:4,alignItems:'center'}}>
-                        <input readOnly value={p.image.id} style={{flex:1,background:'transparent',border:'none',color:'var(--text3)',padding:'2px 0',fontSize:9,outline:'none',fontFamily:'monospace',minWidth:0}}/>
-                        <button className="btn" style={{padding:'2px 4px',fontSize:10,flexShrink:0}} onClick={()=>navigator.clipboard.writeText(p.image.id)} title="Copy ID"><i className="ti ti-copy" style={{fontSize:11}}></i></button>
+                    <div style={{padding:'4px 8px',background:'var(--bg2)',borderTop:'1px solid var(--border)'}}>
+                      <div style={{fontSize:9,color:'var(--text3)',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.05em'}}>Image ID (from site)</div>
+                      <div style={{display:'flex',gap:4}}>
+                        <input value={p.image?.id||''} onChange={e=>updChar(c=>{const v=e.target.value;if(!c.portraits[i].image)c.portraits[i].image={};c.portraits[i].image.id=v||undefined;if(i===0){if(!c.image)c.image={};c.image.id=v;}})} placeholder="paste UUID..." style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'3px 6px',borderRadius:'var(--r)',fontSize:9,outline:'none',fontFamily:'monospace',minWidth:0}}/>
+                        {p.image?.id?<button className="btn" style={{padding:'3px 5px',fontSize:10,flexShrink:0}} onClick={()=>navigator.clipboard.writeText(p.image.id)} title="Copy ID"><i className="ti ti-copy" style={{fontSize:12}}></i></button>:null}
                       </div>
-                    </div>}
+                    </div>
                     <div style={{padding:'8px'}}>
                       <input value={p.name||''} onChange={e=>updChar(c=>c.portraits[i].name=e.target.value)} placeholder="Name (e.g. Charming)" style={{width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none'}}/>
-                      <input value={p.description||''} onChange={e=>updChar(c=>c.portraits[i].description=e.target.value)} placeholder="Description" style={{width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',marginTop:4}}/>
+                      <input value={p.description||''} onChange={e=>updChar(c=>c.portraits[i].description=e.target.value)} placeholder="Description (required by site)" style={{width:'100%',background:'var(--bg2)',border:p.description?'1px solid var(--border)':'1px solid var(--amber)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',marginTop:4}}/>
                       <div style={{display:'flex',gap:4,marginTop:6}}>
                         <button className="btn" style={{flex:1,justifyContent:'center',padding:'3px',fontSize:11}} onClick={async()=>{const r=await window.lorekeeper.importImage();if(r)updChar(c=>c.portraits[i].data=r.base64);}}><i className="ti ti-photo"></i></button>
                         <button className="btn danger" style={{padding:'3px 6px',fontSize:11}} onClick={()=>updChar(c=>c.portraits.splice(i,1))}><i className="ti ti-x"></i></button>
@@ -4396,9 +4398,111 @@ function LorebookEntryTab({charData, data, update, updChar}) {
   );
 }
 
-function LoreExportPanel({lorebook,exportLore,exportLoreMd,loreMdPreview,setLoreMdPreview,buildLoreMd,importJSON}) {
+function LoreItemRestoreCard({lorebook, update}) {
+  const [pasteText, setPasteText] = React.useState('');
+  const [errors, setErrors] = React.useState([]);
+  const [dropActive, setDropActive] = React.useState(false);
+  const loreFileRef = React.useRef(null);
+
+  const validateLore = (obj) => {
+    const errs = [];
+    if(typeof obj.name !== 'string' || !obj.name.trim()) errs.push('name: expected non-empty string');
+    if(!Array.isArray(obj.content)) errs.push('content: expected array of chapters');
+    return errs;
+  };
+
+  const handleLoreText = (text) => {
+    setPasteText(text);
+    if(!text.trim()) { setErrors([]); return; }
+    try { const obj = JSON.parse(text); setErrors(validateLore(obj)); }
+    catch(e) { setErrors(['Invalid JSON: ' + e.message]); }
+  };
+
+  const handleLoreFileDrop = (e) => {
+    e.preventDefault(); setDropActive(false);
+    const file = e.dataTransfer.files[0]; if(!file) return;
+    const r = new FileReader(); r.onload = (ev) => handleLoreText(ev.target.result); r.readAsText(file);
+  };
+
+  const handleLoreFileSelect = (e) => {
+    const file = e.target.files[0]; if(!file) return;
+    const r = new FileReader(); r.onload = (ev) => handleLoreText(ev.target.result); r.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleLorePaste = async () => {
+    try { const t = await navigator.clipboard.readText(); handleLoreText(t); } catch(e) {}
+  };
+
+  const handleLoreBackup = () => {
+    const {world_id,lorebook_filename,image_data,image_relpath,selected_chapter_index,collaboration_type,status,...rest} = lorebook;
+    const safe = {...rest, collaboration_type: lorebook.access_level === 'public' ? 'public' : 'private'};
+    window.lorekeeper.exportFile({defaultName:(lorebook.name||'lorebook').replace(/[^a-zA-Z0-9_-]/g,'_')+'-backup.json', content:JSON.stringify(safe,null,2), folder:'Lorebooks'});
+  };
+
+  const doLoreRestore = () => {
+    try {
+      const obj = JSON.parse(pasteText);
+      update(d => {
+        const lb = d.lorebooks.find(x => x.id === lorebook.id);
+        if(!lb) return;
+        if(obj.name) lb.name = obj.name;
+        if(obj.short_description !== undefined) lb.short_description = obj.short_description;
+        if(Array.isArray(obj.content)) lb.content = obj.content;
+        if(Array.isArray(obj.tags)) lb.tags = obj.tags;
+        if(Array.isArray(obj.fandom_tags)) lb.fandom_tags = obj.fandom_tags;
+        if(obj.nsfw !== undefined) lb.nsfw = obj.nsfw;
+        if(obj.very_nsfw !== undefined) lb.very_nsfw = obj.very_nsfw;
+        if(obj.image_id) lb.image_id = obj.image_id;
+        if(obj.access_level) lb.access_level = obj.access_level;
+        if(obj.definition_protection) lb.definition_protection = obj.definition_protection;
+        if(obj.hide_on_owner_profile !== undefined) lb.hide_on_owner_profile = obj.hide_on_owner_profile;
+        lb.updated_at = new Date().toISOString();
+      });
+      setPasteText(''); setErrors([]);
+    } catch(e) { setErrors(['Restore failed: ' + e.message]); }
+  };
+
+  const loreCanRestore = pasteText.trim() && errors.length === 0;
+
+  return (
+    <div className="export-card">
+      <div className="export-card-title">Backup / Restore</div>
+      <p className="export-card-desc">Save a platform-format backup or restore from a pasted or dropped JSON. Restore keeps world, auto-save filename, and all app-only data.</p>
+      <div style={{display:'flex',gap:8,marginBottom:12}}>
+        <button className="btn" onClick={handleLoreBackup}><i className="ti ti-database-export"></i>Backup Lore Book</button>
+        <button className="btn" onClick={()=>loreFileRef.current&&loreFileRef.current.click()}><i className="ti ti-database-import"></i>Restore Lore Book</button>
+        <input ref={loreFileRef} type="file" accept=".json" style={{display:'none'}} onChange={handleLoreFileSelect}/>
+      </div>
+      <div style={{marginBottom:8}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+          <span style={{fontSize:12,color:'var(--text3)'}}>Paste Lore Book Backup:</span>
+          <button className="btn" style={{padding:'2px 8px',fontSize:11}} onClick={handleLorePaste}><i className="ti ti-clipboard"></i>Paste</button>
+        </div>
+        <textarea value={pasteText} onChange={e=>handleLoreText(e.target.value)}
+          style={{width:'100%',minHeight:120,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px',borderRadius:'var(--r)',fontSize:11,fontFamily:'monospace',outline:'none',resize:'vertical'}}
+          placeholder="{...paste lorebook JSON here...}"/>
+      </div>
+      <div onClick={()=>loreFileRef.current&&loreFileRef.current.click()}
+        onDragOver={e=>{e.preventDefault();setDropActive(true);}} onDragLeave={()=>setDropActive(false)} onDrop={handleLoreFileDrop}
+        style={{border:'2px dashed '+(dropActive?'var(--accent)':'var(--border2)'),borderRadius:'var(--r)',padding:'16px',textAlign:'center',fontSize:12,color:'var(--text3)',marginBottom:12,background:dropActive?'var(--accent-dim)':'transparent',transition:'all 0.15s',cursor:'pointer'}}>
+        {'Drag & drop a JSON file here, or click to select a file'}
+      </div>
+      {errors.length>0&&<div style={{marginBottom:10}}>
+        <div style={{fontSize:12,fontWeight:600,color:'var(--red)',marginBottom:4}}>Validation errors:</div>
+        {errors.map((err,ei)=><div key={ei} style={{fontSize:11,color:'var(--red)',paddingLeft:8}}>{'• '+err}</div>)}
+      </div>}
+      <div style={{display:'flex',justifyContent:'flex-end'}}>
+        <button className="btn primary" disabled={!loreCanRestore} onClick={doLoreRestore}><i className="ti ti-restore"></i>Restore Data</button>
+      </div>
+    </div>
+  );
+}
+
+function LoreExportPanel({lorebook,exportLore,exportLoreMd,loreMdPreview,setLoreMdPreview,buildLoreMd,importJSON,update}) {
   return (
     <div className="export-panel">
+      <LoreItemRestoreCard lorebook={lorebook} update={update}/>
       {importJSON?<div className="export-card">
         <div className="export-card-title">Update from JSON</div>
         <p className="export-card-desc">Re-import this lorebook's JSON to overwrite its fields (keeps world and auto-save filename — app-specific data isn't touched).</p>
@@ -4471,7 +4575,7 @@ function CollPage({coll,data,update,exportColl,initialTab,importJSON,onBack}) {
             {tabs.map(([t,l])=><div key={t} className={"sub-nav-item "+(collTab===t?'active':'')} onClick={()=>setCollTab(t)} style={{fontSize:12,padding:'5px 10px'}}>{l}</div>)}
           </div>
           {collTab==='edit'?<CollSettingsTab col={col} setCol={setCol} data={data} world={world} update={update} onBack={onBack}/>:null}
-          {collTab==='export'?<CollExportPanel coll={col} data={data} exportColl={exportColl} importJSON={importJSON}/>:null}
+          {collTab==='export'?<CollExportPanel coll={col} data={data} exportColl={exportColl} importJSON={importJSON} update={update}/>:null}
         </div>
       </div>
     </div>
@@ -4568,7 +4672,106 @@ function CollEditPanel({coll,data,update,setSelectedColl,world,exportColl}) {
   );
 }
 
-function CollExportPanel({coll,data,exportColl,importJSON}) {
+function CollItemRestoreCard({coll, update}) {
+  const [collPasteText, setCollPasteText] = React.useState('');
+  const [collErrors, setCollErrors] = React.useState([]);
+  const [collDropActive, setCollDropActive] = React.useState(false);
+  const collFileRef = React.useRef(null);
+
+  const validateColl = (obj) => {
+    const errs = [];
+    if(typeof obj.name !== 'string' || !obj.name.trim()) errs.push('name: expected non-empty string');
+    return errs;
+  };
+
+  const handleCollText = (text) => {
+    setCollPasteText(text);
+    if(!text.trim()) { setCollErrors([]); return; }
+    try { const obj = JSON.parse(text); setCollErrors(validateColl(obj)); }
+    catch(e) { setCollErrors(['Invalid JSON: ' + e.message]); }
+  };
+
+  const handleCollFileDrop = (e) => {
+    e.preventDefault(); setCollDropActive(false);
+    const file = e.dataTransfer.files[0]; if(!file) return;
+    const r = new FileReader(); r.onload = (ev) => handleCollText(ev.target.result); r.readAsText(file);
+  };
+
+  const handleCollFileSelect = (e) => {
+    const file = e.target.files[0]; if(!file) return;
+    const r = new FileReader(); r.onload = (ev) => handleCollText(ev.target.result); r.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleCollPaste = async () => {
+    try { const t = await navigator.clipboard.readText(); handleCollText(t); } catch(e) {}
+  };
+
+  const handleCollBackup = () => {
+    const {world_id,collection_filename,image_data,image_relpath,...rest} = coll;
+    const safe = {...rest, description: rest.definition||''};
+    window.lorekeeper.exportFile({defaultName:(coll.name||'collection').replace(/[^a-zA-Z0-9_-]/g,'_')+'-backup.json', content:JSON.stringify(safe,null,2), folder:'Collections'});
+  };
+
+  const doCollRestore = () => {
+    try {
+      const obj = JSON.parse(collPasteText);
+      update(d => {
+        const col = d.collections.find(x => x.id === coll.id);
+        if(!col) return;
+        if(obj.name) col.name = obj.name;
+        if(obj.description !== undefined) col.definition = obj.description;
+        if(obj.definition !== undefined) col.definition = obj.definition;
+        if(Array.isArray(obj.tags)) col.tags = obj.tags;
+        if(Array.isArray(obj.fandom_tags)) col.fandom_tags = obj.fandom_tags;
+        if(obj.access_level) col.access_level = obj.access_level;
+        if(obj.image && obj.image.id) { if(!col.image) col.image={}; col.image.id = obj.image.id; }
+        if(Array.isArray(obj.companions)) col.companions = obj.companions;
+        if(obj.very_nsfw !== undefined) col.very_nsfw = obj.very_nsfw;
+        if(obj.hide_on_owner_profile !== undefined) col.hide_on_owner_profile = obj.hide_on_owner_profile;
+        col.updated_at = new Date().toISOString();
+      });
+      setCollPasteText(''); setCollErrors([]);
+    } catch(e) { setCollErrors(['Restore failed: ' + e.message]); }
+  };
+
+  const collCanRestore = collPasteText.trim() && collErrors.length === 0;
+
+  return (
+    <div className="export-card">
+      <div className="export-card-title">Backup / Restore</div>
+      <p className="export-card-desc">Save a platform-format backup or restore from a pasted or dropped JSON. Restore keeps world, auto-save filename, and all app-only data.</p>
+      <div style={{display:'flex',gap:8,marginBottom:12}}>
+        <button className="btn" onClick={handleCollBackup}><i className="ti ti-database-export"></i>Backup Collection</button>
+        <button className="btn" onClick={()=>collFileRef.current&&collFileRef.current.click()}><i className="ti ti-database-import"></i>Restore Collection</button>
+        <input ref={collFileRef} type="file" accept=".json" style={{display:'none'}} onChange={handleCollFileSelect}/>
+      </div>
+      <div style={{marginBottom:8}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+          <span style={{fontSize:12,color:'var(--text3)'}}>Paste Collection Backup:</span>
+          <button className="btn" style={{padding:'2px 8px',fontSize:11}} onClick={handleCollPaste}><i className="ti ti-clipboard"></i>Paste</button>
+        </div>
+        <textarea value={collPasteText} onChange={e=>handleCollText(e.target.value)}
+          style={{width:'100%',minHeight:120,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px',borderRadius:'var(--r)',fontSize:11,fontFamily:'monospace',outline:'none',resize:'vertical'}}
+          placeholder="{...paste collection JSON here...}"/>
+      </div>
+      <div onClick={()=>collFileRef.current&&collFileRef.current.click()}
+        onDragOver={e=>{e.preventDefault();setCollDropActive(true);}} onDragLeave={()=>setCollDropActive(false)} onDrop={handleCollFileDrop}
+        style={{border:'2px dashed '+(collDropActive?'var(--accent)':'var(--border2)'),borderRadius:'var(--r)',padding:'16px',textAlign:'center',fontSize:12,color:'var(--text3)',marginBottom:12,background:collDropActive?'var(--accent-dim)':'transparent',transition:'all 0.15s',cursor:'pointer'}}>
+        {'Drag & drop a JSON file here, or click to select a file'}
+      </div>
+      {collErrors.length>0&&<div style={{marginBottom:10}}>
+        <div style={{fontSize:12,fontWeight:600,color:'var(--red)',marginBottom:4}}>Validation errors:</div>
+        {collErrors.map((err,ei)=><div key={ei} style={{fontSize:11,color:'var(--red)',paddingLeft:8}}>{'• '+err}</div>)}
+      </div>}
+      <div style={{display:'flex',justifyContent:'flex-end'}}>
+        <button className="btn primary" disabled={!collCanRestore} onClick={doCollRestore}><i className="ti ti-restore"></i>Restore Data</button>
+      </div>
+    </div>
+  );
+}
+
+function CollExportPanel({coll,data,exportColl,importJSON,update}) {
   const exportCollMd = () => {
     const lines = ["# " + coll.name];
     if(coll.definition){lines.push(""); lines.push(coll.definition);}
@@ -4580,6 +4783,7 @@ function CollExportPanel({coll,data,exportColl,importJSON}) {
   };
   return (
     <div className="export-panel">
+      <CollItemRestoreCard coll={coll} update={update}/>
       {importJSON?<div className="export-card">
         <div className="export-card-title">Update from JSON</div>
         <p className="export-card-desc">Re-import this collection's JSON to overwrite its fields (keeps world and auto-save filename — app-specific data isn't touched).</p>
