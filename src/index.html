@@ -574,12 +574,10 @@ function App() {
     update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch)ch.site_last_synced_at=new Date().toISOString();});
   };
   const exportLore = (l) => {
-    const {world_id,lorebook_filename,image_data,image_relpath,selected_chapter_index,collaboration_type,status,...rest}=l;
-    // collaboration_type on the site tracks public/private the same way access_level does —
-    // Lorekeeper was passing through whatever stale value it had stored locally instead of
-    // deriving it fresh from the current access_level, so it could silently disagree with
-    // what the lorebook actually is at export time.
-    const safe = {...rest, collaboration_type: l.access_level==='public' ? 'public' : 'private'};
+    const {world_id,lorebook_filename,image_data,image_relpath,collaboration_type,status,...rest}=l;
+    // collaboration_type: derive fresh from access_level (local value may be stale).
+    // selected_chapter_index: Saucepan requires this on import — include it.
+    const safe = {...rest, selected_chapter_index: l.selected_chapter_index||0, collaboration_type: l.access_level==='public' ? 'public' : 'private'};
     const warnings=[];
     if(!l.image_id) warnings.push('image (cover) ID not set — site will reject import');
     if(!l.tags||l.tags.length===0) warnings.push('no tags set');
@@ -614,8 +612,9 @@ function App() {
       files.push({name: "Companions/" + safeName + "-companion.json", content: JSON.stringify(safe, null, 2)});
     });
     wLores.forEach(l => {
-      const {world_id,lorebook_filename,image_data,image_relpath,selected_chapter_index,site_last_synced_at,collaboration_type,status,...rest} = l;
-      const safe = {...rest, collaboration_type: l.access_level==='public' ? 'public' : 'private'};
+      const {world_id,lorebook_filename,image_data,image_relpath,site_last_synced_at,collaboration_type,status,...rest} = l;
+      const loreScIdx = l.selected_chapter_index||0;
+      const safe = {...rest, selected_chapter_index:loreScIdx, collaboration_type: l.access_level==='public' ? 'public' : 'private'};
       const safeName = (l.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g, "_");
       files.push({name: "Lorebooks/" + safeName + "-lorebook.json", content: JSON.stringify(safe, null, 2)});
     });
@@ -4489,8 +4488,8 @@ function LoreItemRestoreCard({lorebook, update}) {
   };
 
   const handleLoreBackup = () => {
-    const {world_id,lorebook_filename,image_data,image_relpath,selected_chapter_index,collaboration_type,status,...rest} = lorebook;
-    const safe = {...rest, collaboration_type: lorebook.access_level === 'public' ? 'public' : 'private'};
+    const {world_id,lorebook_filename,image_data,image_relpath,collaboration_type,status,...rest} = lorebook;
+    const safe = {...rest, selected_chapter_index: lorebook.selected_chapter_index||0, collaboration_type: lorebook.access_level === 'public' ? 'public' : 'private'};
     window.lorekeeper.exportFile({defaultName:(lorebook.name||'lorebook').replace(/[^a-zA-Z0-9_-]/g,'_')+'-backup.json', content:JSON.stringify(safe,null,2), folder:'Lorebooks'});
   };
 
