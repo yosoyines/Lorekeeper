@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="background:#0f0e13;color:#f2f0ff;">
 <head>
 <meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:">
@@ -25,21 +25,28 @@
     --r: 8px; --rl: 12px;
   }
   html, body, #root { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  body { opacity: 0; }
+  body.app-ready { opacity: 1; transition: opacity 0.15s ease; }
   #root { display: flex; flex-direction: column; }
   .app { display: flex; height: 100%; overflow: hidden; }
   .sidebar { width: 220px; min-width: 220px; height: 100%; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; transition: width 0.2s; overflow: hidden; }
   .sidebar.collapsed { width: 52px; min-width: 52px; }
-  .sidebar-header { padding: 16px 12px 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); }
+  .sidebar-header { height: 56px; padding: 0 12px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
   .logo-mark { width: 28px; height: 28px; background: var(--accent-dim); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .logo-mark i { color: var(--accent); font-size: 15px; }
   .logo-text { font-size: 15px; font-weight: 600; color: var(--accent); white-space: nowrap; letter-spacing: 0.03em; }
   .sidebar-nav { flex: 1; padding: 8px 0; overflow-y: auto; }
+  .sidebar.collapsed .nav-section { visibility: hidden; }
   .nav-section { padding: 8px 12px 4px; font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+  .sidebar.collapsed .nav-item { justify-content: center; padding: 8px 0; }
+  .sidebar.collapsed .world-item { justify-content: center; padding: 8px 0; }
   .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; cursor: pointer; transition: background 0.15s; color: var(--text2); font-size: 13.5px; white-space: nowrap; }
   .nav-item:hover { background: var(--bg3); color: var(--text); }
   .nav-item.active { background: var(--accent-dim); color: var(--accent); }
   .nav-item i { font-size: 17px; flex-shrink: 0; }
-  .collapse-btn { background: transparent; border: none; color: var(--text3); cursor: pointer; padding: 4px; margin-left: auto; flex-shrink: 0; }
+  .collapse-btn { background: transparent; border: none; color: var(--text3); cursor: pointer; padding: 4px; margin-left: auto; flex-shrink: 0; display: flex; align-items: center; justify-content: center; line-height: 1; }
+  .sidebar.collapsed .sidebar-header { padding: 0; justify-content: center; gap: 4px; }
+  .sidebar.collapsed .sidebar-header .collapse-btn { margin-left: 0; }
   .collapse-btn:hover { color: var(--text); }
   .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
   .topbar { padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; background: var(--bg2); }
@@ -362,6 +369,11 @@ function App() {
     window.lorekeeper.getDataPath().then(p => setDataPath(p));
   }, []);
 
+  // Fade in once data is ready — prevents FOUC during Babel/React init
+  useEffect(() => {
+    if(dataLoaded) document.body.classList.add('app-ready');
+  }, [dataLoaded]);
+
   // Autosave to disk on every change — NEVER fires until the initial load has completed,
   // otherwise the default empty initData could overwrite the real file on disk (race condition
   // that caused real data loss once; see Performance/Safety notes in the spec).
@@ -527,7 +539,7 @@ function App() {
     // The platform's field for this text is "description", not "definition" — Lorekeeper's
     // internal data model uses "definition" but that name was leaking straight through to
     // the export, so Saucepan never actually received the collection's description text.
-    const safe = {...rest, description: definition||''};
+    const safe = {...rest, description: definition||'', lorebooks: c.lorebooks||[]};
     window.lorekeeper.exportFile({ defaultName:`${c.name}-collection.json`, content:JSON.stringify(safe,null,2), folder:"Collections" });
     update(d=>{const cl=d.collections.find(x=>x.id===c.id);if(cl)cl.site_last_synced_at=new Date().toISOString();});
   };
@@ -620,7 +632,7 @@ function App() {
     });
     wColls.forEach(c => {
       const {world_id,image_data,image_relpath,collection_filename,site_last_synced_at,definition,...rest} = c;
-      const safe = {...rest, description: definition||''};
+      const safe = {...rest, description: definition||'', lorebooks: c.lorebooks||[]};
       const safeName = (c.name||"collection").replace(/[^a-zA-Z0-9_-]/g, "_");
       files.push({name: "Collections/" + safeName + "-collection.json", content: JSON.stringify(safe, null, 2)});
     });
@@ -754,13 +766,13 @@ function App() {
       </div>}
       
       <div className={`sidebar ${sidebarOpen?'':'collapsed'}`}>
-        <div className="sidebar-header" style={sidebarOpen?{}:{flexDirection:'column',gap:8,padding:'12px 0',alignItems:'center'}}>
+        <div className="sidebar-header" style={{}}>
           <div className="logo-mark" style={{cursor:'pointer'}} onClick={()=>navTo('dashboard')} title="Dashboard"><i className="ti ti-book-2"></i></div>
           {sidebarOpen&&<span className="logo-text">Lorekeeper</span>}
-          <button className="collapse-btn" style={sidebarOpen?{}:{marginLeft:0}} onClick={()=>setSidebarOpen(s=>!s)} title={sidebarOpen?'Collapse sidebar':'Expand sidebar'}><i className={`ti ti-layout-sidebar-left-${sidebarOpen?'collapse':'expand'}`} style={{fontSize:17}}></i></button>
+          <button className="collapse-btn" style={{}} onClick={()=>setSidebarOpen(s=>!s)} title={sidebarOpen?'Collapse sidebar':'Expand sidebar'}><i className={`ti ti-layout-sidebar-left-${sidebarOpen?'collapse':'expand'}`} style={{fontSize:17}}></i></button>
         </div>
         <div className="sidebar-nav">
-          {sidebarOpen&&<div className="nav-section">Navigate</div>}
+          <div className="nav-section">Navigate</div>
           {[['dashboard','ti-layout-dashboard','Dashboard'],['worlds','ti-world','Worlds'],['characters','ti-users','Characters'],['lorebooks','ti-book','Lorebooks'],['collections','ti-folders','Collections'],['personas','ti-masks-theater','Personas'],['templates','ti-template','Templates'],['batch','ti-file-import','Import/Export'],['settings','ti-settings','Settings'],['help','ti-help-circle','Help']].map(([p,icon,label])=>(
             <div key={p} className={`nav-item ${page===p&&!selectedWorld&&!selectedChar?'active':''}`} onClick={()=>navTo(p)}>
               <i className={`ti ${icon}`}></i>{sidebarOpen&&<span>{label}</span>}
@@ -768,7 +780,7 @@ function App() {
           ))}
           {data.worlds.length>0&&<>
             <hr className="divider" style={{margin:'8px 0'}}/>
-            {sidebarOpen&&<div className="nav-section">Worlds</div>}
+            <div className="nav-section">Worlds</div>
             {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=>(
               <div key={w.id} className={`nav-item ${selectedWorld?.id===w.id?'active':''}`}
                 onClick={()=>{setSelectedWorld(w);setWorldTab('characters');setPage('world');}}
@@ -4762,7 +4774,7 @@ function CollItemRestoreCard({coll, update}) {
 
   const handleCollBackup = () => {
     const {world_id,collection_filename,image_data,image_relpath,...rest} = coll;
-    const safe = {...rest, description: rest.definition||''};
+    const safe = {...rest, description: rest.definition||'', lorebooks: coll.lorebooks||[]};
     window.lorekeeper.exportFile({defaultName:(coll.name||'collection').replace(/[^a-zA-Z0-9_-]/g,'_')+'-backup.json', content:JSON.stringify(safe,null,2), folder:'Collections'});
   };
 
