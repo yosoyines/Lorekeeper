@@ -23,4 +23,6 @@ contextBridge.exposeInMainWorld('lorekeeper', {
   exportBackup: (opts) => ipcRenderer.invoke('export-backup', opts),
   exportPlatformZip: (opts) => ipcRenderer.invoke('export-platform-zip', opts),
   restoreBackup: () => ipcRenderer.invoke('restore-backup'),
+  restoreLastgood: () => ipcRenderer.invoke('restore-lastgood'),
+  getLastgoodInfo: () => ipcRenderer.invoke('get-lastgood-info'),
 });

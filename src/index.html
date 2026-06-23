@@ -331,10 +331,30 @@ function App() {
   const [dataLoaded, setDataLoaded] = useState(false);
   const saveTimer = useRef();
 
+  const [lastgoodWarning, setLastgoodWarning] = useState(false);
+
   // Load data from disk on startup
   useEffect(() => {
-    window.lorekeeper.loadData().then(d => {
-      if (d) setData(d);
+    window.lorekeeper.loadData().then(res => {
+      if (res && res.data) {
+        // Auto-migrate: repair portrait relPath links (normalizes spaces vs underscores in names)
+        const d = res.data;
+        const _norm = n => (n||'').toLowerCase().replace(/[()]/g,'').replace(/[\s_]+/g,'_').replace(/^_|_$/g,'');
+        (d.characters||[]).forEach(char => {
+          if(!char.portraits||char.portraits.length===0) return;
+          const allRel = char.portraits.map(p=>p.relPath).filter(Boolean);
+          if(!allRel.length) return;
+          const fm = {};
+          allRel.forEach(rp => { const k=_norm(rp.replace(/\\/g,'/').split('/').pop().replace(/\.[^.]+$/,'')); if(!fm[k])fm[k]=rp; });
+          char.portraits.forEach(p => { const k=_norm(p.name); if(fm[k]&&p.relPath!==fm[k])p.relPath=fm[k]; });
+          char.portraits = char.portraits.filter(p => (p.image&&p.image.id)||!!fm[_norm(p.name)]);
+          const pp=char.portraits.find(p=>p.name==='profile_pic');
+          const nr=pp?.relPath||char.portraits.find(p=>p.relPath)?.relPath||null;
+          if(nr&&char.image&&char.image.relPath!==nr) char.image={...char.image,relPath:nr};
+        });
+        setData(d);
+        if(res.usedLastgood) setLastgoodWarning(true);
+      }
       setDataLoaded(true);
     }).catch(() => {
       console.error('Failed to load data — autosave will remain blocked to avoid overwriting the real file.');
@@ -720,6 +740,10 @@ function App() {
 
   return (
     <div className="app" onClick={()=>setCtxMenu(null)}>
+      {lastgoodWarning&&<div style={{position:'fixed',top:0,left:0,right:0,background:'var(--amber)',color:'#000',padding:'8px 16px',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',justifyContent:'space-between',zIndex:9999}}>
+        <span><i className="ti ti-alert-triangle" style={{marginRight:6}}></i>Data file was corrupted on startup — auto-recovered from last good backup. Verify your data and create a fresh backup zip.</span>
+        <button style={{background:'transparent',border:'1px solid rgba(0,0,0,0.3)',borderRadius:4,padding:'3px 10px',cursor:'pointer',fontWeight:600,fontSize:12,marginLeft:16,flexShrink:0}} onClick={()=>setLastgoodWarning(false)}>Dismiss</button>
+      </div>}
       {ctxMenu&&<div className="ctx-menu" style={{top:ctxMenu.y,left:ctxMenu.x}} onClick={e=>e.stopPropagation()}>
         <div className="ctx-item" onClick={()=>{update(d=>{const w=d.worlds.find(x=>x.id===ctxMenu.world.id);if(w)w.pinned=!w.pinned;});setCtxMenu(null);}}>
           <i className={`ti ${ctxMenu.world.pinned?'ti-pin-off':'ti-pin'}`}></i>{ctxMenu.world.pinned?'Unpin from top':'Pin to top'}
@@ -2939,15 +2963,22 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
   const getNextCycleWorld=()=>{
     if(cycle.length===0) return null;
     const futureDate=new Date(today.getFullYear(),today.getMonth(),today.getDate());
+    const sevenDaysAgo=new Date(today.getFullYear(),today.getMonth(),today.getDate()-7);
     const pds=s=>{const p=(s.split('T')[0]).split('-');return new Date(+p[0],+p[1]-1,+p[2]);};
     // Walk cycle in order:
+    // - skip worlds that recently posted (within 7 days) and have nothing upcoming
     // - skip worlds where all future chars are 'ready' (scheduled, handled) or 'posted'
     // - stop at first world with a 'draft' future char (needs work)
     // - stop at first world with no future scheduled char (needs scheduling)
     for(let i=0;i<cycle.length;i++){
       const wid=cycle[i];
       const futureChars=data.characters.filter(c=>c.world_id===wid&&(c.schedule_dates||[]).some(d=>pds(d)>=futureDate));
-      if(futureChars.length===0) return wid; // no future entry — needs scheduling
+      if(futureChars.length===0){
+        // No future chars — check if this world recently posted (would be a false alarm)
+        const recentlyPosted=data.characters.some(c=>c.world_id===wid&&c.status==='posted'&&(c.posted_dates||[]).some(d=>pds(d)>=sevenDaysAgo));
+        if(recentlyPosted) continue; // just posted — skip, look at next world
+        return wid; // genuinely needs scheduling
+      }
       const hasDraft=futureChars.some(c=>c.status==='draft');
       if(hasDraft) return wid; // has a draft — stop here, needs work
       // all ready or posted — this world is handled, continue
@@ -3997,6 +4028,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
     }
   });
   const [tab,setTab]=useState(initialTab||'identity');
+  const [showPortraitPicker,setShowPortraitPicker]=useState(false);
   const scenarioDragIdx=useRef(null);
   const scenarioDragOverIdx=useRef(null);
   const portraitDragIdx=useRef(null);
@@ -4004,6 +4036,19 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
   const handlePortrait=async()=>{const r=await window.lorekeeper.importImage();if(r)updChar(c=>{c.image={...( c.image||{}),data:r.base64};});};
   const handleBanner=async()=>{const r=await window.lorekeeper.importImage();if(r)updChar(c=>{c.companion_profile_banner_image={data:r.base64};});};
   const charData=data.characters.find(x=>x.id===char.id)||char;
+  React.useEffect(()=>{
+    const pp=charData.portraits&&charData.portraits.find(p=>p.name==='profile_pic');
+    if(!pp) return;
+    const needsFix=!pp.description||(!pp.image?.id&&charData.image?.id);
+    if(!needsFix) return;
+    updChar(c=>{
+      const pt=c.portraits&&c.portraits.find(p=>p.name==='profile_pic');
+      if(!pt) return;
+      if(!pt.description) pt.description='Profile picture';
+      if(!pt.image&&c.image?.id) pt.image={id:c.image.id};
+      else if(pt.image&&!pt.image.id&&c.image?.id) pt.image.id=c.image.id;
+    });
+  },[charData.id]);
   const tabs=[['identity','Identity'],['description','Full Description'],['card','Character Card'],['formatting','Formatting'],['dialogue','Example Dialogue'],['scenarios','Scenarios'],['portraits','Portraits'],['lorebooks','Lorebooks'],['collections','Collections'],['settings','Settings'],['schedule','Schedule'],['lore-entry','Lorebook Entry'],['export','Export']];
   return (
     <div>
@@ -4011,9 +4056,18 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
       <div className="char-detail">
         <div className="char-sidebar">
           <div className="char-portrait-lg">{getImgSrc(charData.image)?<ImgFromPath src={getImgSrc(charData.image)} alt={charData.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<i className="ti ti-user"></i>}</div>
-          <button className="btn" style={{width:'100%',justifyContent:'center'}} onClick={handlePortrait}><i className="ti ti-camera"></i>Set Portrait</button>
+          <div style={{display:'flex',gap:4,marginBottom:4}}>
+            <button className="btn" style={{flex:1,justifyContent:'center'}} onClick={handlePortrait}><i className="ti ti-camera"></i>Set Portrait</button>
+            {(charData.portraits||[]).some(p=>p.data||p.relPath)&&<button className="btn" style={{padding:'6px 10px'}} onClick={()=>setShowPortraitPicker(v=>!v)} title="Pick from gallery"><i className="ti ti-layout-grid"></i></button>}
+          </div>
+          {showPortraitPicker&&<div style={{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:8,marginBottom:4}}>
+            <div style={{fontSize:11,color:'var(--text3)',marginBottom:6}}>Pick from gallery:</div>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+              {(charData.portraits||[]).map((p,pi)=>(p.data||p.relPath)?<div key={pi} title={p.name||''} onClick={()=>{updChar(c=>{if(!c.image)c.image={};const pt=c.portraits[pi];c.image.data=pt.data||null;c.image.relPath=pt.relPath||null;});setShowPortraitPicker(false);}} style={{cursor:'pointer',borderRadius:4,overflow:'hidden',border:'2px solid var(--border)',width:56,height:56,flexShrink:0}}><ImgFromPath src={p.data||p.relPath} alt={p.name||''} style={{width:'100%',height:'100%',objectFit:'cover'}}/></div>:null)}
+            </div>
+          </div>}
           <div className="field-block" style={{padding:'10px 12px'}}>
-            <label style={{fontSize:10}}>Profile Pic / Portrait 1 ID <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0}}>(from site)</span></label>
+            <label style={{fontSize:10}}>Profile Pic <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0}}>(from site)</span></label>
             <div style={{display:'flex',gap:6,marginTop:4}}>
               <input value={charData.image?.id||''} onChange={e=>updChar(c=>{if(!c.image)c.image={};c.image.id=e.target.value;const pp=c.portraits&&c.portraits.find(p=>p.name==='profile_pic');if(pp){if(!pp.image)pp.image={};pp.image.id=e.target.value||undefined;}})} placeholder="paste UUID…" style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',fontFamily:'monospace',minWidth:0}}/>
               {charData.image?.id&&<button className="btn" style={{padding:'4px 6px',fontSize:10,flexShrink:0}} onClick={()=>navigator.clipboard.writeText(charData.image.id)} title="Copy"><i className="ti ti-copy" style={{fontSize:12}}></i></button>}
@@ -5190,6 +5244,8 @@ function PersonaDetailPage({persona,data,update,onBack}) {
 function BackupRestorePanel({data, update}) {
   const [status, setStatus] = useState(null);
   const [msg, setMsg] = useState('');
+  const [lgInfo, setLgInfo] = React.useState(null);
+  React.useEffect(()=>{window.lorekeeper.getLastgoodInfo().then(i=>setLgInfo(i)).catch(()=>{});},[]);
 
   const globalBackup = async () => {
     setStatus('working'); setMsg('Creating backup…');
@@ -5257,6 +5313,19 @@ function BackupRestorePanel({data, update}) {
           <div style={{fontSize:12,color:'var(--text3)',marginBottom:8}}>Restore from a previous backup zip. Copies all files and replaces data.</div>
           <button className="btn danger" style={{fontSize:12}} onClick={restore} disabled={status==='working'}>
             <i className="ti ti-restore"></i>Restore from backup…
+          </button>
+        </div>
+        <div style={{borderTop:'1px solid var(--border)',paddingTop:10}}>
+          <div style={{fontSize:12,color:'var(--text3)',marginBottom:4}}>Restore directly from the rolling last-good-backup file (no zip needed). Use this when your data file is corrupted or empty.</div>
+          {lgInfo&&<div style={{fontSize:11,color:'var(--text3)',marginBottom:8}}>Last saved: {lgInfo.mtime.split('T')[0]} {lgInfo.mtime.split('T')[1].slice(0,5)} — {(lgInfo.size/1024).toFixed(0)} KB</div>}
+          <button className="btn danger" style={{fontSize:12}} disabled={status==='working'||!lgInfo} onClick={async()=>{
+            if(!window.confirm('Restore from last good backup? This replaces all current data.')) return;
+            setStatus('working'); setMsg('Restoring from lastgood…');
+            const res = await window.lorekeeper.restoreLastgood();
+            if(res.success){ update(()=>res.data); setStatus('ok'); setMsg('✓ Restored from lastgood ('+Math.round(res.size/1024)+' KB). Restart recommended.'); }
+            else { setStatus('err'); setMsg('Error: '+res.error); }
+          }}>
+            <i className="ti ti-database-import"></i>Restore from last good backup
           </button>
         </div>
         {status&&status!=='working'&&<div style={{fontSize:12,color:status==='ok'?'#6ee7b7':'var(--red)',marginTop:4}}>{msg}</div>}
@@ -5595,18 +5664,19 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
         const worldId = wid==='__none__' ? null : wid;
         const obj=item.jsonData;
         const status=obj.access_level==='public'?'posted':'draft';
-        const portraits=(obj.portraits||[]).map(p=>{
-          // Match image files by name
-          const matchedImg=item.imageFiles.find(f=>
-            f.name.toLowerCase().includes('profile')||
-            f.name.toLowerCase()===p.name?.toLowerCase()
-          );
-          return {...p, data:null, relPath:matchedImg?.relPath||null};
+        // Build portrait list from JSON, then match image files by normalized name
+        // Normalize: lowercase, collapse spaces+underscores to _, strip parens
+        const normName=n=>(n||'').toLowerCase().replace(/[()]/g,'').replace(/[\s_]+/g,'_').replace(/^_|_$/g,'');
+        const portraits=(obj.portraits||[]).map(p=>({...p,data:null,relPath:null}));
+        const matchedRelPaths=new Set();
+        // Pass 1: normalized name match — each JSON portrait gets its image file
+        portraits.forEach(p=>{
+          const img=item.imageFiles.find(f=>normName(f.name)===normName(p.name));
+          if(img){p.relPath=img.relPath;matchedRelPaths.add(img.relPath);}
         });
-        // Assign images to portrait slots by filename order
-        item.imageFiles.forEach((imgFile,idx)=>{
-          if(portraits[idx]) portraits[idx].relPath=imgFile.relPath;
-          else if(idx<10) portraits.push({name:imgFile.name,description:'',very_sus:false,data:null,relPath:imgFile.relPath});
+        // Pass 2: push truly unmatched image files as extra portrait slots
+        item.imageFiles.filter(f=>!matchedRelPaths.has(f.relPath)).forEach(imgFile=>{
+          if(portraits.length<10) portraits.push({name:imgFile.name,description:imgFile.name==='profile_pic'?'Profile picture':'',very_sus:false,data:null,relPath:imgFile.relPath,image:undefined});
         });
 
         const existing=d.characters.find(x=>x.id===obj.id);
@@ -5619,21 +5689,30 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
           if(!forced && localTime > importTime && localTime > 0){ skipCount++; return; }
           // Preserve the platform image UUID from the import if present; only fall back to a
           // local-file relPath when the site export genuinely has no UUID (e.g. unposted/private).
-          const mainImage = obj.image?.id ? {id:obj.image.id} : (portraits[0]?.relPath ? {relPath:portraits[0].relPath} : existing.image);
+          const ppRelPath = (portraits.find(p=>p.name==='profile_pic')?.relPath) || portraits[0]?.relPath || null;
+          const mainImage = obj.image?.id ? {id:obj.image.id, relPath:ppRelPath} : (ppRelPath ? {relPath:ppRelPath} : existing.image);
           const folderName = item.folderName || existing.companion_folder;
+          // Preserve portrait descriptions that exist locally but are missing in incoming data
+          const mergedPortraits = portraits.map(p => {
+            const ep = (existing.portraits||[]).find(x =>
+              (p.image?.id && x.image?.id && p.image.id === x.image.id) ||
+              (!p.image?.id && p.name && x.name === p.name)
+            );
+            return (!p.description && ep?.description) ? {...p, description:ep.description} : p;
+          });
           // posted_dates: if the site export shows this is posted and we don't already have a
           // posted date locally, derive one from posted_at (or updated_at as a fallback) instead
           // of leaving posted_dates empty and forcing a manual "Add Posted Date" later.
           const sitePostedDates = (status==='posted'&&(!existing.posted_dates||existing.posted_dates.length===0)&&(obj.posted_at||obj.updated_at))
             ? [(obj.posted_at||obj.updated_at).split(/[ T]/)[0]]
             : existing.posted_dates;
-          Object.assign(existing,{name:obj.name||existing.name,display_name:obj.display_name||existing.display_name,short_description:obj.short_description||existing.short_description,full_description:obj.full_description||existing.full_description,card:obj.card||existing.card,example_dialogue:obj.example_dialogue||existing.example_dialogue,tags:obj.tags||existing.tags,fandom_tags:obj.fandom_tags||existing.fandom_tags,sus:obj.sus!==undefined?obj.sus:existing.sus,very_sus:obj.very_sus!==undefined?obj.very_sus:existing.very_sus,starting_scenarios:obj.starting_scenarios||existing.starting_scenarios,formatting_instructions:obj.formatting_instructions||existing.formatting_instructions,advanced_prompt:obj.advanced_prompt||existing.advanced_prompt,access_level:obj.access_level||existing.access_level,status,image:mainImage,portraits,posted_dates:sitePostedDates,updated_at:obj.updated_at||now(),companion_folder:folderName||existing.companion_folder||null});
+          Object.assign(existing,{name:obj.name||existing.name,display_name:obj.display_name||existing.display_name,short_description:obj.short_description||existing.short_description,full_description:obj.full_description||existing.full_description,card:obj.card||existing.card,example_dialogue:obj.example_dialogue||existing.example_dialogue,tags:obj.tags||existing.tags,fandom_tags:obj.fandom_tags||existing.fandom_tags,sus:obj.sus!==undefined?obj.sus:existing.sus,very_sus:obj.very_sus!==undefined?obj.very_sus:existing.very_sus,starting_scenarios:obj.starting_scenarios||existing.starting_scenarios,formatting_instructions:obj.formatting_instructions||existing.formatting_instructions,advanced_prompt:obj.advanced_prompt||existing.advanced_prompt,access_level:obj.access_level||existing.access_level,status,image:mainImage,portraits:mergedPortraits,posted_dates:sitePostedDates,updated_at:obj.updated_at||now(),companion_folder:folderName||existing.companion_folder||null});
           charCount++;
         } else {
           // posted_dates: derive from the site's posted_at (or updated_at as fallback) when this
           // character comes in already posted, so it's not left empty requiring manual entry.
           const newCharPostedDates = (status==='posted'&&(obj.posted_at||obj.updated_at)) ? [(obj.posted_at||obj.updated_at).split(/[ T]/)[0]] : [];
-          const char={id:obj.id||uuid(),world_id:worldId,name:obj.name||item.folderName,display_name:obj.display_name||obj.name||'',short_description:obj.short_description||'',full_description:obj.full_description||'',card:obj.card||'',example_dialogue:obj.example_dialogue||'',tags:obj.tags||[],fandom_tags:obj.fandom_tags||[],sus:obj.sus||false,very_sus:obj.very_sus||false,starting_scenarios:obj.starting_scenarios||[],formatting_instructions:obj.formatting_instructions||'',advanced_prompt:obj.advanced_prompt||'',access_level:obj.access_level||'private',open_definition:obj.open_definition||false,external_model_policy:obj.external_model_policy||'vetted_only',locked_starting_message:obj.locked_starting_message||false,unlocked_portraits:obj.unlocked_portraits!==undefined?obj.unlocked_portraits:true,hide_on_owner_profile:obj.hide_on_owner_profile||false,suppress_companion_profile_banner:obj.suppress_companion_profile_banner||false,preserve_existing_chats:obj.preserve_existing_chats!==undefined?obj.preserve_existing_chats:true,posted_at:obj.posted_at||now(),created_at:obj.created_at||now(),updated_at:obj.updated_at||now(),voice_catalog_id:obj.voice_catalog_id||null,temperature_offset_percentage:obj.temperature_offset_percentage||0,status,schedule_dates:[],posted_dates:newCharPostedDates,collections:[],linked_lorebooks:[],image:obj.image?.id?{id:obj.image.id}:(portraits[0]?.relPath?{relPath:portraits[0].relPath}:null),portraits,companion_profile_banner_image:null,author_id:obj.author_id||'',author_handle:obj.author_handle||'',companion_folder:item.folderName||null};
+          const char={id:obj.id||uuid(),world_id:worldId,name:obj.name||item.folderName,display_name:obj.display_name||obj.name||'',short_description:obj.short_description||'',full_description:obj.full_description||'',card:obj.card||'',example_dialogue:obj.example_dialogue||'',tags:obj.tags||[],fandom_tags:obj.fandom_tags||[],sus:obj.sus||false,very_sus:obj.very_sus||false,starting_scenarios:obj.starting_scenarios||[],formatting_instructions:obj.formatting_instructions||'',advanced_prompt:obj.advanced_prompt||'',access_level:obj.access_level||'private',open_definition:obj.open_definition||false,external_model_policy:obj.external_model_policy||'vetted_only',locked_starting_message:obj.locked_starting_message||false,unlocked_portraits:obj.unlocked_portraits!==undefined?obj.unlocked_portraits:true,hide_on_owner_profile:obj.hide_on_owner_profile||false,suppress_companion_profile_banner:obj.suppress_companion_profile_banner||false,preserve_existing_chats:obj.preserve_existing_chats!==undefined?obj.preserve_existing_chats:true,posted_at:obj.posted_at||now(),created_at:obj.created_at||now(),updated_at:obj.updated_at||now(),voice_catalog_id:obj.voice_catalog_id||null,temperature_offset_percentage:obj.temperature_offset_percentage||0,status,schedule_dates:[],posted_dates:newCharPostedDates,collections:[],linked_lorebooks:[],image:obj.image?.id?{id:obj.image.id,relPath:(portraits.find(p=>p.name==='profile_pic')?.relPath||portraits[0]?.relPath||null)}:(portraits[0]?.relPath?{relPath:portraits[0].relPath}:null),portraits,companion_profile_banner_image:null,author_id:obj.author_id||'',author_handle:obj.author_handle||'',companion_folder:item.folderName||null};
           // Auto-link collections
           d.collections.forEach(col=>{if((col.companions||[]).includes(char.id))char.collections.push(col.id);});
           d.characters.push(char);

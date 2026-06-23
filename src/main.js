@@ -45,9 +45,31 @@ app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) creat
 // ── Data ────────────────────────────────────────────────
 ipcMain.handle('load-data', async () => {
   try {
-    if (fs.existsSync(DATA_FILE)) return JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-    return null;
-  } catch (e) { console.error('load-data:', e); return null; }
+    let content = null;
+    let usedLastgood = false;
+
+    if (fs.existsSync(DATA_FILE)) {
+      content = fs.readFileSync(DATA_FILE, 'utf-8');
+      const dataSize = Buffer.byteLength(content, 'utf-8');
+      if (fs.existsSync(DATA_BACKUP_FILE)) {
+        const lastgoodSize = fs.statSync(DATA_BACKUP_FILE).size;
+        if (lastgoodSize > MIN_SIZE_TO_PROTECT && dataSize < lastgoodSize * SHRINK_REFUSE_RATIO) {
+          console.warn('load-data: data file (' + dataSize + ' B) is suspiciously small vs lastgood (' + lastgoodSize + ' B) — auto-recovering from lastgood.');
+          content = fs.readFileSync(DATA_BACKUP_FILE, 'utf-8');
+          fs.writeFileSync(DATA_FILE, content, 'utf-8');
+          usedLastgood = true;
+        }
+      }
+    } else if (fs.existsSync(DATA_BACKUP_FILE)) {
+      console.warn('load-data: no data file found — recovering from lastgood.');
+      content = fs.readFileSync(DATA_BACKUP_FILE, 'utf-8');
+      fs.writeFileSync(DATA_FILE, content, 'utf-8');
+      usedLastgood = true;
+    }
+
+    if (!content) return { data: null, usedLastgood: false };
+    return { data: JSON.parse(content), usedLastgood };
+  } catch (e) { console.error('load-data:', e); return { data: null, usedLastgood: false }; }
 });
 
 // Safety net: refuse to silently overwrite a substantial existing data file with
@@ -64,17 +86,26 @@ ipcMain.handle('save-data', async (event, data) => {
     const newContent = JSON.stringify(data);
     const newSize = Buffer.byteLength(newContent, 'utf-8');
 
+    const refuseWrite = (reason) => {
+      console.error('save-data REFUSED: ' + reason + '. Writing to lorekeeper-data.SUSPICIOUS.json instead.');
+      const suspiciousFile = path.join(DATA_DIR, 'lorekeeper-data.SUSPICIOUS.json');
+      fs.promises.writeFile(suspiciousFile, newContent, 'utf-8').catch(() => {});
+    };
+
     if (fs.existsSync(DATA_FILE)) {
       const oldSize = fs.statSync(DATA_FILE).size;
       if (oldSize > MIN_SIZE_TO_PROTECT && newSize < oldSize * SHRINK_REFUSE_RATIO) {
-        console.error(
-          'save-data REFUSED: new write (' + newSize + ' bytes) is drastically smaller than ' +
-          'the existing file (' + oldSize + ' bytes). This looks like a data-loss bug, not an ' +
-          'intentional deletion. Writing the would-be content to lorekeeper-data.SUSPICIOUS.json ' +
-          'for manual review instead of overwriting the real file.'
-        );
-        const suspiciousFile = path.join(DATA_DIR, 'lorekeeper-data.SUSPICIOUS.json');
-        await fs.promises.writeFile(suspiciousFile, newContent, 'utf-8');
+        refuseWrite('new write (' + newSize + ' B) << existing file (' + oldSize + ' B)');
+        return false;
+      }
+    }
+
+    // Also check against lastgood — catches the case where data.json was already cleared
+    // before the save attempt (so oldSize would also be small and the check above would pass).
+    if (fs.existsSync(DATA_BACKUP_FILE)) {
+      const lastgoodSize = fs.statSync(DATA_BACKUP_FILE).size;
+      if (lastgoodSize > MIN_SIZE_TO_PROTECT && newSize < lastgoodSize * SHRINK_REFUSE_RATIO) {
+        refuseWrite('new write (' + newSize + ' B) << lastgood (' + lastgoodSize + ' B)');
         return false;
       }
     }
@@ -433,6 +464,25 @@ function copyDirRecursive(src, dest) {
     else fs.copyFileSync(s, d);
   }
 }
+
+// ── Lastgood helpers ──────────────────────────────────────────────
+ipcMain.handle('get-lastgood-info', async () => {
+  try {
+    if (!fs.existsSync(DATA_BACKUP_FILE)) return null;
+    const stat = fs.statSync(DATA_BACKUP_FILE);
+    return { size: stat.size, mtime: stat.mtime.toISOString() };
+  } catch(e) { return null; }
+});
+
+ipcMain.handle('restore-lastgood', async () => {
+  try {
+    if (!fs.existsSync(DATA_BACKUP_FILE)) return { success: false, error: 'No lastgood backup found' };
+    const content = fs.readFileSync(DATA_BACKUP_FILE, 'utf-8');
+    const data = JSON.parse(content);
+    fs.writeFileSync(DATA_FILE, content, 'utf-8');
+    return { success: true, data, size: fs.statSync(DATA_BACKUP_FILE).size };
+  } catch(e) { return { success: false, error: e.message }; }
+});
 
 // ── Export backup ────────────────────────────────────────
 ipcMain.handle('export-backup', async (event, { worldId }) => {
