@@ -186,11 +186,13 @@ ipcMain.handle('import-image', async () => {
 });
 
 // ── Import multiple images (returns array) ───────────────
-ipcMain.handle('import-images', async () => {
-  const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+ipcMain.handle('import-images', async (event, opts) => {
+  const dialogOpts = {
     filters: [{ name: 'Images', extensions: IMAGE_EXTS }],
     properties: ['openFile', 'multiSelections']
-  });
+  };
+  if (opts && opts.defaultPath && fs.existsSync(opts.defaultPath)) dialogOpts.defaultPath = opts.defaultPath;
+  const { filePaths } = await dialog.showOpenDialog(mainWindow, dialogOpts);
   if (!filePaths || filePaths.length === 0) return [];
   return filePaths.slice(0, 10).map(fp => ({
     name: path.basename(fp, path.extname(fp)),

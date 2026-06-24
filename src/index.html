@@ -125,7 +125,7 @@
   .char-card:hover { border-color: var(--border2); transform: translateY(-1px); }
   .char-portrait { height: 200px; background: var(--bg3); display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .char-portrait i { font-size: 40px; color: var(--text3); }
-  .char-portrait img { width: 100%; height: 100%; object-fit: cover; }
+  .char-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
   .char-card-body { padding: 12px; }
   .char-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
   .char-display { font-size: 11px; color: var(--accent); margin-bottom: 6px; }
@@ -136,7 +136,7 @@
   .char-detail { display: grid; grid-template-columns: 260px 1fr; gap: 20px; }
   .char-sidebar { display: flex; flex-direction: column; gap: 12px; }
   .char-portrait-lg { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rl); height: 260px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  .char-portrait-lg img { width: 100%; height: 100%; object-fit: cover; }
+  .char-portrait-lg img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
   .char-portrait-lg i { font-size: 64px; color: var(--text3); }
   .info-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--rl); padding: 14px; }
   .info-card h4 { font-size: 11px; font-weight: 600; color: var(--text3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
@@ -233,7 +233,7 @@
   .gallery-item { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; transition: border-color 0.15s; flex-direction: column; gap: 6px; position: relative; }
   .gallery-item:hover { border-color: var(--border2); }
   @keyframes pulse { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }
-  .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+  .gallery-item img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
   .gallery-item i { font-size: 28px; color: var(--text3); }
   .gallery-upload { border: 1.5px dashed var(--border2); }
   .gallery-upload:hover { border-color: var(--accent2); background: var(--accent-dim); }
@@ -282,6 +282,263 @@
 </head>
 <body>
 <div id="root"></div>
+
+<script type="text/javascript">
+// Pure data arrays — extracted from Babel script to keep it under 500KB
+
+const GLOBAL_PLOT_ARCHETYPES = [
+  "Hero's Journey","Coming of Age","Love Triangle","Revenge","Forbidden Love",
+  "Rags to Riches","Underdog","Quest","Sacrifice","Mystery","Betrayal",
+  "Chosen One","Fish Out of Water","Redemption","The Mentor","Parallel Worlds",
+  "Dystopia","Overcoming the Monster","Escape","Survival","War","Discovery",
+  "Identity Crisis","The Double","Voyage and Return","Family Drama","Rebellion",
+  "Time Travel","Apocalypse","Power and Corruption","Redemption Quest",
+  "Unrequited Love","Tragedy","Reincarnation","Survival of the Fittest",
+  "Stranger in a Strange Land","Escape from Death","Forbidden Knowledge",
+  "Society vs Individual","Supernatural Encounter","Body Swap","The Prophecy",
+  "Seeking Home","Framed for a Crime","Wandering Hero","The Masquerade",
+  "Time Loop","Love at First Sight","Human vs Nature","Heir to the Throne",
+  "Corrupting Influence","The Big Game","Cursed Object","Mistaken Identity",
+  "Apocalypse Survival","Immortality Quest","Sworn Enemies","Impossible Love",
+  "Revenge of the Underdog","The Artifact","Betrayal of Trust","Man vs Machine",
+  "Amnesia","Forbidden Power","Madness and Sanity","Race Against Time",
+  "The Last of Their Kind","The Secret Society","Forbidden Journey",
+  "Parental Sacrifice","The MacGuffin","Crime and Punishment","Parallel Lives",
+  "The Fall from Grace","The False Prophecy","Hidden Heir","Cursed Bloodline",
+  "Generation Gap","Navigating the Afterlife","Obsession","The Long Return Home",
+  "Twist of Fate","The Dark Past","The Heirloom","The Final Stand",
+  "The Perfect Crime","The Sacrificial Hero","The Lost Civilization",
+  "The Hidden Enemy","The Time Paradox","The Orphan Seeking Kin",
+  "The Puppet Master","Framed for Betrayal","The Broken Peacemaker",
+  "The Tormented Artist","The Reluctant Leader","The Fallen Mentor",
+  "Mentor's Redemption","The Tinkerer at the Crossroads",
+];
+
+const NATIONALITIES = [
+  {name:"Afghan",region:"Central Asia",adj:"Afghan",currency:"Afghani",languages:["Dari","Pashto"]},
+  {name:"Albanian",region:"Southeast Europe",adj:"Albanian",currency:"Lek",languages:["Albanian"]},
+  {name:"Algerian",region:"North Africa",adj:"Algerian",currency:"Dinar",languages:["Arabic","Tamazight"]},
+  {name:"Argentinian",region:"South America",adj:"Argentinian",currency:"Peso",languages:["Spanish"]},
+  {name:"Armenian",region:"Caucasus",adj:"Armenian",currency:"Dram",languages:["Armenian"]},
+  {name:"Australian",region:"Oceania",adj:"Australian",currency:"Dollar",languages:["English"]},
+  {name:"Austrian",region:"Central Europe",adj:"Austrian",currency:"Euro",languages:["German"]},
+  {name:"Azerbaijani",region:"Caucasus",adj:"Azerbaijani",currency:"Manat",languages:["Azerbaijani"]},
+  {name:"Bangladeshi",region:"South Asia",adj:"Bangladeshi",currency:"Taka",languages:["Bengali"]},
+  {name:"Belgian",region:"Western Europe",adj:"Belgian",currency:"Euro",languages:["Dutch","French","German"]},
+  {name:"Bolivian",region:"South America",adj:"Bolivian",currency:"Boliviano",languages:["Spanish","Quechua","Aymara"]},
+  {name:"Brazilian",region:"South America",adj:"Brazilian",currency:"Real",languages:["Portuguese"]},
+  {name:"British",region:"Western Europe",adj:"British",currency:"Pound",languages:["English"]},
+  {name:"Bulgarian",region:"Southeast Europe",adj:"Bulgarian",currency:"Lev",languages:["Bulgarian"]},
+  {name:"Cambodian",region:"Southeast Asia",adj:"Cambodian",currency:"Riel",languages:["Khmer"]},
+  {name:"Canadian",region:"North America",adj:"Canadian",currency:"Dollar",languages:["English","French"]},
+  {name:"Chilean",region:"South America",adj:"Chilean",currency:"Peso",languages:["Spanish"]},
+  {name:"Chinese",region:"East Asia",adj:"Chinese",currency:"Yuan",languages:["Mandarin"]},
+  {name:"Colombian",region:"South America",adj:"Colombian",currency:"Peso",languages:["Spanish"]},
+  {name:"Croatian",region:"Southeast Europe",adj:"Croatian",currency:"Euro",languages:["Croatian"]},
+  {name:"Cuban",region:"Caribbean",adj:"Cuban",currency:"Peso",languages:["Spanish"]},
+  {name:"Czech",region:"Central Europe",adj:"Czech",currency:"Koruna",languages:["Czech"]},
+  {name:"Danish",region:"Northern Europe",adj:"Danish",currency:"Krone",languages:["Danish"]},
+  {name:"Dominican",region:"Caribbean",adj:"Dominican",currency:"Peso",languages:["Spanish"]},
+  {name:"Dutch",region:"Western Europe",adj:"Dutch",currency:"Euro",languages:["Dutch"]},
+  {name:"Ecuadorian",region:"South America",adj:"Ecuadorian",currency:"Dollar",languages:["Spanish","Quechua"]},
+  {name:"Egyptian",region:"North Africa",adj:"Egyptian",currency:"Pound",languages:["Arabic"]},
+  {name:"Ethiopian",region:"East Africa",adj:"Ethiopian",currency:"Birr",languages:["Amharic","Oromo","Tigrinya"]},
+  {name:"Filipino",region:"Southeast Asia",adj:"Filipino",currency:"Peso",languages:["Filipino","English"]},
+  {name:"Finnish",region:"Northern Europe",adj:"Finnish",currency:"Euro",languages:["Finnish","Swedish"]},
+  {name:"French",region:"Western Europe",adj:"French",currency:"Euro",languages:["French"]},
+  {name:"Georgian",region:"Caucasus",adj:"Georgian",currency:"Lari",languages:["Georgian"]},
+  {name:"German",region:"Central Europe",adj:"German",currency:"Euro",languages:["German"]},
+  {name:"Ghanaian",region:"West Africa",adj:"Ghanaian",currency:"Cedi",languages:["English","Akan"]},
+  {name:"Greek",region:"Southern Europe",adj:"Greek",currency:"Euro",languages:["Greek"]},
+  {name:"Guatemalan",region:"Central America",adj:"Guatemalan",currency:"Quetzal",languages:["Spanish","Mayan languages"]},
+  {name:"Haitian",region:"Caribbean",adj:"Haitian",currency:"Gourde",languages:["Haitian Creole","French"]},
+  {name:"Hungarian",region:"Central Europe",adj:"Hungarian",currency:"Forint",languages:["Hungarian"]},
+  {name:"Indian",region:"South Asia",adj:"Indian",currency:"Rupee",languages:["Hindi","English","Bengali","Tamil","Telugu"]},
+  {name:"Indonesian",region:"Southeast Asia",adj:"Indonesian",currency:"Rupiah",languages:["Indonesian","Javanese"]},
+  {name:"Iranian",region:"Middle East",adj:"Iranian",currency:"Rial",languages:["Persian"]},
+  {name:"Iraqi",region:"Middle East",adj:"Iraqi",currency:"Dinar",languages:["Arabic","Kurdish"]},
+  {name:"Irish",region:"Western Europe",adj:"Irish",currency:"Euro",languages:["English","Irish"]},
+  {name:"Israeli",region:"Middle East",adj:"Israeli",currency:"Shekel",languages:["Hebrew","Arabic"]},
+  {name:"Italian",region:"Southern Europe",adj:"Italian",currency:"Euro",languages:["Italian"]},
+  {name:"Jamaican",region:"Caribbean",adj:"Jamaican",currency:"Dollar",languages:["English","Jamaican Patois"]},
+  {name:"Japanese",region:"East Asia",adj:"Japanese",currency:"Yen",languages:["Japanese"]},
+  {name:"Jordanian",region:"Middle East",adj:"Jordanian",currency:"Dinar",languages:["Arabic"]},
+  {name:"Kazakh",region:"Central Asia",adj:"Kazakh",currency:"Tenge",languages:["Kazakh","Russian"]},
+  {name:"Kenyan",region:"East Africa",adj:"Kenyan",currency:"Shilling",languages:["Swahili","English","Kikuyu"]},
+  {name:"Korean",region:"East Asia",adj:"Korean",currency:"Won",languages:["Korean"]},
+  {name:"Kurdish",region:"Middle East",adj:"Kurdish",currency:"Various",languages:["Kurdish"]},
+  {name:"Laotian",region:"Southeast Asia",adj:"Laotian",currency:"Kip",languages:["Lao"]},
+  {name:"Lebanese",region:"Middle East",adj:"Lebanese",currency:"Pound",languages:["Arabic","French"]},
+  {name:"Libyan",region:"North Africa",adj:"Libyan",currency:"Dinar",languages:["Arabic"]},
+  {name:"Lithuanian",region:"Northern Europe",adj:"Lithuanian",currency:"Euro",languages:["Lithuanian"]},
+  {name:"Malagasy",region:"East Africa",adj:"Malagasy",currency:"Ariary",languages:["Malagasy","French"]},
+  {name:"Malaysian",region:"Southeast Asia",adj:"Malaysian",currency:"Ringgit",languages:["Malay","English","Chinese"]},
+  {name:"Malian",region:"West Africa",adj:"Malian",currency:"CFA Franc",languages:["French","Bambara"]},
+  {name:"Mexican",region:"North America",adj:"Mexican",currency:"Peso",languages:["Spanish","Nahuatl"]},
+  {name:"Mongolian",region:"Central Asia",adj:"Mongolian",currency:"Tugrik",languages:["Mongolian"]},
+  {name:"Moroccan",region:"North Africa",adj:"Moroccan",currency:"Dirham",languages:["Arabic","Tamazight","French"]},
+  {name:"Mozambican",region:"Southern Africa",adj:"Mozambican",currency:"Metical",languages:["Portuguese","Emakhuwa"]},
+  {name:"Myanmar",region:"Southeast Asia",adj:"Burmese",currency:"Kyat",languages:["Burmese"]},
+  {name:"Nepali",region:"South Asia",adj:"Nepali",currency:"Rupee",languages:["Nepali"]},
+  {name:"New Zealander",region:"Oceania",adj:"New Zealander",currency:"Dollar",languages:["English","Maori"]},
+  {name:"Nigerian",region:"West Africa",adj:"Nigerian",currency:"Naira",languages:["English","Hausa","Yoruba","Igbo"]},
+  {name:"Norwegian",region:"Northern Europe",adj:"Norwegian",currency:"Krone",languages:["Norwegian"]},
+  {name:"Pakistani",region:"South Asia",adj:"Pakistani",currency:"Rupee",languages:["Urdu","English","Punjabi"]},
+  {name:"Panamanian",region:"Central America",adj:"Panamanian",currency:"Balboa/Dollar",languages:["Spanish"]},
+  {name:"Paraguayan",region:"South America",adj:"Paraguayan",currency:"Guarani",languages:["Spanish","Guarani"]},
+  {name:"Peruvian",region:"South America",adj:"Peruvian",currency:"Sol",languages:["Spanish","Quechua","Aymara"]},
+  {name:"Polish",region:"Central Europe",adj:"Polish",currency:"Zloty",languages:["Polish"]},
+  {name:"Portuguese",region:"Southern Europe",adj:"Portuguese",currency:"Euro",languages:["Portuguese"]},
+  {name:"Puerto Rican",region:"Caribbean",adj:"Puerto Rican",currency:"Dollar",languages:["Spanish","English"]},
+  {name:"Romanian",region:"Southeast Europe",adj:"Romanian",currency:"Leu",languages:["Romanian"]},
+  {name:"Russian",region:"Eastern Europe/Asia",adj:"Russian",currency:"Ruble",languages:["Russian"]},
+  {name:"Saudi",region:"Middle East",adj:"Saudi",currency:"Riyal",languages:["Arabic"]},
+  {name:"Scottish",region:"Western Europe",adj:"Scottish",currency:"Pound",languages:["English","Scottish Gaelic"]},
+  {name:"Senegalese",region:"West Africa",adj:"Senegalese",currency:"CFA Franc",languages:["French","Wolof"]},
+  {name:"Serbian",region:"Southeast Europe",adj:"Serbian",currency:"Dinar",languages:["Serbian"]},
+  {name:"Singaporean",region:"Southeast Asia",adj:"Singaporean",currency:"Dollar",languages:["English","Mandarin","Malay","Tamil"]},
+  {name:"Somali",region:"East Africa",adj:"Somali",currency:"Shilling",languages:["Somali","Arabic"]},
+  {name:"South African",region:"Southern Africa",adj:"South African",currency:"Rand",languages:["Zulu","Xhosa","Afrikaans","English"]},
+  {name:"Spanish",region:"Southern Europe",adj:"Spanish",currency:"Euro",languages:["Spanish","Catalan","Basque","Galician"]},
+  {name:"Sri Lankan",region:"South Asia",adj:"Sri Lankan",currency:"Rupee",languages:["Sinhala","Tamil"]},
+  {name:"Sudanese",region:"North Africa",adj:"Sudanese",currency:"Pound",languages:["Arabic","English"]},
+  {name:"Swedish",region:"Northern Europe",adj:"Swedish",currency:"Krona",languages:["Swedish"]},
+  {name:"Swiss",region:"Central Europe",adj:"Swiss",currency:"Franc",languages:["German","French","Italian","Romansh"]},
+  {name:"Syrian",region:"Middle East",adj:"Syrian",currency:"Pound",languages:["Arabic","Kurdish"]},
+  {name:"Taiwanese",region:"East Asia",adj:"Taiwanese",currency:"Dollar",languages:["Mandarin","Taiwanese Hokkien"]},
+  {name:"Thai",region:"Southeast Asia",adj:"Thai",currency:"Baht",languages:["Thai"]},
+  {name:"Tunisian",region:"North Africa",adj:"Tunisian",currency:"Dinar",languages:["Arabic","French"]},
+  {name:"Turkish",region:"Middle East/Europe",adj:"Turkish",currency:"Lira",languages:["Turkish"]},
+  {name:"Ukrainian",region:"Eastern Europe",adj:"Ukrainian",currency:"Hryvnia",languages:["Ukrainian","Russian"]},
+  {name:"Uruguayan",region:"South America",adj:"Uruguayan",currency:"Peso",languages:["Spanish"]},
+  {name:"Uzbek",region:"Central Asia",adj:"Uzbek",currency:"Som",languages:["Uzbek","Russian"]},
+  {name:"Venezuelan",region:"South America",adj:"Venezuelan",currency:"Bolivar",languages:["Spanish"]},
+  {name:"Vietnamese",region:"Southeast Asia",adj:"Vietnamese",currency:"Dong",languages:["Vietnamese"]},
+  {name:"Welsh",region:"Western Europe",adj:"Welsh",currency:"Pound",languages:["English","Welsh"]},
+  {name:"Yemeni",region:"Middle East",adj:"Yemeni",currency:"Rial",languages:["Arabic"]},
+  {name:"Zimbabwean",region:"Southern Africa",adj:"Zimbabwean",currency:"Dollar",languages:["Shona","Ndebele","English"]},
+];
+
+const ATTACHMENT_STYLES = [
+  {name:"Secure",desc:"Comfortable with intimacy and independence. Trusts others; communicates needs clearly. Handles conflict without fear of abandonment. Resilient after setbacks."},
+  {name:"Anxious-Preoccupied",desc:"Craves closeness but fears abandonment. Reads too much into small signals. Needs constant reassurance. Can come across as clingy or emotionally intense."},
+  {name:"Dismissive-Avoidant",desc:"Values independence over intimacy. Suppresses emotional needs; sees vulnerability as weakness. Pulls away when others get too close. Can seem emotionally unavailable."},
+  {name:"Fearful-Avoidant",desc:"Wants connection but is terrified of it. Pushes people away then pulls them back. Unpredictable in relationships; often rooted in past trauma or betrayal."},
+];
+
+const JUNGIAN_ARCHETYPES = [
+  {name:"The Hero",desc:"Overcomes adversity through courage and skill. Defined by the quest and the willingness to face the unknown."},
+  {name:"The Shadow",desc:"The dark side of the psyche — the parts of ourselves we repress or deny. Often manifests as the villain."},
+  {name:"The Anima",desc:"The feminine aspect within a male psyche. Represents emotion, intuition, and the unconscious."},
+  {name:"The Animus",desc:"The masculine aspect within a female psyche. Represents logic, drive, and assertiveness."},
+  {name:"The Self",desc:"The unified whole of the personality. The goal of individuation — integrating all aspects of oneself."},
+  {name:"The Trickster",desc:"The rule-breaker and boundary-crosser. Brings chaos but also transformation and new perspectives."},
+  {name:"The Persona",desc:"The mask we wear in public — the social face we present to the world. Can become a trap if over-identified."},
+  {name:"The Wise Old Man",desc:"Represents wisdom, guidance, and knowledge. The mentor figure who appears when the hero needs direction."},
+  {name:"The Great Mother",desc:"Represents nurturing, fertility, and creation — but also destruction and devouring."},
+  {name:"The Child",desc:"Represents innocence, potential, and new beginnings. Also vulnerability and the need for protection."},
+  {name:"The Maiden",desc:"Represents purity, possibility, and the threshold between girlhood and womanhood."},
+  {name:"The Sage",desc:"Seeks truth and wisdom above all else. Values understanding over action."},
+  {name:"The Rebel",desc:"Breaks rules, destroys what is not working. Values revolution and radical change."},
+];
+
+const MBTI_TYPES = [
+  {name:"INTJ — The Architect",desc:"Strategic, independent, private. Sees the big picture; long-term thinker. Can seem cold or arrogant."},
+  {name:"INTP — The Logician",desc:"Analytical, original, reserved. Loves abstract thinking; can lose track of practical matters."},
+  {name:"ENTJ — The Commander",desc:"Bold, decisive, natural leader. Sees inefficiency as a challenge to overcome. Can be domineering."},
+  {name:"ENTP — The Debater",desc:"Smart, curious, loves an intellectual challenge. Plays devil's advocate; avoids routine."},
+  {name:"INFJ — The Advocate",desc:"Principled, compassionate, private. Rare idealist with iron will. Dislikes confrontation."},
+  {name:"INFP — The Mediator",desc:"Poetic, kind, altruistic. Always looking for meaning. Can be impractical or overly idealistic."},
+  {name:"ENFJ — The Protagonist",desc:"Charismatic, inspiring, natural teacher. Genuinely interested in others; can over-extend."},
+  {name:"ENFP — The Campaigner",desc:"Enthusiastic, creative, sociable. Sees life full of possibilities; can be scattered or unfocused."},
+  {name:"ISTJ — The Logistician",desc:"Practical, fact-minded, reliable. Values duty and tradition. Stubborn once decided."},
+  {name:"ISFJ — The Defender",desc:"Warm, dedicated, patient. Committed protectors; tend to repress their own feelings."},
+  {name:"ESTJ — The Executive",desc:"Organized, strong-willed, direct. Great at managing things and people. Can be judgmental."},
+  {name:"ESFJ — The Consul",desc:"Caring, popular, social. Loyal to family and friends; very sensitive to criticism."},
+  {name:"ISTP — The Virtuoso",desc:"Bold, practical, experimental. Masters of tools and crafts; unpredictable and private."},
+  {name:"ISFP — The Adventurer",desc:"Flexible, charming, artistic. Dislikes conflict and rules; lives in the moment."},
+  {name:"ESTP — The Entrepreneur",desc:"Smart, energetic, perceptive. Lives on the edge; jumps in before thinking."},
+  {name:"ESFP — The Entertainer",desc:"Spontaneous, energetic, enthusiastic. Never a dull moment; can be impulsive."},
+];
+
+const LITERARY_ARCHETYPES = [
+  {name:"The Rogue With a Heart of Gold",desc:"Seemingly selfish or aloof, eventually reveals deep honor and willingness to risk all for the right cause."},
+  {name:"The Rebellious Hero",desc:"Rejects societal norms and defies authority, driven by a deeper morality others might not see."},
+  {name:"The Disguised Stranger",desc:"Hides their true identity, often revealing themselves in a pivotal moment."},
+  {name:"The Wandering Bard",desc:"Roams from place to place, both teller of tales and player in them, influencing events subtly."},
+  {name:"The Broken Optimist",desc:"Once believed in the best, but life events have jaded them — now on a path to regain optimism."},
+  {name:"The Gentle Giant",desc:"Imposing in stature but soft at heart; physical strength contrasts with gentle nature."},
+  {name:"The Reluctant Warrior",desc:"Prefers peace, but when pushed displays unmatched skill and determination in combat."},
+  {name:"The Seeker of Vengeance",desc:"Motivated primarily by revenge; their journey questions the costs and morality of that quest."},
+  {name:"The Cursed Wanderer",desc:"Doomed to roam, bearing a curse or tragic past that denies them rest."},
+  {name:"The Melancholic Dreamer",desc:"Often lost in thought, more in tune with the ethereal and artistic, sometimes to their detriment."},
+  {name:"The Enigmatic Scholar",desc:"Holds vast knowledge and is reserved, revealing depths in carefully chosen moments."},
+  {name:"The Fallen Hero",desc:"Once revered but brought down by a flaw or twist of fate; journey of redemption or tragedy."},
+  {name:"The Scheming Artisan",desc:"Talented in their craft but uses it for dubious ends, weaving complex plots."},
+  {name:"The Leader with a Dark Secret",desc:"Exudes confidence and gathers followers, but hides a crucial aspect of their past or intentions."},
+  {name:"The Outlaw Out for Justice",desc:"Operates outside the law for noble causes, challenging what is legal vs moral."},
+  {name:"The Silent Observer",desc:"Speaks little, but their actions and few words hold significant weight or insight."},
+  {name:"The Ethereal Mystic",desc:"Deeply connected with the spiritual or supernatural; their knowledge guides or warns."},
+  {name:"The Puppet Master",desc:"Operates from the shadows, manipulating events and characters to achieve their goals."},
+  {name:"The Defiant Artist",desc:"Uses their art to challenge norms, make political statements, or rebel against established order."},
+  {name:"The Nurturing Guardian",desc:"Offers emotional, spiritual, or physical protection at the risk of their own well-being."},
+  {name:"The Dreamer Awakened",desc:"Once lived in fantasies, but a pivotal event forces them to confront reality."},
+  {name:"The Fallen Noble",desc:"Once in power or prestige but lost it; seeks redemption or a return to former glory."},
+  {name:"The Merchant with a Code",desc:"Engages in commerce (sometimes illicit) but operates on unbreakable personal ethics."},
+  {name:"The Charming Scoundrel",desc:"Engages in morally ambiguous or criminal activities but does so with charm and wit."},
+  {name:"The Ethical Adversary",desc:"Opposes the protagonist out of personal honor or a conflicting sense of right."},
+  {name:"The Reviled Martyr",desc:"Sacrifices for the greater good but receives scorn rather than praise."},
+  {name:"The Mirror Twin",desc:"Bears an uncanny resemblance to another, revealing suppressed traits or desires of the counterpart."},
+  {name:"The Hopeful Outlander",desc:"From a different culture, brings fresh perspectives and optimism, challenging the status quo."},
+  {name:"The Mournful Avenger",desc:"Seeks vengeance not from anger but sorrow, often questioning their own motives."},
+  {name:"The Lighthearted Sage",desc:"Imparts wisdom with humor and a carefree demeanor."},
+  {name:"The Reclusive Genius",desc:"Exceptionally skilled but shuns society due to trauma or disdain for norms."},
+  {name:"The Wild Card",desc:"Unpredictable, with shifting loyalties or unclear motives; adds uncertainty to every situation."},
+  {name:"The Naive Idealist",desc:"Believes in the inherent good of the world, leading to both triumphs and tragedies."},
+  {name:"The Brooding Loner",desc:"Haunted by the past, prefers solitude but is often pulled into affairs against their will."},
+  {name:"The Resilient Survivor",desc:"Has undergone significant trauma; their journey is one of healing and overcoming."},
+  {name:"The Curious Explorer",desc:"Driven by thirst for knowledge, embarking on adventures into uncharted territories."},
+  {name:"The Playful Trickster",desc:"Relies on wit and cunning, playing pranks or deceiving others without necessarily malicious intent."},
+  {name:"The Aging Warrior",desc:"Past their prime but with wealth of experience; seeks one final grand adventure."},
+  {name:"The Benevolent Guide",desc:"Has mystical or otherworldly knowledge, guiding the protagonist on their journey."},
+  {name:"The Outcast with a Secret",desc:"Shunned or misunderstood by society, possesses knowledge or abilities crucial to the plot."},
+  {name:"The Determined Inventor",desc:"Driven by innovation, constantly creating — leading to discoveries or unintended consequences."},
+  {name:"The Cynic with a Hidden Heart",desc:"Appears jaded or sarcastic but eventually reveals deep-seated passion or kindness."},
+  {name:"The Time-Tested Friend",desc:"Has been friends for ages, providing a bridge to the past and unconditional support."},
+  {name:"The Wanderer with No Past",desc:"Arrives from nowhere, unwilling to discuss their past, but plays a crucial role."},
+  {name:"The Prophet of Doom",desc:"Predicts dire events, often dismissed until their prophecies begin to come true."},
+  {name:"The Relentless Pursuer",desc:"Single-minded in their mission, stopping at nothing to achieve their goal."},
+  {name:"The Enthusiastic Amateur",desc:"Lacks professional skills but makes up for it with passion and a can-do attitude."},
+  {name:"The Virtuous Outcast",desc:"Possesses a moral code but is excluded or shunned by mainstream society."},
+  {name:"The Disguised Ruler",desc:"A leader or royalty in hiding, either for protection or to observe their people unnoticed."},
+  {name:"The Fallen Mentor",desc:"Once a guide, they have lost their way — needing redemption or serving as a warning."},
+  {name:"The Ambiguous Ally",desc:"Their allegiance is unclear, keeping characters and audience guessing."},
+  {name:"The Pacifist Warrior",desc:"Skilled in combat but chooses non-violence, only fighting when absolutely necessary."},
+  {name:"The Altruistic Thief",desc:"Steals with noble intentions, often redistributing wealth or righting societal wrongs."},
+  {name:"The Disillusioned Dreamer",desc:"Once held great ideals but faced setbacks, leading to a more cynical worldview."},
+  {name:"The Broken Peacemaker",desc:"Strives for peace but wrestles with personal traumas and internal conflicts."},
+  {name:"The Seeker of Forbidden Truths",desc:"Goes to great lengths to uncover truths others believe should remain hidden."},
+  {name:"The Ethical Mercenary",desc:"Works for hire but has a personal code dictating who they work for and what they will do."},
+  {name:"The Displaced Noble",desc:"Born to privilege but finds themselves in humble circumstances, learning profound lessons."},
+  {name:"The Tormented Artist",desc:"Creates profound art but is plagued by personal demons or societal misunderstandings."},
+  {name:"The Echo from the Past",desc:"Returns from a bygone era or brings old thinking into the present, challenging modern perspectives."},
+  {name:"The Defender of the Lost Cause",desc:"Continues to fight for a cause that most believe is already lost or futile."},
+  {name:"The Hidden Mastermind",desc:"Operates from the shadows; their influence is felt but identity and intentions remain concealed."},
+  {name:"The Star-Crossed Lovers",desc:"Deeply in love but fated for tragedy due to external forces beyond their control."},
+  {name:"The Loyal Retainer",desc:"Unwaveringly dedicated to another, providing support at great personal risk or sacrifice."},
+  {name:"The Forgotten Chronicler",desc:"Records events or truths others overlook, providing a different perspective on history."},
+  {name:"The Guardian at the Crossroads",desc:"Protects a territory or object, testing the protagonist's worthiness."},
+  {name:"The Masked Avenger",desc:"Works in the shadows, hiding their identity as they seek justice or vengeance."},
+  {name:"The Dreamer Bound by Reality",desc:"Aspires for more than their circumstances allow, often leading to bittersweet outcomes."},
+  {name:"The Orphan Seeking Kin",desc:"Driven by a desire to find their true origins or family; journey intertwines with larger events."},
+  {name:"The Benevolent Conqueror",desc:"Seeks to expand their domain with the aim of bringing peace, order, or prosperity."},
+  {name:"The Mournful Avenger (Grief-Driven)",desc:"Seeks vengeance out of sorrow for a personal loss, not anger."},
+  {name:"The Tinkerer at the Crossroads",desc:"Always inventing or tweaking; their creations might bring about significant change or disaster."},
+  {name:"The Scheming Villain with Principles",desc:"Pursues villainous goals but operates within a strict personal code they will not break."},
+  {name:"The Last Defender",desc:"Stands alone or with few allies as the final protector of something precious or sacred."},
+  {name:"The Reluctant Leader",desc:"Thrust into leadership despite resisting it; grows into the role through trial and sacrifice."},
+];
+</script>
 <script type="text/babel">
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 const uuid = () => ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
@@ -339,6 +596,7 @@ function App() {
   const saveTimer = useRef();
 
   const [lastgoodWarning, setLastgoodWarning] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState(null);
 
   // Load data from disk on startup
   useEffect(() => {
@@ -548,7 +806,7 @@ function App() {
     if (!c.companion_folder) return; // no folder assigned, skip
     const {world_id,status,schedule_dates,collections,linked_lorebooks,companion_folder,...rest} = c;
     const exportImage = rest.image?.id ? {id: rest.image.id} : null;
-    const exportPortraits = (rest.portraits||[]).map(p => { const {data,...pRest} = p; return pRest; });
+    const exportPortraits = (rest.portraits||[]).map(p => { const {data,relPath,...pRest} = p; return pRest; });
     const exportBanner = rest.companion_profile_banner_image?.id ? {id: rest.companion_profile_banner_image.id} : undefined;
     const safe = {...rest, image: exportImage, portraits: exportPortraits, companion_profile_banner_image: exportBanner, card: rest.card||' ', example_dialogue: rest.example_dialogue||'', temperature_offset_percentage: rest.temperature_offset_percentage||0};
     window.lorekeeper.saveCompanionJson(c.companion_folder, safe);
@@ -751,7 +1009,8 @@ function App() {
 
   return (
     <div className="app" onClick={()=>setCtxMenu(null)}>
-      {lastgoodWarning&&<div style={{position:'fixed',top:0,left:0,right:0,background:'var(--amber)',color:'#000',padding:'8px 16px',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',justifyContent:'space-between',zIndex:9999}}>
+      {lightboxSrc&&<LightboxModal src={lightboxSrc} onClose={()=>setLightboxSrc(null)}/>}
+        {lastgoodWarning&&<div style={{position:'fixed',top:0,left:0,right:0,background:'var(--amber)',color:'#000',padding:'8px 16px',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',justifyContent:'space-between',zIndex:9999}}>
         <span><i className="ti ti-alert-triangle" style={{marginRight:6}}></i>Data file was corrupted on startup — auto-recovered from last good backup. Verify your data and create a fresh backup zip.</span>
         <button style={{background:'transparent',border:'1px solid rgba(0,0,0,0.3)',borderRadius:4,padding:'3px 10px',cursor:'pointer',fontWeight:600,fontSize:12,marginLeft:16,flexShrink:0}} onClick={()=>setLastgoodWarning(false)}>Dismiss</button>
       </div>}
@@ -849,7 +1108,7 @@ function App() {
           <div className="content" style={{flex:1}} ref={contentRef}>
             {page==='dashboard'&&<DashboardPage calCells={calCells} calYear={calYear} calMonth={calMonth} today={today} selDay={selDay} setSelDay={setSelDay} charsOnDay={charsOnDay} postedOnDay={postedOnDay} calDate={calDate} setCalDate={setCalDate} upcoming={upcoming} data={data} update={update} setSelectedChar={(c,tab)=>openChar(c,tab)} openChar={openChar} openLore={openLore} openColl={openColl} setSelectedWorld={(w,tab)=>{setSelectedWorld(w);if(tab)setWorldTab(tab);setPage('world');}} />}
             {page==='worlds'&&<WorldsPage data={data} setSelectedWorld={w=>{setSelectedWorld(w);setWorldTab('characters');setPage('world');}} setModal={setModal} />}
-            {page==='world'&&selectedWorld&&<WorldDetailPage world={selectedWorld} tab={worldTab} setTab={setWorldTab} worldChars={worldChars} worldLores={worldLores} worldColls={worldColls} worldGallery={worldGallery} setSelectedChar={c=>openChar(c)} setSelectedLore={setSelectedLore} openLore={openLore} openColl={openColl} selectedLore={selectedLore} update={update} setModal={setModal} exportChar={exportChar} exportLore={exportLore} exportColl={exportColl} setPage={setPage} setSelectedWorld={setSelectedWorld} data={data} initialCollId={initialCollId} clearInitialCollId={()=>setInitialCollId(null)} />}
+            {page==='world'&&selectedWorld&&<WorldDetailPage world={selectedWorld} tab={worldTab} setTab={setWorldTab} worldChars={worldChars} worldLores={worldLores} worldColls={worldColls} worldGallery={worldGallery} setSelectedChar={c=>openChar(c)} setSelectedLore={setSelectedLore} openLore={openLore} openColl={openColl} selectedLore={selectedLore} update={update} setModal={setModal} exportChar={exportChar} exportLore={exportLore} exportColl={exportColl} setPage={setPage} setSelectedWorld={setSelectedWorld} data={data} initialCollId={initialCollId} clearInitialCollId={()=>setInitialCollId(null)} setLightboxSrc={setLightboxSrc} />}
             {page==='characters'&&<CharactersPage data={data} setSelectedChar={(c,tab)=>openChar(c,tab)} />}
             {page==='lorebooks'&&<AllLorebooksPage data={data} update={update} exportLore={exportLore} openLore={openLore} />}
             {page==='collections'&&<AllCollectionsPage data={data} update={update} openColl={openColl} exportColl={exportColl} />}
@@ -857,7 +1116,7 @@ function App() {
             {page==='help'&&<HelpPage/>}
             {page==='lore'&&selectedLore&&<LorePage lorebook={selectedLore} data={data} update={update} exportLore={exportLore} initialTab={loreInitialTab} importJSON={importJSON} onBack={()=>{setPage(selectedWorld?'world':'lorebooks');setSelectedLore(null);setLoreInitialTab(null);}} />}
             {page==='collection'&&selectedColl&&<CollPage coll={selectedColl} data={data} update={update} exportColl={exportColl} initialTab={collInitialTab} importJSON={importJSON} openChar={openChar} onBack={()=>{setPage(selectedWorld?'world':'collections');setSelectedColl(null);setCollInitialTab(null);}} />}
-            {page==='char'&&selectedChar&&<CharDetailPage char={selectedChar} data={data} update={update} initialTab={charInitialTab} exportChar={exportChar} importJSON={importJSON} setModal={setModal} onBack={()=>{setCharInitialTab(null);setPage(selectedWorld?'world':'characters');}} />}
+            {page==='char'&&selectedChar&&<CharDetailPage char={selectedChar} data={data} update={update} initialTab={charInitialTab} exportChar={exportChar} importJSON={importJSON} setModal={setModal} setLightboxSrc={setLightboxSrc} onBack={()=>{setCharInitialTab(null);setPage(selectedWorld?'world':'characters');}} />}
             {page==='batch'&&<BatchImportPage data={data} update={update} importJSON={importJSON} exportAll={exportAll} />}
             {page==='templates'&&<TemplatesPage data={data} update={update} newTemplate={newTemplate} clearNew={()=>setNewTemplate(false)} />}
             {page==='personas'&&!selectedPersona&&<PersonasPage data={data} setSelectedPersona={p=>{setSelectedPersona(p);}} />}
@@ -1655,7 +1914,25 @@ function TagSelector({value, onChange, max, showCW, worldChars}) {
 }
 
 
-function GalleryItem({src, label, sublabel, path}) {
+function LightboxModal({src, onClose}) {
+  React.useEffect(()=>{
+    const h=(e)=>{if(e.key==='Escape')onClose();};
+    window.addEventListener('keydown',h);
+    return ()=>window.removeEventListener('keydown',h);
+  },[]);
+  return (
+    <div onClick={onClose} style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',cursor:'zoom-out'}}>
+      <div onClick={e=>e.stopPropagation()} style={{cursor:'default'}}>
+        <ResolvedImg src={src} alt="" style={{maxWidth:'90vw',maxHeight:'90vh',objectFit:'contain',borderRadius:6,boxShadow:'0 4px 40px rgba(0,0,0,0.8)',display:'block'}}/>
+      </div>
+      <button onClick={onClose} style={{position:'absolute',top:16,right:16,background:'rgba(255,255,255,0.1)',border:'none',color:'#fff',width:36,height:36,borderRadius:'50%',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <i className="ti ti-x"></i>
+      </button>
+    </div>
+  );
+}
+
+function GalleryItem({src, label, sublabel, path, onViewFull}) {
   const [dims, setDims] = useState(null);
   const [hover, setHover] = useState(false);
   const ext = path ? path.split('.').pop().toUpperCase() : (src&&src.startsWith('data:'))?src.split(';')[0].split('/')[1].toUpperCase():'';
@@ -1679,6 +1956,7 @@ function GalleryItem({src, label, sublabel, path}) {
           {dims&&<div style={{fontSize:9,color:'var(--accent)'}}>{dims.w} × {dims.h}px</div>}
           {path&&<div style={{fontSize:8,color:'var(--text3)',fontFamily:'monospace',wordBreak:'break-all',lineHeight:1.4,cursor:'pointer'}} title="Click to copy" onClick={e=>{e.stopPropagation();navigator.clipboard.writeText('I:\\Lorekeeper\\'+path.replace(/\//g,'\\'));}}>{'I:\\Lorekeeper\\'+path.replace(/\//g,'\\')}</div>}
           {ext&&<div style={{fontSize:9,color:'var(--text3)'}}>{ext}</div>}
+          {onViewFull&&<button onClick={e=>{e.stopPropagation();onViewFull();}} style={{marginTop:4,background:'rgba(167,139,250,0.2)',border:'1px solid var(--accent)',color:'var(--accent)',borderRadius:3,padding:'2px 8px',fontSize:9,cursor:'pointer'}}>View full</button>}
         </div>
       )}
     </div>
@@ -1700,126 +1978,6 @@ function ResolvedImg({src, alt, style, className, onDims}) {
 
 
 // ── Personality Tool ─────────────────────────────────────
-
-const LITERARY_ARCHETYPES = [
-  {name:"The Rogue With a Heart of Gold",desc:"Seemingly selfish or aloof, eventually reveals deep honor and willingness to risk all for the right cause."},
-  {name:"The Rebellious Hero",desc:"Rejects societal norms and defies authority, driven by a deeper morality others might not see."},
-  {name:"The Disguised Stranger",desc:"Hides their true identity, often revealing themselves in a pivotal moment."},
-  {name:"The Wandering Bard",desc:"Roams from place to place, both teller of tales and player in them, influencing events subtly."},
-  {name:"The Broken Optimist",desc:"Once believed in the best, but life events have jaded them — now on a path to regain optimism."},
-  {name:"The Gentle Giant",desc:"Imposing in stature but soft at heart; physical strength contrasts with gentle nature."},
-  {name:"The Reluctant Warrior",desc:"Prefers peace, but when pushed displays unmatched skill and determination in combat."},
-  {name:"The Seeker of Vengeance",desc:"Motivated primarily by revenge; their journey questions the costs and morality of that quest."},
-  {name:"The Cursed Wanderer",desc:"Doomed to roam, bearing a curse or tragic past that denies them rest."},
-  {name:"The Melancholic Dreamer",desc:"Often lost in thought, more in tune with the ethereal and artistic, sometimes to their detriment."},
-  {name:"The Enigmatic Scholar",desc:"Holds vast knowledge and is reserved, revealing depths in carefully chosen moments."},
-  {name:"The Fallen Hero",desc:"Once revered but brought down by a flaw or twist of fate; journey of redemption or tragedy."},
-  {name:"The Scheming Artisan",desc:"Talented in their craft but uses it for dubious ends, weaving complex plots."},
-  {name:"The Leader with a Dark Secret",desc:"Exudes confidence and gathers followers, but hides a crucial aspect of their past or intentions."},
-  {name:"The Outlaw Out for Justice",desc:"Operates outside the law for noble causes, challenging what is legal vs moral."},
-  {name:"The Silent Observer",desc:"Speaks little, but their actions and few words hold significant weight or insight."},
-  {name:"The Ethereal Mystic",desc:"Deeply connected with the spiritual or supernatural; their knowledge guides or warns."},
-  {name:"The Puppet Master",desc:"Operates from the shadows, manipulating events and characters to achieve their goals."},
-  {name:"The Defiant Artist",desc:"Uses their art to challenge norms, make political statements, or rebel against established order."},
-  {name:"The Nurturing Guardian",desc:"Offers emotional, spiritual, or physical protection at the risk of their own well-being."},
-  {name:"The Dreamer Awakened",desc:"Once lived in fantasies, but a pivotal event forces them to confront reality."},
-  {name:"The Fallen Noble",desc:"Once in power or prestige but lost it; seeks redemption or a return to former glory."},
-  {name:"The Merchant with a Code",desc:"Engages in commerce (sometimes illicit) but operates on unbreakable personal ethics."},
-  {name:"The Charming Scoundrel",desc:"Engages in morally ambiguous or criminal activities but does so with charm and wit."},
-  {name:"The Ethical Adversary",desc:"Opposes the protagonist out of personal honor or a conflicting sense of right."},
-  {name:"The Reviled Martyr",desc:"Sacrifices for the greater good but receives scorn rather than praise."},
-  {name:"The Mirror Twin",desc:"Bears an uncanny resemblance to another, revealing suppressed traits or desires of the counterpart."},
-  {name:"The Hopeful Outlander",desc:"From a different culture, brings fresh perspectives and optimism, challenging the status quo."},
-  {name:"The Mournful Avenger",desc:"Seeks vengeance not from anger but sorrow, often questioning their own motives."},
-  {name:"The Lighthearted Sage",desc:"Imparts wisdom with humor and a carefree demeanor."},
-  {name:"The Reclusive Genius",desc:"Exceptionally skilled but shuns society due to trauma or disdain for norms."},
-  {name:"The Wild Card",desc:"Unpredictable, with shifting loyalties or unclear motives; adds uncertainty to every situation."},
-  {name:"The Naive Idealist",desc:"Believes in the inherent good of the world, leading to both triumphs and tragedies."},
-  {name:"The Brooding Loner",desc:"Haunted by the past, prefers solitude but is often pulled into affairs against their will."},
-  {name:"The Resilient Survivor",desc:"Has undergone significant trauma; their journey is one of healing and overcoming."},
-  {name:"The Curious Explorer",desc:"Driven by thirst for knowledge, embarking on adventures into uncharted territories."},
-  {name:"The Playful Trickster",desc:"Relies on wit and cunning, playing pranks or deceiving others without necessarily malicious intent."},
-  {name:"The Aging Warrior",desc:"Past their prime but with wealth of experience; seeks one final grand adventure."},
-  {name:"The Benevolent Guide",desc:"Has mystical or otherworldly knowledge, guiding the protagonist on their journey."},
-  {name:"The Outcast with a Secret",desc:"Shunned or misunderstood by society, possesses knowledge or abilities crucial to the plot."},
-  {name:"The Determined Inventor",desc:"Driven by innovation, constantly creating — leading to discoveries or unintended consequences."},
-  {name:"The Cynic with a Hidden Heart",desc:"Appears jaded or sarcastic but eventually reveals deep-seated passion or kindness."},
-  {name:"The Time-Tested Friend",desc:"Has been friends for ages, providing a bridge to the past and unconditional support."},
-  {name:"The Wanderer with No Past",desc:"Arrives from nowhere, unwilling to discuss their past, but plays a crucial role."},
-  {name:"The Prophet of Doom",desc:"Predicts dire events, often dismissed until their prophecies begin to come true."},
-  {name:"The Relentless Pursuer",desc:"Single-minded in their mission, stopping at nothing to achieve their goal."},
-  {name:"The Enthusiastic Amateur",desc:"Lacks professional skills but makes up for it with passion and a can-do attitude."},
-  {name:"The Virtuous Outcast",desc:"Possesses a moral code but is excluded or shunned by mainstream society."},
-  {name:"The Disguised Ruler",desc:"A leader or royalty in hiding, either for protection or to observe their people unnoticed."},
-  {name:"The Fallen Mentor",desc:"Once a guide, they have lost their way — needing redemption or serving as a warning."},
-  {name:"The Ambiguous Ally",desc:"Their allegiance is unclear, keeping characters and audience guessing."},
-  {name:"The Pacifist Warrior",desc:"Skilled in combat but chooses non-violence, only fighting when absolutely necessary."},
-  {name:"The Altruistic Thief",desc:"Steals with noble intentions, often redistributing wealth or righting societal wrongs."},
-  {name:"The Disillusioned Dreamer",desc:"Once held great ideals but faced setbacks, leading to a more cynical worldview."},
-  {name:"The Broken Peacemaker",desc:"Strives for peace but wrestles with personal traumas and internal conflicts."},
-  {name:"The Seeker of Forbidden Truths",desc:"Goes to great lengths to uncover truths others believe should remain hidden."},
-  {name:"The Ethical Mercenary",desc:"Works for hire but has a personal code dictating who they work for and what they will do."},
-  {name:"The Displaced Noble",desc:"Born to privilege but finds themselves in humble circumstances, learning profound lessons."},
-  {name:"The Tormented Artist",desc:"Creates profound art but is plagued by personal demons or societal misunderstandings."},
-  {name:"The Echo from the Past",desc:"Returns from a bygone era or brings old thinking into the present, challenging modern perspectives."},
-  {name:"The Defender of the Lost Cause",desc:"Continues to fight for a cause that most believe is already lost or futile."},
-  {name:"The Hidden Mastermind",desc:"Operates from the shadows; their influence is felt but identity and intentions remain concealed."},
-  {name:"The Star-Crossed Lovers",desc:"Deeply in love but fated for tragedy due to external forces beyond their control."},
-  {name:"The Loyal Retainer",desc:"Unwaveringly dedicated to another, providing support at great personal risk or sacrifice."},
-  {name:"The Forgotten Chronicler",desc:"Records events or truths others overlook, providing a different perspective on history."},
-  {name:"The Guardian at the Crossroads",desc:"Protects a territory or object, testing the protagonist's worthiness."},
-  {name:"The Masked Avenger",desc:"Works in the shadows, hiding their identity as they seek justice or vengeance."},
-  {name:"The Dreamer Bound by Reality",desc:"Aspires for more than their circumstances allow, often leading to bittersweet outcomes."},
-  {name:"The Orphan Seeking Kin",desc:"Driven by a desire to find their true origins or family; journey intertwines with larger events."},
-  {name:"The Benevolent Conqueror",desc:"Seeks to expand their domain with the aim of bringing peace, order, or prosperity."},
-  {name:"The Mournful Avenger (Grief-Driven)",desc:"Seeks vengeance out of sorrow for a personal loss, not anger."},
-  {name:"The Tinkerer at the Crossroads",desc:"Always inventing or tweaking; their creations might bring about significant change or disaster."},
-  {name:"The Scheming Villain with Principles",desc:"Pursues villainous goals but operates within a strict personal code they will not break."},
-  {name:"The Last Defender",desc:"Stands alone or with few allies as the final protector of something precious or sacred."},
-  {name:"The Reluctant Leader",desc:"Thrust into leadership despite resisting it; grows into the role through trial and sacrifice."},
-];
-
-const MBTI_TYPES = [
-  {name:"INTJ — The Architect",desc:"Strategic, independent, private. Sees the big picture; long-term thinker. Can seem cold or arrogant."},
-  {name:"INTP — The Logician",desc:"Analytical, original, reserved. Loves abstract thinking; can lose track of practical matters."},
-  {name:"ENTJ — The Commander",desc:"Bold, decisive, natural leader. Sees inefficiency as a challenge to overcome. Can be domineering."},
-  {name:"ENTP — The Debater",desc:"Smart, curious, loves an intellectual challenge. Plays devil's advocate; avoids routine."},
-  {name:"INFJ — The Advocate",desc:"Principled, compassionate, private. Rare idealist with iron will. Dislikes confrontation."},
-  {name:"INFP — The Mediator",desc:"Poetic, kind, altruistic. Always looking for meaning. Can be impractical or overly idealistic."},
-  {name:"ENFJ — The Protagonist",desc:"Charismatic, inspiring, natural teacher. Genuinely interested in others; can over-extend."},
-  {name:"ENFP — The Campaigner",desc:"Enthusiastic, creative, sociable. Sees life full of possibilities; can be scattered or unfocused."},
-  {name:"ISTJ — The Logistician",desc:"Practical, fact-minded, reliable. Values duty and tradition. Stubborn once decided."},
-  {name:"ISFJ — The Defender",desc:"Warm, dedicated, patient. Committed protectors; tend to repress their own feelings."},
-  {name:"ESTJ — The Executive",desc:"Organized, strong-willed, direct. Great at managing things and people. Can be judgmental."},
-  {name:"ESFJ — The Consul",desc:"Caring, popular, social. Loyal to family and friends; very sensitive to criticism."},
-  {name:"ISTP — The Virtuoso",desc:"Bold, practical, experimental. Masters of tools and crafts; unpredictable and private."},
-  {name:"ISFP — The Adventurer",desc:"Flexible, charming, artistic. Dislikes conflict and rules; lives in the moment."},
-  {name:"ESTP — The Entrepreneur",desc:"Smart, energetic, perceptive. Lives on the edge; jumps in before thinking."},
-  {name:"ESFP — The Entertainer",desc:"Spontaneous, energetic, enthusiastic. Never a dull moment; can be impulsive."},
-];
-
-const JUNGIAN_ARCHETYPES = [
-  {name:"The Hero",desc:"Overcomes adversity through courage and skill. Defined by the quest and the willingness to face the unknown."},
-  {name:"The Shadow",desc:"The dark side of the psyche — the parts of ourselves we repress or deny. Often manifests as the villain."},
-  {name:"The Anima",desc:"The feminine aspect within a male psyche. Represents emotion, intuition, and the unconscious."},
-  {name:"The Animus",desc:"The masculine aspect within a female psyche. Represents logic, drive, and assertiveness."},
-  {name:"The Self",desc:"The unified whole of the personality. The goal of individuation — integrating all aspects of oneself."},
-  {name:"The Trickster",desc:"The rule-breaker and boundary-crosser. Brings chaos but also transformation and new perspectives."},
-  {name:"The Persona",desc:"The mask we wear in public — the social face we present to the world. Can become a trap if over-identified."},
-  {name:"The Wise Old Man",desc:"Represents wisdom, guidance, and knowledge. The mentor figure who appears when the hero needs direction."},
-  {name:"The Great Mother",desc:"Represents nurturing, fertility, and creation — but also destruction and devouring."},
-  {name:"The Child",desc:"Represents innocence, potential, and new beginnings. Also vulnerability and the need for protection."},
-  {name:"The Maiden",desc:"Represents purity, possibility, and the threshold between girlhood and womanhood."},
-  {name:"The Sage",desc:"Seeks truth and wisdom above all else. Values understanding over action."},
-  {name:"The Rebel",desc:"Breaks rules, destroys what is not working. Values revolution and radical change."},
-];
-
-const ATTACHMENT_STYLES = [
-  {name:"Secure",desc:"Comfortable with intimacy and independence. Trusts others; communicates needs clearly. Handles conflict without fear of abandonment. Resilient after setbacks."},
-  {name:"Anxious-Preoccupied",desc:"Craves closeness but fears abandonment. Reads too much into small signals. Needs constant reassurance. Can come across as clingy or emotionally intense."},
-  {name:"Dismissive-Avoidant",desc:"Values independence over intimacy. Suppresses emotional needs; sees vulnerability as weakness. Pulls away when others get too close. Can seem emotionally unavailable."},
-  {name:"Fearful-Avoidant",desc:"Wants connection but is terrified of it. Pushes people away then pulls them back. Unpredictable in relationships; often rooted in past trauma or betrayal."},
-];
 
 
 
@@ -1936,111 +2094,6 @@ function PlotArchetypeInput({worldId, update}) {
 
 
 // ── Nationality Tool ─────────────────────────────────────
-
-const NATIONALITIES = [
-  {name:"Afghan",region:"Central Asia",adj:"Afghan",currency:"Afghani",languages:["Dari","Pashto"]},
-  {name:"Albanian",region:"Southeast Europe",adj:"Albanian",currency:"Lek",languages:["Albanian"]},
-  {name:"Algerian",region:"North Africa",adj:"Algerian",currency:"Dinar",languages:["Arabic","Tamazight"]},
-  {name:"Argentinian",region:"South America",adj:"Argentinian",currency:"Peso",languages:["Spanish"]},
-  {name:"Armenian",region:"Caucasus",adj:"Armenian",currency:"Dram",languages:["Armenian"]},
-  {name:"Australian",region:"Oceania",adj:"Australian",currency:"Dollar",languages:["English"]},
-  {name:"Austrian",region:"Central Europe",adj:"Austrian",currency:"Euro",languages:["German"]},
-  {name:"Azerbaijani",region:"Caucasus",adj:"Azerbaijani",currency:"Manat",languages:["Azerbaijani"]},
-  {name:"Bangladeshi",region:"South Asia",adj:"Bangladeshi",currency:"Taka",languages:["Bengali"]},
-  {name:"Belgian",region:"Western Europe",adj:"Belgian",currency:"Euro",languages:["Dutch","French","German"]},
-  {name:"Bolivian",region:"South America",adj:"Bolivian",currency:"Boliviano",languages:["Spanish","Quechua","Aymara"]},
-  {name:"Brazilian",region:"South America",adj:"Brazilian",currency:"Real",languages:["Portuguese"]},
-  {name:"British",region:"Western Europe",adj:"British",currency:"Pound",languages:["English"]},
-  {name:"Bulgarian",region:"Southeast Europe",adj:"Bulgarian",currency:"Lev",languages:["Bulgarian"]},
-  {name:"Cambodian",region:"Southeast Asia",adj:"Cambodian",currency:"Riel",languages:["Khmer"]},
-  {name:"Canadian",region:"North America",adj:"Canadian",currency:"Dollar",languages:["English","French"]},
-  {name:"Chilean",region:"South America",adj:"Chilean",currency:"Peso",languages:["Spanish"]},
-  {name:"Chinese",region:"East Asia",adj:"Chinese",currency:"Yuan",languages:["Mandarin"]},
-  {name:"Colombian",region:"South America",adj:"Colombian",currency:"Peso",languages:["Spanish"]},
-  {name:"Croatian",region:"Southeast Europe",adj:"Croatian",currency:"Euro",languages:["Croatian"]},
-  {name:"Cuban",region:"Caribbean",adj:"Cuban",currency:"Peso",languages:["Spanish"]},
-  {name:"Czech",region:"Central Europe",adj:"Czech",currency:"Koruna",languages:["Czech"]},
-  {name:"Danish",region:"Northern Europe",adj:"Danish",currency:"Krone",languages:["Danish"]},
-  {name:"Dominican",region:"Caribbean",adj:"Dominican",currency:"Peso",languages:["Spanish"]},
-  {name:"Dutch",region:"Western Europe",adj:"Dutch",currency:"Euro",languages:["Dutch"]},
-  {name:"Ecuadorian",region:"South America",adj:"Ecuadorian",currency:"Dollar",languages:["Spanish","Quechua"]},
-  {name:"Egyptian",region:"North Africa",adj:"Egyptian",currency:"Pound",languages:["Arabic"]},
-  {name:"Ethiopian",region:"East Africa",adj:"Ethiopian",currency:"Birr",languages:["Amharic","Oromo","Tigrinya"]},
-  {name:"Filipino",region:"Southeast Asia",adj:"Filipino",currency:"Peso",languages:["Filipino","English"]},
-  {name:"Finnish",region:"Northern Europe",adj:"Finnish",currency:"Euro",languages:["Finnish","Swedish"]},
-  {name:"French",region:"Western Europe",adj:"French",currency:"Euro",languages:["French"]},
-  {name:"Georgian",region:"Caucasus",adj:"Georgian",currency:"Lari",languages:["Georgian"]},
-  {name:"German",region:"Central Europe",adj:"German",currency:"Euro",languages:["German"]},
-  {name:"Ghanaian",region:"West Africa",adj:"Ghanaian",currency:"Cedi",languages:["English","Akan"]},
-  {name:"Greek",region:"Southern Europe",adj:"Greek",currency:"Euro",languages:["Greek"]},
-  {name:"Guatemalan",region:"Central America",adj:"Guatemalan",currency:"Quetzal",languages:["Spanish","Mayan languages"]},
-  {name:"Haitian",region:"Caribbean",adj:"Haitian",currency:"Gourde",languages:["Haitian Creole","French"]},
-  {name:"Hungarian",region:"Central Europe",adj:"Hungarian",currency:"Forint",languages:["Hungarian"]},
-  {name:"Indian",region:"South Asia",adj:"Indian",currency:"Rupee",languages:["Hindi","English","Bengali","Tamil","Telugu"]},
-  {name:"Indonesian",region:"Southeast Asia",adj:"Indonesian",currency:"Rupiah",languages:["Indonesian","Javanese"]},
-  {name:"Iranian",region:"Middle East",adj:"Iranian",currency:"Rial",languages:["Persian"]},
-  {name:"Iraqi",region:"Middle East",adj:"Iraqi",currency:"Dinar",languages:["Arabic","Kurdish"]},
-  {name:"Irish",region:"Western Europe",adj:"Irish",currency:"Euro",languages:["English","Irish"]},
-  {name:"Israeli",region:"Middle East",adj:"Israeli",currency:"Shekel",languages:["Hebrew","Arabic"]},
-  {name:"Italian",region:"Southern Europe",adj:"Italian",currency:"Euro",languages:["Italian"]},
-  {name:"Jamaican",region:"Caribbean",adj:"Jamaican",currency:"Dollar",languages:["English","Jamaican Patois"]},
-  {name:"Japanese",region:"East Asia",adj:"Japanese",currency:"Yen",languages:["Japanese"]},
-  {name:"Jordanian",region:"Middle East",adj:"Jordanian",currency:"Dinar",languages:["Arabic"]},
-  {name:"Kazakh",region:"Central Asia",adj:"Kazakh",currency:"Tenge",languages:["Kazakh","Russian"]},
-  {name:"Kenyan",region:"East Africa",adj:"Kenyan",currency:"Shilling",languages:["Swahili","English","Kikuyu"]},
-  {name:"Korean",region:"East Asia",adj:"Korean",currency:"Won",languages:["Korean"]},
-  {name:"Kurdish",region:"Middle East",adj:"Kurdish",currency:"Various",languages:["Kurdish"]},
-  {name:"Laotian",region:"Southeast Asia",adj:"Laotian",currency:"Kip",languages:["Lao"]},
-  {name:"Lebanese",region:"Middle East",adj:"Lebanese",currency:"Pound",languages:["Arabic","French"]},
-  {name:"Libyan",region:"North Africa",adj:"Libyan",currency:"Dinar",languages:["Arabic"]},
-  {name:"Lithuanian",region:"Northern Europe",adj:"Lithuanian",currency:"Euro",languages:["Lithuanian"]},
-  {name:"Malagasy",region:"East Africa",adj:"Malagasy",currency:"Ariary",languages:["Malagasy","French"]},
-  {name:"Malaysian",region:"Southeast Asia",adj:"Malaysian",currency:"Ringgit",languages:["Malay","English","Chinese"]},
-  {name:"Malian",region:"West Africa",adj:"Malian",currency:"CFA Franc",languages:["French","Bambara"]},
-  {name:"Mexican",region:"North America",adj:"Mexican",currency:"Peso",languages:["Spanish","Nahuatl"]},
-  {name:"Mongolian",region:"Central Asia",adj:"Mongolian",currency:"Tugrik",languages:["Mongolian"]},
-  {name:"Moroccan",region:"North Africa",adj:"Moroccan",currency:"Dirham",languages:["Arabic","Tamazight","French"]},
-  {name:"Mozambican",region:"Southern Africa",adj:"Mozambican",currency:"Metical",languages:["Portuguese","Emakhuwa"]},
-  {name:"Myanmar",region:"Southeast Asia",adj:"Burmese",currency:"Kyat",languages:["Burmese"]},
-  {name:"Nepali",region:"South Asia",adj:"Nepali",currency:"Rupee",languages:["Nepali"]},
-  {name:"New Zealander",region:"Oceania",adj:"New Zealander",currency:"Dollar",languages:["English","Maori"]},
-  {name:"Nigerian",region:"West Africa",adj:"Nigerian",currency:"Naira",languages:["English","Hausa","Yoruba","Igbo"]},
-  {name:"Norwegian",region:"Northern Europe",adj:"Norwegian",currency:"Krone",languages:["Norwegian"]},
-  {name:"Pakistani",region:"South Asia",adj:"Pakistani",currency:"Rupee",languages:["Urdu","English","Punjabi"]},
-  {name:"Panamanian",region:"Central America",adj:"Panamanian",currency:"Balboa/Dollar",languages:["Spanish"]},
-  {name:"Paraguayan",region:"South America",adj:"Paraguayan",currency:"Guarani",languages:["Spanish","Guarani"]},
-  {name:"Peruvian",region:"South America",adj:"Peruvian",currency:"Sol",languages:["Spanish","Quechua","Aymara"]},
-  {name:"Polish",region:"Central Europe",adj:"Polish",currency:"Zloty",languages:["Polish"]},
-  {name:"Portuguese",region:"Southern Europe",adj:"Portuguese",currency:"Euro",languages:["Portuguese"]},
-  {name:"Puerto Rican",region:"Caribbean",adj:"Puerto Rican",currency:"Dollar",languages:["Spanish","English"]},
-  {name:"Romanian",region:"Southeast Europe",adj:"Romanian",currency:"Leu",languages:["Romanian"]},
-  {name:"Russian",region:"Eastern Europe/Asia",adj:"Russian",currency:"Ruble",languages:["Russian"]},
-  {name:"Saudi",region:"Middle East",adj:"Saudi",currency:"Riyal",languages:["Arabic"]},
-  {name:"Scottish",region:"Western Europe",adj:"Scottish",currency:"Pound",languages:["English","Scottish Gaelic"]},
-  {name:"Senegalese",region:"West Africa",adj:"Senegalese",currency:"CFA Franc",languages:["French","Wolof"]},
-  {name:"Serbian",region:"Southeast Europe",adj:"Serbian",currency:"Dinar",languages:["Serbian"]},
-  {name:"Singaporean",region:"Southeast Asia",adj:"Singaporean",currency:"Dollar",languages:["English","Mandarin","Malay","Tamil"]},
-  {name:"Somali",region:"East Africa",adj:"Somali",currency:"Shilling",languages:["Somali","Arabic"]},
-  {name:"South African",region:"Southern Africa",adj:"South African",currency:"Rand",languages:["Zulu","Xhosa","Afrikaans","English"]},
-  {name:"Spanish",region:"Southern Europe",adj:"Spanish",currency:"Euro",languages:["Spanish","Catalan","Basque","Galician"]},
-  {name:"Sri Lankan",region:"South Asia",adj:"Sri Lankan",currency:"Rupee",languages:["Sinhala","Tamil"]},
-  {name:"Sudanese",region:"North Africa",adj:"Sudanese",currency:"Pound",languages:["Arabic","English"]},
-  {name:"Swedish",region:"Northern Europe",adj:"Swedish",currency:"Krona",languages:["Swedish"]},
-  {name:"Swiss",region:"Central Europe",adj:"Swiss",currency:"Franc",languages:["German","French","Italian","Romansh"]},
-  {name:"Syrian",region:"Middle East",adj:"Syrian",currency:"Pound",languages:["Arabic","Kurdish"]},
-  {name:"Taiwanese",region:"East Asia",adj:"Taiwanese",currency:"Dollar",languages:["Mandarin","Taiwanese Hokkien"]},
-  {name:"Thai",region:"Southeast Asia",adj:"Thai",currency:"Baht",languages:["Thai"]},
-  {name:"Tunisian",region:"North Africa",adj:"Tunisian",currency:"Dinar",languages:["Arabic","French"]},
-  {name:"Turkish",region:"Middle East/Europe",adj:"Turkish",currency:"Lira",languages:["Turkish"]},
-  {name:"Ukrainian",region:"Eastern Europe",adj:"Ukrainian",currency:"Hryvnia",languages:["Ukrainian","Russian"]},
-  {name:"Uruguayan",region:"South America",adj:"Uruguayan",currency:"Peso",languages:["Spanish"]},
-  {name:"Uzbek",region:"Central Asia",adj:"Uzbek",currency:"Som",languages:["Uzbek","Russian"]},
-  {name:"Venezuelan",region:"South America",adj:"Venezuelan",currency:"Bolivar",languages:["Spanish"]},
-  {name:"Vietnamese",region:"Southeast Asia",adj:"Vietnamese",currency:"Dong",languages:["Vietnamese"]},
-  {name:"Welsh",region:"Western Europe",adj:"Welsh",currency:"Pound",languages:["English","Welsh"]},
-  {name:"Yemeni",region:"Middle East",adj:"Yemeni",currency:"Rial",languages:["Arabic"]},
-  {name:"Zimbabwean",region:"Southern Africa",adj:"Zimbabwean",currency:"Dollar",languages:["Shona","Ndebele","English"]},
-];
 
 const REGIONS = ['All',...[...new Set(NATIONALITIES.map(n=>n.region))].sort()];
 
@@ -2348,34 +2401,6 @@ function PersonalityTool() {
 
 // ── Plot Archetypes Tool ──────────────────────────────────
 
-const GLOBAL_PLOT_ARCHETYPES = [
-  "Hero's Journey","Coming of Age","Love Triangle","Revenge","Forbidden Love",
-  "Rags to Riches","Underdog","Quest","Sacrifice","Mystery","Betrayal",
-  "Chosen One","Fish Out of Water","Redemption","The Mentor","Parallel Worlds",
-  "Dystopia","Overcoming the Monster","Escape","Survival","War","Discovery",
-  "Identity Crisis","The Double","Voyage and Return","Family Drama","Rebellion",
-  "Time Travel","Apocalypse","Power and Corruption","Redemption Quest",
-  "Unrequited Love","Tragedy","Reincarnation","Survival of the Fittest",
-  "Stranger in a Strange Land","Escape from Death","Forbidden Knowledge",
-  "Society vs Individual","Supernatural Encounter","Body Swap","The Prophecy",
-  "Seeking Home","Framed for a Crime","Wandering Hero","The Masquerade",
-  "Time Loop","Love at First Sight","Human vs Nature","Heir to the Throne",
-  "Corrupting Influence","The Big Game","Cursed Object","Mistaken Identity",
-  "Apocalypse Survival","Immortality Quest","Sworn Enemies","Impossible Love",
-  "Revenge of the Underdog","The Artifact","Betrayal of Trust","Man vs Machine",
-  "Amnesia","Forbidden Power","Madness and Sanity","Race Against Time",
-  "The Last of Their Kind","The Secret Society","Forbidden Journey",
-  "Parental Sacrifice","The MacGuffin","Crime and Punishment","Parallel Lives",
-  "The Fall from Grace","The False Prophecy","Hidden Heir","Cursed Bloodline",
-  "Generation Gap","Navigating the Afterlife","Obsession","The Long Return Home",
-  "Twist of Fate","The Dark Past","The Heirloom","The Final Stand",
-  "The Perfect Crime","The Sacrificial Hero","The Lost Civilization",
-  "The Hidden Enemy","The Time Paradox","The Orphan Seeking Kin",
-  "The Puppet Master","Framed for Betrayal","The Broken Peacemaker",
-  "The Tormented Artist","The Reluctant Leader","The Fallen Mentor",
-  "Mentor's Redemption","The Tinkerer at the Crossroads",
-];
-
 
 const PLOT_DESCRIPTIONS = {
   "Hero's Journey":"A protagonist embarks on an adventurous quest, facing challenges and mentors, ultimately transforming to achieve a goal.",
@@ -2543,7 +2568,7 @@ function PlotTool({data}) {
   );
 }
 
-function ImgFromPath({src, alt, style, className}) {
+function ImgFromPath({src, alt, style, className, onClick}) {
   const [resolved, setResolved] = React.useState(null);
   React.useEffect(()=>{
     if(!src) { setResolved(null); return; }
@@ -2554,8 +2579,8 @@ function ImgFromPath({src, alt, style, className}) {
       setResolved(b64||null);
     }).catch(e=>console.error('ImgFromPath error for', src, e));
   }, [src]);
-  if(!resolved) return <div style={{...style, background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center'}}><i className="ti ti-photo" style={{color:'var(--text3)',fontSize:20}}></i></div>;
-  return <img src={resolved} alt={alt||''} style={style} className={className}/>;
+  if(!resolved) return <div style={{...style, background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={onClick}><i className="ti ti-photo" style={{color:'var(--text3)',fontSize:20}}></i></div>;
+  return <img src={resolved} alt={alt||''} style={style} className={className} onClick={onClick}/>;
 }
 
 // Returns display src from image object {data, path, relPath}
@@ -3315,7 +3340,7 @@ function WorldsPage({data,setSelectedWorld,setModal}) {
   );
 }
 
-function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worldGallery,setSelectedChar,setSelectedLore,openLore,openColl,selectedLore,update,setModal,exportChar,exportLore,exportColl,setPage,setSelectedWorld,data,initialCollId,clearInitialCollId}) {
+function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worldGallery,setSelectedChar,setSelectedLore,openLore,openColl,selectedLore,update,setModal,exportChar,exportLore,exportColl,setPage,setSelectedWorld,data,initialCollId,clearInitialCollId,setLightboxSrc}) {
   const tabs=[['characters','ti-users','Characters'],['lorebooks','ti-book','Lorebooks'],['collections','ti-folders','Collections'],['gallery','ti-photo','Gallery'],['info','ti-info-circle','World Info']];
   const notesFileTimer = React.useRef();
   const saveWorldNotesBackup = (val) => {
@@ -3395,7 +3420,7 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
           <div className="gallery-grid">
             <div className="gallery-item gallery-upload" onClick={handleGalleryUpload}><i className="ti ti-cloud-upload" style={{fontSize:28}}></i><span>Upload image</span></div>
             {/* manually uploaded gallery images */}
-            {worldGallery.map(g=><GalleryItem key={g.id} src={g.data||g.relPath} label={g.name} path={g.relPath}/>)}
+            {worldGallery.map(g=><GalleryItem key={g.id} src={g.data||g.relPath} label={g.name} path={g.relPath} onViewFull={()=>setLightboxSrc(g.data||g.relPath)}/>)}
             {/* character portraits and portrait slots */}
             {worldChars.flatMap(c=>[
               getImgSrc(c.image) && <GalleryItem key={`${c.id}-main`} src={getImgSrc(c.image)} label={c.name} sublabel="portrait" path={c.image?.relPath}/>,
@@ -4025,7 +4050,7 @@ function CharactersPage({data,setSelectedChar}) {
   );
 }
 
-function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setModal,onBack}) {
+function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setModal,setLightboxSrc,onBack}) {
   const updChar=(fn)=>update(d=>{
     const c=d.characters.find(x=>x.id===char.id);
     if(c){
@@ -4183,7 +4208,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                     <div style={{position:'absolute',top:6,left:6,zIndex:2,background:'rgba(0,0,0,0.45)',borderRadius:4,padding:'2px 4px',lineHeight:1}}>
                       <i className="ti ti-grip-vertical" style={{color:'#fff',fontSize:13,opacity:0.8}}></i>
                     </div>
-                    {(p.data||p.relPath) ? <ImgFromPath src={p.data||p.relPath} alt={p.name} style={{width:'100%',aspectRatio:'3/4',objectFit:'cover',display:'block'}}/> : 
+                    {(p.data||p.relPath) ? <ImgFromPath src={p.data||p.relPath} alt={p.name} style={{width:'100%',aspectRatio:'3/4',objectFit:'cover',objectPosition:'top',display:'block'}}/> : 
                     <div style={{width:'100%',aspectRatio:'3/4',display:'flex',alignItems:'center',justifyContent:'center'}}>
                       <i className="ti ti-user" style={{fontSize:36,color:'var(--text3)'}}></i>
                     </div>}
@@ -4199,6 +4224,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                       <input value={p.description||''} onChange={e=>updChar(c=>c.portraits[i].description=e.target.value)} placeholder="Description (required by site)" style={{width:'100%',background:'var(--bg2)',border:p.description?'1px solid var(--border)':'1px solid var(--amber)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',marginTop:4}}/>
                       <div style={{display:'flex',gap:4,marginTop:6}}>
                         <button className="btn" style={{flex:1,justifyContent:'center',padding:'3px',fontSize:11}} onClick={async()=>{const r=await window.lorekeeper.importImage();if(r)updChar(c=>c.portraits[i].data=r.base64);}}><i className="ti ti-photo"></i></button>
+                        {(p.data||p.relPath)&&<button className="btn" style={{padding:'3px 5px',fontSize:11}} onClick={()=>setLightboxSrc(p.data||p.relPath)} title="View full image"><i className="ti ti-zoom-in" style={{fontSize:12}}></i></button>}
                         <button className="btn danger" style={{padding:'3px 6px',fontSize:11}} onClick={()=>updChar(c=>c.portraits.splice(i,1))}><i className="ti ti-x"></i></button>
                       </div>
                     </div>
@@ -4207,8 +4233,21 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                 {(charData.portraits||[]).length < 10 && (
                   <div style={{display:'flex',flexDirection:'column',gap:6}}>
                     <button className="btn" style={{aspectRatio:'3/4',width:'100%',flexDirection:'column',gap:6,justifyContent:'center',border:'1.5px dashed var(--border2)'}} onClick={async()=>{
-                      const imgs=await window.lorekeeper.importImages();
-                      if(imgs&&imgs.length>0) updChar(c=>{if(!c.portraits)c.portraits=[];const slots=10-c.portraits.length;imgs.slice(0,slots).forEach(img=>c.portraits.push({name:img.name,description:'',very_sus:false,data:img.base64}));});
+                      const dp=await window.lorekeeper.getDataPath();
+                      const cDir=charData.companion_folder?dp+'\\Companions\\'+charData.companion_folder:dp+'\\Companions';
+                      const imgs=await window.lorekeeper.importImages({defaultPath:cDir});
+                      if(!imgs||!imgs.length) return;
+                      const slots=10-(charData.portraits||[]).length;
+                      const toAdd=imgs.slice(0,slots);
+                      const destFolder='Companions'+(charData.companion_folder?'/'+charData.companion_folder:'');
+                      const copies=await Promise.all(toAdd.map(img=>window.lorekeeper.copyImageToFolder({srcPath:img.srcPath,destFolder})));
+                      updChar(c=>{
+                        if(!c.portraits)c.portraits=[];
+                        toAdd.forEach((img,idx)=>{
+                          const res=copies[idx];
+                          c.portraits.push({name:img.name,description:'',very_sus:false,data:res?null:img.base64,relPath:res?res.relPath:null});
+                        });
+                      });
                     }}><i className="ti ti-plus" style={{fontSize:24}}></i><span style={{fontSize:11}}>Add portraits</span></button>
                   </div>
                 )}
@@ -4221,15 +4260,29 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                 <label>Linked Lorebooks</label>
                 <p style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>Lorebooks attached to this character. Can span across worlds.</p>
                 {data.lorebooks.length===0 ? <p className="text-muted">No lorebooks exist yet. Create one inside a world first.</p> :
-                  Object.entries(data.lorebooks.reduce((acc,l)=>{
-                    const w=data.worlds.find(x=>x.id===l.world_id);
-                    const wname=w?.name||'No World';
-                    if(!acc[wname])acc[wname]=[];
-                    acc[wname].push(l);
-                    return acc;
-                  },{})).map(([wname,lores])=>(
+                  (()=>{
+                    const grouped=data.lorebooks.reduce((acc,l)=>{
+                      const w=data.worlds.find(x=>x.id===l.world_id);
+                      const key=w?.id||'__none__';
+                      if(!acc[key])acc[key]={name:w?.name||'No World',emoji:w?.emoji||'',lores:[]};
+                      acc[key].lores.push(l);
+                      return acc;
+                    },{});
+                    // Put character's own world first, then alphabetically
+                    const ownId=charData.world_id||'__none__';
+                    const keys=Object.keys(grouped).sort((a,b)=>{
+                      if(a===ownId) return -1;
+                      if(b===ownId) return 1;
+                      if(a==='__none__') return 1;
+                      if(b==='__none__') return -1;
+                      return grouped[a].name.localeCompare(grouped[b].name);
+                    });
+                    return keys.map(key=>{
+                      const {name:wname,emoji:wemoji,lores}=grouped[key];
+                      const wname_display=wemoji?wemoji+' '+wname:wname;
+                      return (
                     <div key={wname} style={{marginBottom:12}}>
-                      <div style={{fontSize:11,color:'var(--text3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>{wname}</div>
+                      <div style={{fontSize:11,color:'var(--text3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>{wname_display}</div>
                       {lores.map(l=>{
                         const linked=(charData.linked_lorebooks||[]).includes(l.id);
                         return <div key={l.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:linked?'var(--accent-dim)':'var(--bg3)',border:linked?'1px solid var(--accent2)':'1px solid var(--border)',borderRadius:'var(--r)',marginBottom:4,cursor:'pointer',transition:'all 0.15s'}} onClick={()=>updChar(c=>{if(!c.linked_lorebooks)c.linked_lorebooks=[];if(c.linked_lorebooks.includes(l.id)){c.linked_lorebooks=c.linked_lorebooks.filter(x=>x!==l.id);}else{c.linked_lorebooks.push(l.id);}})}>
@@ -4242,7 +4295,9 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                         </div>;
                       })}
                     </div>
-                  ))
+                      );
+                    });
+                  })()
                 }
               </div>
               {(charData.linked_lorebooks||[]).length>0&&(

@@ -6,7 +6,7 @@ contextBridge.exposeInMainWorld('lorekeeper', {
   exportFile: (opts) => ipcRenderer.invoke('export-file', opts),
   importFile: () => ipcRenderer.invoke('import-file'),
   importImage: () => ipcRenderer.invoke('import-image'),
-  importImages: () => ipcRenderer.invoke('import-images'),
+  importImages: (opts) => ipcRenderer.invoke('import-images', opts),
   readImagePath: (relPath) => ipcRenderer.invoke('read-image-path', relPath),
   scanCompanions: () => ipcRenderer.invoke('scan-companions'),
   scanLorebooks: () => ipcRenderer.invoke('scan-lorebooks'),
