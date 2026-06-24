@@ -4099,7 +4099,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
       else if(pt.image&&!pt.image.id&&c.image?.id) pt.image.id=c.image.id;
     });
   },[charData.id]);
-  const tabs=[['identity','Identity'],['description','Full Description'],['card','Character Card'],['formatting','Formatting'],['dialogue','Example Dialogue'],['scenarios','Scenarios'],['portraits','Portraits'],['lorebooks','Lorebooks'],['collections','Collections'],['settings','Settings'],['schedule','Schedule'],['lore-entry','Lorebook Entry'],['export','Export']];
+  const tabs=[['identity','Identity'],['description','Full Description'],['card','Character Card'],['formatting','Formatting'],['scenarios','Scenarios'],['portraits','Portraits'],['lorebooks','Lorebooks'],['collections','Collections'],['settings','Settings'],['schedule','Schedule'],['lore-entry','Lorebook Entry']];
   return (
     <div>
       <div className="breadcrumb" onClick={onBack}><i className="ti ti-arrow-left"></i><span>Back</span><i className="ti ti-chevron-right"></i><span>{charData.name}</span></div>
@@ -4162,11 +4162,11 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
           )}
           {tab==='description'&&<div className="field-block"><label>Full Description</label><MdField value={charData.full_description||''} onChange={e=>updChar(c=>c.full_description=e.target.value)} style={{minHeight:460}}/></div>}
           {tab==='card'&&<div className="field-block"><label>Character Card</label><MacroReference/><MdField value={charData.card||''} onChange={e=>updChar(c=>c.card=e.target.value)} style={{minHeight:500}} monospace={true} placeholder="Paste your character card / system prompt here…"/></div>}
-          {tab==='dialogue'&&<div className="field-block"><label>Example Dialogue</label><textarea value={charData.example_dialogue||''} onChange={e=>updChar(c=>c.example_dialogue=e.target.value)} style={{minHeight:460,lineHeight:1.7}} placeholder="Example dialogue showing how the character speaks in different emotional states…"/></div>}
           {tab==='formatting'&&(
             <div style={{display:'flex',flexDirection:'column',gap:12}}>
               <div className="field-block"><label>Formatting Instructions</label><textarea value={charData.formatting_instructions||''} onChange={e=>updChar(c=>c.formatting_instructions=e.target.value)} style={{minHeight:200}}/></div>
               <div className="field-block"><label>Advanced Prompt</label><textarea value={charData.advanced_prompt||''} onChange={e=>updChar(c=>c.advanced_prompt=e.target.value)} style={{minHeight:140}}/></div>
+              <div className="field-block"><label>Example Dialogue</label><textarea value={charData.example_dialogue||''} onChange={e=>updChar(c=>c.example_dialogue=e.target.value)} style={{minHeight:200}} placeholder="Example dialogue showing how the character speaks in different emotional states…"/></div>
             </div>
           )}
           {tab==='scenarios'&&(
@@ -4356,6 +4356,9 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                 </div>
               </div>
               <div style={{paddingTop:8,borderTop:'1px solid var(--border)'}}>
+                <CharExportTab charData={charData} data={data} exportChar={exportChar} importJSON={importJSON}/>
+              </div>
+              <div style={{paddingTop:8,borderTop:'1px solid var(--border)'}}>
                 <button className="btn danger" onClick={()=>setModal({type:'confirm-delete-char',char:charData})}><i className="ti ti-trash"></i>Delete Character</button>
               </div>
             </div>
@@ -4396,9 +4399,6 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
           )}
           {tab==='lore-entry'&&(
             <LorebookEntryTab charData={charData} data={data} update={update} updChar={updChar}/>
-          )}
-          {tab==='export'&&(
-            <CharExportTab charData={charData} data={data} exportChar={exportChar} importJSON={importJSON}/>
           )}
         </div>
       </div>
@@ -5658,6 +5658,56 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
   const [forceImport,setForceImport]=useState(false); // global override: ignore "local newer" protection
   const [forceItems,setForceItems]=useState(new Set()); // per-item override ids
   const [done,setDone]=useState(null);
+  // Backup/Restore state (inlined from old BackupRestorePanel)
+  const [selectedWorldId,setSelectedWorldId]=useState('');
+  const [bkStatus,setBkStatus]=useState(null);
+  const [bkMsg,setBkMsg]=useState('');
+  const [bkLg,setBkLg]=React.useState(null);
+  React.useEffect(()=>{window.lorekeeper.getLastgoodInfo().then(i=>setBkLg(i)).catch(()=>{});},[]);
+  const bkGlobal=async()=>{
+    setBkStatus('working');setBkMsg('Creating backup…');
+    const res=await window.lorekeeper.exportBackup({});
+    if(res.cancelled){setBkStatus(null);return;}
+    if(res.success){setBkStatus('ok');setBkMsg('✓ Backup saved ('+(res.size/1024).toFixed(0)+' KB)');}
+    else{setBkStatus('err');setBkMsg('Error: '+res.error);}
+  };
+  const bkWorld=async(world)=>{
+    setBkStatus('working');setBkMsg('Exporting '+world.name+'…');
+    const res=await window.lorekeeper.exportBackup({worldId:world.id});
+    if(res.cancelled){setBkStatus(null);return;}
+    if(res.success){setBkStatus('ok');setBkMsg('✓ '+world.name+' exported ('+(res.size/1024).toFixed(0)+' KB)');}
+    else{setBkStatus('err');setBkMsg('Error: '+res.error);}
+  };
+  const bkRestore=async()=>{
+    if(!window.confirm('Restore from backup? This will overwrite your current data. Back up first!')) return;
+    setBkStatus('working');setBkMsg('Restoring…');
+    const res=await window.lorekeeper.restoreBackup();
+    if(res.cancelled){setBkStatus(null);return;}
+    if(res.success){
+      if(res.data._world_export){
+        update(d=>{
+          res.data.worlds.forEach(w=>{if(!d.worlds.find(x=>x.id===w.id))d.worlds.push(w);else Object.assign(d.worlds.find(x=>x.id===w.id),w);});
+          res.data.characters.forEach(c=>{if(!d.characters.find(x=>x.id===c.id))d.characters.push(c);else Object.assign(d.characters.find(x=>x.id===c.id),c);});
+          res.data.lorebooks.forEach(l=>{if(!d.lorebooks.find(x=>x.id===l.id))d.lorebooks.push(l);else Object.assign(d.lorebooks.find(x=>x.id===l.id),l);});
+          res.data.collections.forEach(c=>{if(!d.collections.find(x=>x.id===c.id))d.collections.push(c);else Object.assign(d.collections.find(x=>x.id===c.id),c);});
+          (res.data.templates||[]).forEach(t=>{if(!d.templates.find(x=>x.id===t.id))d.templates.push(t);});
+          (res.data.lorebook_templates||[]).forEach(t=>{if(!d.lorebook_templates)d.lorebook_templates=[];if(!d.lorebook_templates.find(x=>x.id===t.id))d.lorebook_templates.push(t);});
+          (res.data.relationships||[]).forEach(r=>{if(!d.relationships)d.relationships=[];if(!d.relationships.find(x=>x.id===r.id))d.relationships.push(r);});
+        });
+        setBkStatus('ok');setBkMsg('✓ World restored and merged into existing data.');
+      } else {
+        update(()=>res.data);
+        setBkStatus('ok');setBkMsg('✓ Full restore complete. Restart Lorekeeper to ensure everything is fresh.');
+      }
+    } else {setBkStatus('err');setBkMsg('Error: '+res.error);}
+  };
+  const bkRestoreLg=async()=>{
+    if(!window.confirm('Restore from last good backup? This replaces all current data.')) return;
+    setBkStatus('working');setBkMsg('Restoring from lastgood…');
+    const res=await window.lorekeeper.restoreLastgood();
+    if(res.success){update(()=>res.data);setBkStatus('ok');setBkMsg('✓ Restored from lastgood ('+Math.round(res.size/1024)+' KB). Restart recommended.');}
+    else{setBkStatus('err');setBkMsg('Error: '+res.error);}
+  };
 
   const scan=async()=>{
     setScanning(true);
@@ -5835,41 +5885,95 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
 
   if(!scanned) return (
     <div>
-      <div style={{maxWidth:600}}>
-        <div className="field-block" style={{marginBottom:16}}>
-          <label>Quick Import / Backup</label>
-          <p style={{fontSize:13,color:'var(--text3)',lineHeight:1.7,marginTop:4,marginBottom:10}}>
-            For single files (a character/lorebook/collection JSON, or a full data restore) and for full app backups. For bulk imports from a Saucepan companion export, scroll down to Batch Import.
-          </p>
-          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-            <button className="btn" onClick={importJSON}><i className="ti ti-upload"></i>Import single file</button>
-            <button className="btn" onClick={exportAll}><i className="ti ti-archive"></i>Backup everything</button>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:16,marginBottom:20}}>
+
+        {/* ── BACKUP ── */}
+        <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:20,display:'flex',flexDirection:'column',gap:12}}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <i className="ti ti-archive" style={{fontSize:18,color:'var(--accent)'}}></i>
+            <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>Backup</span>
+          </div>
+          <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.6}}>Save a zip of everything. Store it somewhere safe outside Lorekeeper.</div>
+          <button className="btn" style={{justifyContent:'center'}} onClick={bkGlobal} disabled={bkStatus==='working'}>
+            <i className="ti ti-archive"></i>Export full backup (.zip)
+          </button>
+          <div>
+            <div style={{fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>Per world</div>
+            <div style={{display:'flex',gap:8}}>
+              <select value={selectedWorldId} onChange={e=>setSelectedWorldId(e.target.value)}
+                style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none'}}>
+                <option value="">Select a world…</option>
+                {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=>(
+                  <option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>
+                ))}
+              </select>
+              <button className="btn" disabled={!selectedWorldId||bkStatus==='working'}
+                onClick={()=>{const w=data.worlds.find(x=>x.id===selectedWorldId);if(w)bkWorld(w);}}>
+                <i className="ti ti-archive"></i>Export
+              </button>
+            </div>
+          </div>
+          {bkStatus&&<div style={{fontSize:11,color:bkStatus==='ok'?'var(--green)':bkStatus==='err'?'var(--red)':'var(--text3)'}}>{bkMsg}</div>}
+        </div>
+
+        {/* ── RESTORE ── */}
+        <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:20,display:'flex',flexDirection:'column',gap:12}}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <i className="ti ti-restore" style={{fontSize:18,color:'var(--amber)'}}></i>
+            <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>Restore</span>
+          </div>
+          <div>
+            <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.6,marginBottom:8}}>
+              From a backup zip. <span style={{color:'var(--text2)',fontWeight:600}}>Full backup replaces all data.</span> Per-world backup merges into existing data.
+            </div>
+            <button className="btn danger" style={{justifyContent:'center',width:'100%'}} onClick={bkRestore} disabled={bkStatus==='working'}>
+              <i className="ti ti-restore"></i>Restore from backup zip…
+            </button>
+          </div>
+          <div style={{borderTop:'1px solid var(--border)',paddingTop:12}}>
+            <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.6,marginBottom:6}}>Auto-saved last-good file — use when data is corrupted or empty. No zip needed.</div>
+            {bkLg&&<div style={{fontSize:11,color:'var(--text3)',marginBottom:8}}>Last saved: {bkLg.mtime.split('T')[0]} {bkLg.mtime.split('T')[1].slice(0,5)} — {(bkLg.size/1024).toFixed(0)} KB</div>}
+            <button className="btn danger" style={{justifyContent:'center',width:'100%'}} disabled={bkStatus==='working'||!bkLg} onClick={bkRestoreLg}>
+              <i className="ti ti-database-import"></i>Restore from last good backup
+            </button>
+          </div>
+          {bkStatus&&<div style={{fontSize:11,color:bkStatus==='ok'?'var(--green)':bkStatus==='err'?'var(--red)':'var(--text3)'}}>{bkMsg}</div>}
+        </div>
+
+        {/* ── IMPORT ── */}
+        <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:20,display:'flex',flexDirection:'column',gap:12}}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <i className="ti ti-file-import" style={{fontSize:18,color:'var(--green)'}}></i>
+            <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>Import</span>
+          </div>
+          <div>
+            <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.6,marginBottom:8}}>Add a single character, lorebook, or collection from a JSON file exported from Saucepan.</div>
+            <button className="btn" style={{justifyContent:'center',width:'100%'}} onClick={importJSON}>
+              <i className="ti ti-file-import"></i>Import item from JSON…
+            </button>
+          </div>
+          <div style={{borderTop:'1px solid var(--border)',paddingTop:12}}>
+            <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.6,marginBottom:8}}>Bulk import from Saucepan companion export folders.</div>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:6}}>
+              <button className="btn" style={{flex:1,justifyContent:'center'}} onClick={scan} disabled={scanning}>
+                <i className="ti ti-scan"></i>{scanning?'Scanning…':'Scan Folders'}
+              </button>
+              <button className="btn" onClick={()=>window.lorekeeper.openFolder('')}>
+                <i className="ti ti-folder-open"></i>Open I:\Lorekeeper
+              </button>
+            </div>
+            <BatchImportHelp/>
+            <div style={{marginTop:8,fontSize:10,color:'var(--text3)',lineHeight:1.6}}>
+              Place files in <code style={{background:'var(--bg3)',padding:'1px 4px',borderRadius:3}}>Companions\Name\character.json</code>,{' '}
+              <code style={{background:'var(--bg3)',padding:'1px 4px',borderRadius:3}}>Lorebooks\lorebook.json</code>, or{' '}
+              <code style={{background:'var(--bg3)',padding:'1px 4px',borderRadius:3}}>Collections\collection.json</code>
+            </div>
           </div>
         </div>
-        <div className="field-block" style={{marginBottom:16}}>
-          <label>Batch Import — How it works</label>
-          <p style={{fontSize:13,color:'var(--text3)',lineHeight:1.7,marginTop:4}}>
-            Place your files in <code style={{background:'var(--bg3)',padding:'1px 5px',borderRadius:3,fontSize:12}}>I:\Lorekeeper\</code> like this:<br/><br/>
-            <code style={{background:'var(--bg3)',padding:'6px 10px',borderRadius:4,fontSize:11,display:'block',lineHeight:1.8}}>
-              Companions\CharacterName\character.json + images<br/>
-              Lorebooks\lorebook.json<br/>
-              Collections\collection.json
-            </code>
-          </p>
-        </div>
-        <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
-          <button className="btn primary" onClick={scan} disabled={scanning}>
-            <i className="ti ti-scan"></i>{scanning?'Scanning…':'Scan Folders'}
-          </button>
-          <button className="btn" onClick={()=>window.lorekeeper.openFolder('')}>
-            <i className="ti ti-folder-open"></i>Open I:\Lorekeeper
-          </button>
-          <BatchImportHelp/>
-        </div>
       </div>
+
       <ImageMigrationPanel data={data} update={update}/>
-    <BackupRestorePanel data={data} update={update}/>
-    <NotesBackupPanel data={data}/>
+      <NotesBackupPanel data={data}/>
     </div>
   );
 

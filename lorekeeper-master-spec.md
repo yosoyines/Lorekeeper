@@ -588,40 +588,25 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 
 ## What's Next (Priority Order)
 
-### Import/Export Audit (session 22 flagged)
-Review all import/export entry points for duplication and gaps. Known places to audit:
-- **Global:** Backup/Restore (sidebar → Import/Export page) — zip backup and lastgood restore
-- **World:** Export ZIP button in World topbar — exports all world characters + lorebooks + collections
-- **Character:** Export JSON (Export tab) — single character platform export; Update from JSON (importJSON); batch import (folder scan); saveCompanionJson (auto-saves to `Companions/` folder on every field change)
-- **Lorebook:** Export JSON (Export tab); Export Markdown; Backup Lore Book / Restore Lore Book (LoreItemRestoreCard); batch import scan; saveLorebookJson (auto-save)
-- **Collection:** Export JSON (Export tab); Backup Collection / Restore Collection (CollItemRestoreCard); batch import scan; saveCollectionJson (auto-save)
-- **Potential duplicates to resolve:** `importJSON` (single-item modal drop) vs backup/restore cards — do they do the same thing? Are there cases where one works and the other doesn't? Are all export paths including the same required Saucepan fields (`selected_chapter_index` on lorebooks, `lorebooks: []` on collections, etc.)?
+### Import/Export Audit (session 22 flagged, partially done session 25)
+Duplicate `exportAll` / "Backup everything" button removed. Import/Export page reorganised into three cards: Backup, Restore, Import. Character Export tab merged into Settings tab; Example Dialogue tab merged into Formatting tab.
 
-### Character — Portrait UX improvements (session 22 flagged)
-- ~~Multi-portrait on new character creation~~ ✓ **done session 23** — `import-images` opens in character's Companions folder; each image copied via `copyImageToFolder`, stored as `relPath`.
-- ~~Image display from top~~ ✓ **done session 23** — `object-position: top` on all portrait/card images.
-- ~~View full image~~ ✓ **done session 23** — `LightboxModal` at App level; `ResolvedImg` for relPath support; zoom button in portrait controls; `onViewFull` on world gallery items.
-- ~~Linked lorebooks — show world first~~ ✓ **done session 23** — picker now sorts character's own world first, then alphabetically, No World last; world emoji in section headers.
-
-### Tools — Known bugs (session 22 flagged)
-- ~~Plot Archetype tool~~ ✓ **done session 24** — active button now highlights correctly; `lastRoll` state tracks which of Roll (any) / World only / Global only was last clicked and applies `primary` class only to that button.
-- ~~Relationship Map tool — world switching~~ ✓ **done session 24** — `initialWorld` prop changes when sidebar world is switched; added `useEffect` to sync `initialWorld → worldId` state so the map updates immediately.
-- ~~Relationship Map tool — position persistence~~ ✓ **done session 24** — node positions now saved to `data.map_positions[worldId]` on drag end (via `posRef` to avoid stale closure); loaded on world switch instead of always rebuilding the grid. New characters without saved positions get auto-placed in grid; existing positions preserved.
+Remaining gaps to verify:
+- Are all export paths (character/lorebook/collection single-item + world ZIP) keeping the same required Saucepan fields? Spot-check after any future export change.
+- `importJSON` (single-item modal drop) still handles full data restore silently if a full-backup JSON is picked — consider blocking this path or routing to Restore explicitly.
+- World topbar Export ZIP: verify it still matches the individual export paths for all three content types.
 
 ### Image Tools
 - **Format converter** — convert any local image (PNG/JPG/WEBP/AVIF etc.) to a target format; useful for Saucepan which prefers AVIF; uses `sharp` npm package
-- **Paste & save** — paste image from clipboard -> preview -> save as a file to a chosen folder (Companions/CharName, Lorebooks, Collections, etc.); replaces manual screenshot workflow
+- **Paste & save** — paste image from clipboard → preview → save as a file to a chosen folder (Companions/CharName, Lorebooks, Collections, etc.); replaces manual screenshot workflow
 - **Cropper** — crop a local or pasted image to a target aspect ratio (3:4 portrait, 4:1 banner, 1:1 square); canvas-based UI
 - **Image prompt generator** — Claude call using character name/description/tags to generate an image generation prompt; lives in character editor or right panel
 
 ### Tools (remaining)
 - **Map generator** — region/landmark randomiser; output as text description or simple ASCII map (design TBD)
 
-### UI Overhaul (mostly done)
-Consistency pass complete across list pages, detail pages, and World Info/Settings. Remaining:
-- **CharDetailPage** — has the most inline styles of any component (it's the oldest and most complex); structurally fine, worth a cleanup pass later when there's time, not urgent
-- ~~Global themes~~ ✓ **done session 20** — see Theme System section. Accent-color-driven dark+light generation, live preview, Apply/Reset, persists across restarts.
-- ~~Colorblind mode~~ ✓ **done session 24** — Settings → Appearance. Three buttons: Off / Red-Green / Blue-Yellow. CSS class approach (`html.cb-rg`, `html.cb-by`) overrides only the affected variables. Red-Green (deuteranopia/protanopia): `--red → #fb923c` (orange), `--green → #60a5fa` (blue). Blue-Yellow (tritanopia): `--amber → #f87171` (red-orange), `--teal → #e879a9` (pink), `--green → #60a5fa` (blue). App-level `useEffect` applies/removes classes on settings change, same pattern as theme.
+### UI Overhaul (remaining)
+- **CharDetailPage** — has the most inline styles of any component (oldest and most complex); structurally fine, worth a cleanup pass later when there's time, not urgent
 - **Standalone / Public Version** — configurable data path, strip Saucepan-specific stuff, packaged `.exe`, optional rename/theming; README.md goes here
 
 ### Won't do
@@ -635,6 +620,8 @@ Consistency pass complete across list pages, detail pages, and World Info/Settin
 - Android build
 
 ---
+
+## GitHub
 
 ## GitHub
 
@@ -761,3 +748,4 @@ This has happened multiple times this project: a chat session's fixes only exist
 
 ## What's Built
 Full feature list — see sections above for details on each. Chronological build order is in the Session Log table above.
+| 25 | Jun 24 | **Import/Export page reorganisation; character tab reduction.** Import/Export page ("Batch Import") rebuilt into three side-by-side cards — **Backup** (export full ZIP + per-world dropdown+button, replacing individual per-world buttons that would overflow with many worlds), **Restore** (from backup ZIP with explicit note that full backup replaces all / world backup merges; from last-good auto-save), **Import** (single item JSON + batch scan + how-it-works). Duplicate "Backup everything" button removed (was identical to "Export full backup"). All action buttons now use standard `btn` style (no `primary` colouring). Backup/restore state inlined from old `BackupRestorePanel` component which is no longer rendered. Character detail page tab count reduced from 13 to 11: **Example Dialogue** tab removed — textarea moved into Formatting tab below Advanced Prompt. **Export** tab removed — `CharExportTab` (Update from JSON / Export JSON / Export Markdown) moved into Settings tab above Delete Character button. |
