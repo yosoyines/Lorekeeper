@@ -24,6 +24,9 @@
     --red: #f87171; --green: #6ee7b7; --amber: #fbbf24; --pink: #f472b6; --teal: #2dd4bf;
     --r: 8px; --rl: 12px;
   }
+  /* Colorblind mode overrides */
+  html.cb-rg { --red: #fb923c; --green: #60a5fa; } /* Red-Green (deuteranopia/protanopia): red→orange, green→blue */
+  html.cb-by { --amber: #f87171; --teal: #e879a9; --green: #60a5fa; } /* Blue-Yellow (tritanopia): amber→red-orange, teal→pink, green→blue */
   html, body, #root { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); }
   body { opacity: 0; }
   body.app-ready { opacity: 1; transition: opacity 0.15s ease; }
@@ -564,7 +567,7 @@ const now = () => new Date().toISOString();
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-const initData = () => ({ worlds:[], characters:[], lorebooks:[], collections:[], gallery:[], schedule:[], notes:'', personas:[], templates:[], release_cycle:[], schedule_notes:{}, lorebook_templates:[], settings:{} });
+const initData = () => ({ worlds:[], characters:[], lorebooks:[], collections:[], gallery:[], schedule:[], notes:'', personas:[], templates:[], release_cycle:[], schedule_notes:{}, lorebook_templates:[], map_positions:{}, settings:{} });
 
 function App() {
   const [data, setData] = useState(initData);
@@ -960,6 +963,14 @@ function App() {
     const { dark, light } = generateTheme(themeSettings.accent_hex);
     applyTheme(themeSettings.mode === 'light' ? light : dark);
   }, [(data.settings||{}).theme]);
+
+  // Apply colorblind mode via class on <html>
+  React.useEffect(() => {
+    const cb = (data.settings||{}).colorblind_mode || '';
+    document.documentElement.classList.remove('cb-rg','cb-by');
+    if(cb === 'rg') document.documentElement.classList.add('cb-rg');
+    if(cb === 'by') document.documentElement.classList.add('cb-by');
+  }, [(data.settings||{}).colorblind_mode]);
 
   // Reset scroll position whenever the viewed page/item changes — without this, navigating
   // into a character/lorebook/etc while the previous page was scrolled down renders the new
@@ -2509,6 +2520,7 @@ function PlotTool({data}) {
   const [worldId, setWorldId] = useState('');
   const [result, setResult] = useState(null);
   const [source, setSource] = useState('');
+  const [lastRoll, setLastRoll] = useState(null); // 'any'|'world'|'global'
 
   // Only list worlds that actually have custom archetypes set up — worlds with none just
   // add noise to the dropdown since there's nothing extra to roll from for them.
@@ -2518,10 +2530,11 @@ function PlotTool({data}) {
     ? (data.worlds.find(w=>w.id===worldId)?.plot_archetypes||[])
     : [];
 
-  const roll = (pool, label) => {
+  const roll = (pool, label, key) => {
     if(!pool.length) return;
     setResult(pick(pool));
     setSource(label);
+    setLastRoll(key);
   };
 
   const rollAny = () => {
@@ -2530,6 +2543,7 @@ function PlotTool({data}) {
     const r = pick(combined);
     setResult(r);
     setSource(GLOBAL_PLOT_ARCHETYPES.includes(r)?'Global':data.worlds.find(w=>w.id===worldId)?.name||'World');
+    setLastRoll('any');
   };
 
   return (
@@ -2544,15 +2558,15 @@ function PlotTool({data}) {
         {worldsWithArchetypes.length===0&&<div style={{fontSize:10,color:'var(--text3)',marginTop:6}}>No worlds have custom archetypes yet — add some from a world's World Info tab.</div>}
       </div>
       <div style={{display:'flex',gap:6}}>
-        <button className="btn primary" style={{flex:1,justifyContent:'center'}} onClick={rollAny}>
+        <button className={`btn${lastRoll==='any'||!lastRoll?' primary':''}`} style={{flex:1,justifyContent:'center'}} onClick={rollAny}>
           <i className="ti ti-dice"></i>Roll{worldId&&worldPool.length>0?' (any)':''}
         </button>
         {worldId&&worldPool.length>0&&(
-          <button className="btn" style={{flex:1,justifyContent:'center'}} onClick={()=>roll(worldPool,'World only')}>
+          <button className={`btn${lastRoll==='world'?' primary':''}`} style={{flex:1,justifyContent:'center'}} onClick={()=>roll(worldPool,'World only','world')}>
             <i className="ti ti-world"></i>World only
           </button>
         )}
-        {worldId&&<button className="btn" style={{flex:1,justifyContent:'center'}} onClick={()=>roll(GLOBAL_PLOT_ARCHETYPES,'Global')}>
+        {worldId&&<button className={`btn${lastRoll==='global'?' primary':''}`} style={{flex:1,justifyContent:'center'}} onClick={()=>roll(GLOBAL_PLOT_ARCHETYPES,'Global','global')}>
           <i className="ti ti-books"></i>Global only
         </button>}
       </div>
@@ -5016,6 +5030,10 @@ function RelationshipsPage({data, update, initialWorld}) {
   const [popupPos, setPopupPos] = useState({x: null, y: null});
   const [popupDrag, setPopupDrag] = useState(null);
   const svgRef = React.useRef();
+  const posRef = React.useRef({}); // mirrors positions state — avoids stale closure in mouseUp
+
+  // Sync initialWorld prop → worldId state (prop changes when user switches worlds in sidebar)
+  React.useEffect(() => { if(initialWorld && initialWorld !== worldId) setWorldId(initialWorld); }, [initialWorld]);
 
   const worldCollIds = worldId ? data.collections.filter(col=>col.world_id===worldId).map(col=>col.id) : [];
   const worldCollCompanions = worldId ? data.collections.filter(col=>col.world_id===worldId).flatMap(col=>col.companions||[]) : [];
@@ -5037,11 +5055,14 @@ function RelationshipsPage({data, update, initialWorld}) {
       return (c.collections||[]).some(cid=>collIds.includes(cid)) || collCompanions.includes(c.id);
     });
     const cols = Math.max(1, Math.ceil(Math.sqrt(chars.length)));
+    const saved = (data.map_positions && data.map_positions[worldId]) || {};
     const next = {};
     chars.forEach((c, i) => {
-      next[c.id] = {x: 120 + (i % cols) * 170, y: 100 + Math.floor(i / cols) * 170};
+      // Use saved position if available, otherwise place in grid
+      next[c.id] = saved[c.id] || {x: 120 + (i % cols) * 170, y: 100 + Math.floor(i / cols) * 170};
     });
     setPositions(next);
+    posRef.current = next;
   }, [worldId, data.characters]);
 
   const getSvgPoint = (e) => {
@@ -5068,10 +5089,21 @@ function RelationshipsPage({data, update, initialWorld}) {
   const onSvgMouseMove = (e) => {
     if (!dragging) return;
     const svgP = getSvgPoint(e);
-    setPositions(prev => ({...prev, [dragging.id]: {x: svgP.x - dragging.ox, y: svgP.y - dragging.oy}}));
+    const newPos = {x: svgP.x - dragging.ox, y: svgP.y - dragging.oy};
+    posRef.current = {...posRef.current, [dragging.id]: newPos};
+    setPositions(prev => ({...prev, [dragging.id]: newPos}));
   };
 
-  const onSvgMouseUp = () => setDragging(null);
+  const onSvgMouseUp = () => {
+    if (dragging) {
+      const finalPos = posRef.current;
+      update(d => {
+        if (!d.map_positions) d.map_positions = {};
+        d.map_positions[worldId] = {...finalPos};
+      });
+    }
+    setDragging(null);
+  };
 
   // Popup drag handlers (on the DOM, not SVG)
   const popupRef = React.useRef();
@@ -6328,8 +6360,19 @@ function SettingsPage({data, update, dataPath}) {
         <Field label="Theme" hint="Pick an accent color to generate a matching dark and light theme. Preview before applying.">
           <ThemeGenerator settings={settings} update={update}/>
         </Field>
-        <Field label="Colorblind Mode" hint="Adjusted color palettes for common colorblindness types.">
-          <ComingSoon text="Deuteranopia, protanopia, tritanopia options"/>
+        <Field label="Colorblind Mode" hint="Adjusted color palettes for common colorblindness types. Changes red/green or blue/yellow pairs to distinguishable alternatives.">
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+              {[['','Off'],['rg','Red-Green'],['by','Blue-Yellow']].map(([val,label])=>(
+                <button key={val} className={`btn${(settings.colorblind_mode||'')=== val?' primary':''}`}
+                  onClick={()=>update(d=>{if(!d.settings)d.settings={};d.settings.colorblind_mode=val;})}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {(settings.colorblind_mode||'')==='rg'&&<div style={{fontSize:11,color:'var(--text3)',lineHeight:1.5}}>Deuteranopia / Protanopia — replaces red with orange and green with blue so they are never confused.</div>}
+            {(settings.colorblind_mode||'')==='by'&&<div style={{fontSize:11,color:'var(--text3)',lineHeight:1.5}}>Tritanopia — replaces yellow-amber with red-orange and teal with pink so they are never confused with blue.</div>}
+          </div>
         </Field>
       </Section>
 
@@ -6519,7 +6562,7 @@ function HelpPage() {
         <P><B>Model</B> — Claude model to use. Sonnet 4.6 (default) is the best balance of quality and cost. Haiku 4.5 is faster and cheaper.</P>
         <P><B>Autosave debounce</B> — How long to wait after a keystroke before saving. Default 600ms.</P>
         <P><B>Data file</B> — Shows where data is stored. Click to open the folder.</P>
-        <P><B>Theme and colorblind mode</B> — Coming in a future update.</P>
+        <P><B>Theme and colorblind mode</B> — Settings → Appearance. Pick an accent color to generate a full dark/light theme. Colorblind mode adjusts red/green or blue/yellow pairs: Red-Green mode (deuteranopia/protanopia) swaps red→orange and green→blue; Blue-Yellow mode (tritanopia) swaps amber→red-orange and teal→pink.</P>
       </HelpSection>
 
       <HelpSection title="Claude AI assistant" icon="ti-sparkles">
