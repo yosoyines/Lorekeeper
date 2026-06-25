@@ -1,5 +1,5 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 24, 2026 (session 28)**
+**Last updated: June 24, 2026 (session 28 — wrapped up)**
 
 ---
 
@@ -590,14 +590,36 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 
 ~~1. CharDetailPage UI cleanup~~ ✓ **done session 28**
 
-### 2. UI consistency check
-After CharDetailPage is done: open every page/tab modified across sessions 22–27 and verify no layout breaks at default font size, large font size, and narrow window (~900px). Check tab bars don't overflow, no orphaned styles.
+~~2. UI consistency check~~ ✓ **done session 28** — all pages verified, scenario drag cursor fixed
 
-### 3. Help page update
-Last — written against the final stable UI. Sections to add/update: all four image tools (Format Converter, Paste & Save, Crop, Image Prompt Generator), Import/Export page reorganisation, colorblind mode, character tab changes (Example Dialogue → Formatting, Export → Settings), import/export test flow.
+### 3. Design backup/restore flows (before building or writing help)
+The current full-restore-as-replace behavior is fine for solo use but is a footgun for general users (see Standalone section for full design notes). Before writing the help page, the backup/restore UX needs to be finalised so the help is written against correct behavior.
 
-### 4. Standalone / Public Version
+**Design questions to answer in next session:**
+- Where does "Import from backup" (merge) live — Import/Export page alongside Restore, or separate flow?
+- Conflict resolution: when local and backup have the same character with different `updated_at`, does newer always win or does user choose?
+- Items only in backup (not local) — added or skipped?
+- Items only local (not in backup) — preserved or removed?
+- Do worlds merge too, or only the content inside them?
+
+### 4. Build backup/restore Option C
+Once design is settled: add "Import from backup" merge path. Merges worlds/characters/lorebooks/collections/personas/templates by `id`. Skips notes, map positions, settings, release cycle, schedule notes (non-mergeable). Keep current Restore as-is.
+
+### 5. Help page update
+Written last — against the final stable UI and final backup/restore behavior. Sections to add/update: all four image tools, Import/Export page reorganisation, colorblind mode, character tab changes, backup/restore flows, import/export test flow.
+
+### 6. Standalone / Public Version
 Configurable data path, strip Saucepan-specific fields, packaged `.exe`, optional rename/theming, README.md.
+
+**Before shipping to other users — backup/restore model needs rethinking:**
+
+Current behavior: full backup restore is a **total replace** (wipes everything, loads backup). This is safe for a solo user who knows their workflow, but for general users it's a footgun — someone takes a backup, creates new content, then restores and loses everything made since.
+
+**Option C (recommended for standalone):** Add a separate "Import from backup" feature distinct from Restore. Explicitly merges content (worlds, characters, lorebooks, collections, personas, templates) by `id`, with `updated_at` as tiebreaker. Explicitly skips workspace state (notes, map positions, settings, release cycle, schedule notes) since those don't merge cleanly. User sees upfront what gets merged and what doesn't.
+
+**Option D (long-term architectural direction):** Split `lorekeeper-data.json` into content file (mergeable) + workspace files (non-mergeable, stored separately — e.g. `settings.json`, `Notes/world_id.md`, `Maps/world_id.json`). Full restore then only touches content by definition. Already partially done — per-world `.md` notes are already external. Real cost: every IPC read/write touches multiple files, data safety system needs rethinking, backup ZIPs get more complex, existing installs need migration. Worth doing properly rather than rushing.
+
+For now: the UI already warns clearly that full restore replaces all data. Keep Option C and D noted here for the standalone build.
 
 ### Import/Export — remaining gaps to verify
 - `importJSON` still handles full data restore silently if a full-backup JSON is picked — consider blocking or routing to Restore explicitly.
