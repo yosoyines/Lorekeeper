@@ -1,5 +1,5 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 20, 2026 (session 20)**
+**Last updated: June 24, 2026 (session 26)**
 
 ---
 
@@ -596,11 +596,8 @@ Remaining gaps to verify:
 - `importJSON` (single-item modal drop) still handles full data restore silently if a full-backup JSON is picked — consider blocking this path or routing to Restore explicitly.
 - World topbar Export ZIP: verify it still matches the individual export paths for all three content types.
 
-### Image Tools
-- **Format converter** — convert any local image (PNG/JPG/WEBP/AVIF etc.) to a target format; useful for Saucepan which prefers AVIF; uses `sharp` npm package
-- **Paste & save** — paste image from clipboard → preview → save as a file to a chosen folder (Companions/CharName, Lorebooks, Collections, etc.); replaces manual screenshot workflow
-- **Cropper** — crop a local or pasted image to a target aspect ratio (3:4 portrait, 4:1 banner, 1:1 square); canvas-based UI
-- **Image prompt generator** — Claude call using character name/description/tags to generate an image generation prompt; lives in character editor or right panel
+### Image Tools (remaining)
+- **Image prompt generator** — Claude API call using character name/description/tags to generate an image generation prompt; lives in the right panel Tools section
 
 ### Tools (remaining)
 - **Map generator** — region/landmark randomiser; output as text description or simple ASCII map (design TBD)
@@ -754,3 +751,4 @@ This has happened multiple times this project: a chat session's fixes only exist
 ## What's Built
 Full feature list — see sections above for details on each. Chronological build order is in the Session Log table above.
 | 25 | Jun 24 | **Import/Export page reorganisation; character tab reduction.** Import/Export page ("Batch Import") rebuilt into three side-by-side cards — **Backup** (export full ZIP + per-world dropdown+button, replacing individual per-world buttons that would overflow with many worlds), **Restore** (from backup ZIP with explicit note that full backup replaces all / world backup merges; from last-good auto-save), **Import** (single item JSON + batch scan + how-it-works). Duplicate "Backup everything" button removed (was identical to "Export full backup"). All action buttons now use standard `btn` style (no `primary` colouring). Backup/restore state inlined from old `BackupRestorePanel` component which is no longer rendered. Character detail page tab count reduced from 13 to 11: **Example Dialogue** tab removed — textarea moved into Formatting tab below Advanced Prompt. **Export** tab removed — `CharExportTab` (Update from JSON / Export JSON / Export Markdown) moved into Settings tab above Delete Character button. |
+| 26 | Jun 24 | **Image tools (Format Converter, Paste & Save, Crop); data array recovery; Babel size management.** Added three image tools to the right panel Tools section. Format Converter: load any image → select output format (JPEG/PNG/WebP) + quality slider → convert via canvas `toBlob()` → save via new `save-image` IPC (binary save with dialog). Paste & Save: paste from clipboard via `paste-image` IPC (`clipboard.readImage()` in main process) or drag-and-drop → preview with dimensions → set filename → save as PNG. Crop: interactive canvas crop with corner handles, aspect ratio presets (1:1/3:4/16:9/4:1/Free), rule-of-thirds grid; `applyCrop` loads a fresh clean `Image()` from stored `imgSrc` base64 to avoid drawing the overlay; all style objects inside `&&` conditionals pre-defined as variables (Babel deoptimisation fix). Added `save-image` IPC to main.js + `saveImage` to preload.js; added `clipboard` to electron imports + `paste-image` IPC. Data array recovery: extraction script bug caused 9 arrays (SAUCEPAN_TAGS 61KB, PLOT_DESCRIPTIONS, WESTERN_SIGNS, CHINESE_SIGNS, HOCKEY_POSITIONS, SWIM_EVENTS, MACROS, NAMES_MASC, NAMES_FEM) to be removed from Babel but silently fail to append to the plain JS block — recovered from test environment file. Fixed two comment+const merge bugs (HOCKEY_HANDEDNESS, SWIM_ROLES) left by extraction. Plain JS block now 110KB (15 arrays total); Babel block 425KB. |

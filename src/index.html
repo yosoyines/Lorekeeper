@@ -1908,18 +1908,22 @@ function CropTool() {
   const resultImg = {width:'100%',maxHeight:180,objectFit:'contain',borderRadius:4,background:'var(--bg)',display:'block'};
   const saveBtn = {justifyContent:'center',width:'100%',marginTop:8};
   const statusStyle = {fontSize:11,marginTop:4,color:status.startsWith('\u2713')?'var(--green)':'var(--red)'};
+  const ratioGrid = {display:'flex',gap:5,flexWrap:'wrap'};
+  const ratioBtn = {flex:1,justifyContent:'center',fontSize:11};
+  const cvStyle = {width:'100%',display:'block',cursor:drag?'grabbing':'crosshair'};
+  const loadBtnStyle = {justifyContent:'center'};
 
   return (
     <div style={{display:'flex',flexDirection:'column',gap:10}}>
-      <button className="btn" style={{justifyContent:'center'}} onClick={loadFile}>
+      <button className="btn" style={loadBtnStyle} onClick={loadFile}>
         <i className="ti ti-photo-up"></i>Load image…
       </button>
       {img&&(
         <div style={S2.box}>
           <span style={S2.label}>Aspect ratio</span>
-          <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+          <div style={ratioGrid}>
             {Object.keys(RATIOS).map(r=>(
-              <button key={r} className={"btn"+(ratio===r?' primary':'')} style={{flex:1,justifyContent:'center',fontSize:11}} onClick={()=>setRatio(r)}>
+              <button key={r} className={"btn"+(ratio===r?' primary':'')} style={ratioBtn} onClick={()=>setRatio(r)}>
                 {r==='free'?'□ Free':r}
               </button>
             ))}
@@ -1929,7 +1933,7 @@ function CropTool() {
       {img&&box&&(
         <div style={cvWrap}>
           <canvas ref={cvRef}
-            style={{width:'100%',display:'block',cursor:drag?'grabbing':'crosshair'}}
+            style={cvStyle}
             onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}/>
         </div>
       )}
