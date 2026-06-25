@@ -67,7 +67,7 @@
   .cd-flags-col{display:flex;flex-direction:column;gap:10px;margin-top:4px}
   .cd-flag-label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;font-weight:normal;text-transform:none;letter-spacing:0}
   .cd-scenario-hdr{display:flex;align-items:center;gap:8px;margin-bottom:6px}
-  .cd-scenario-item{cursor:grab}
+  .cd-scenario-item{cursor:default}
   .cd-date-row{display:flex;gap:8px;margin-bottom:8px}
   .cd-lorebook-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r);margin-bottom:4px;cursor:pointer;transition:all .15s;background:var(--bg3);border:1px solid var(--border)}
   .cd-lorebook-row.linked{background:var(--accent-dim);border-color:var(--accent2)}
@@ -4743,8 +4743,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
               <label>Starting Scenarios</label>
               <MacroReference/>
               {(charData.starting_scenarios||[]).map((s,i)=>(
-                  <div key={i} className="scenario-item" draggable
-                    onDragStart={()=>{scenarioDragIdx.current=i;}}
+                  <div key={i} className="scenario-item"
                     onDragOver={e=>{e.preventDefault();scenarioDragOverIdx.current=i;}}
                     onDrop={()=>{
                       const from=scenarioDragIdx.current,to=scenarioDragOverIdx.current;
@@ -4752,10 +4751,9 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                       updChar(c=>{const arr=[...c.starting_scenarios];const[item]=arr.splice(from,1);arr.splice(to,0,item);c.starting_scenarios=arr;});
                       scenarioDragIdx.current=null;scenarioDragOverIdx.current=null;
                     }}
-                    style={{cursor:'grab'}}
                   >
                     <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
-                      <i className="ti ti-grip-vertical" style={{color:'var(--text3)',fontSize:16,cursor:'grab',flexShrink:0}}></i>
+                      <i className="ti ti-grip-vertical" draggable onDragStart={()=>{scenarioDragIdx.current=i;}} style={{color:'var(--text3)',fontSize:16,cursor:'grab',flexShrink:0}}></i>
                       <input value={s.title||''} onChange={e=>updChar(c=>c.starting_scenarios[i].title=e.target.value)} placeholder="Scenario title (optional)" style={{background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none',flex:1}}/>
                       <button className="scenario-del" style={{position:'static'}} onClick={()=>updChar(c=>c.starting_scenarios.splice(i,1))}><i className="ti ti-x"></i></button>
                     </div>
