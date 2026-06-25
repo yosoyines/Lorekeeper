@@ -27,6 +27,65 @@
   /* Colorblind mode overrides */
   html.cb-rg { --red: #fb923c; --green: #60a5fa; } /* Red-Green (deuteranopia/protanopia): red→orange, green→blue */
   html.cb-by { --amber: #f87171; --teal: #e879a9; --green: #60a5fa; } /* Blue-Yellow (tritanopia): amber→red-orange, teal→pink, green→blue */
+
+  .char-tags + .char-tags{margin-top:6px}
+  .cd-col12{display:flex;flex-direction:column;gap:12px}
+  .cd-col14{display:flex;flex-direction:column;gap:14px}
+  .cd-col10{display:flex;flex-direction:column;gap:10px}
+  .cd-col6{display:flex;flex-direction:column;gap:6px}
+  .cd-row4{display:flex;gap:4px}
+  .cd-row4-mb4{display:flex;gap:4px;margin-bottom:4px}
+  .cd-row6{display:flex;gap:6px}
+  .cd-row6w{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+  .cd-row8{display:flex;gap:8px}
+  .cd-row8mt8{display:flex;gap:8px;margin-top:8px}
+  .cd-row8mb8{display:flex;gap:8px;margin-bottom:8px}
+  .cd-row8ai{display:flex;align-items:center;gap:8px}
+  .cd-row8ai-mb6{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .cd-row10ai{display:flex;align-items:center;gap:10px}
+  .cd-spbt{display:flex;justify-content:space-between;align-items:center}
+  .cd-spbt4{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+  .cd-divider{padding-top:8px;border-top:1px solid var(--border)}
+  .cd-hint{color:var(--text3);font-weight:normal;text-transform:none;letter-spacing:0}
+  .cd-hint-sm{font-size:11px;color:var(--text3);font-weight:normal;text-transform:none;letter-spacing:0}
+  .cd-sub{font-size:11px;color:var(--text3)}
+  .cd-sub12{font-size:12px;color:var(--text3)}
+  .cd-world-lbl{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+  .cd-tab-bar{display:flex;gap:4px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:4px;flex-wrap:wrap}
+  .cd-tab-item{font-size:12px!important;padding:5px 10px!important}
+  .cd-portrait-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:8px}
+  .cd-portrait-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;position:relative;cursor:grab}
+  .cd-drag-badge{position:absolute;top:6px;left:6px;z-index:2;background:rgba(0,0,0,.45);border-radius:4px;padding:2px 4px;line-height:1}
+  .cd-portrait-img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:top;display:block}
+  .cd-portrait-empty{width:100%;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center}
+  .cd-portrait-uuid{padding:4px 8px;background:var(--bg2);border-top:1px solid var(--border)}
+  .cd-uuid-lbl{font-size:9px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em}
+  .cd-portrait-meta{padding:8px}
+  .cd-portrait-actions{display:flex;gap:4px;margin-top:6px}
+  .cd-banner-preview{height:60px;border-radius:var(--r);overflow:hidden;border:1px solid var(--border)}
+  .cd-gallery-picker{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px;margin-bottom:4px}
+  .cd-flags-col{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+  .cd-flag-label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;font-weight:normal;text-transform:none;letter-spacing:0}
+  .cd-scenario-hdr{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .cd-scenario-item{cursor:grab}
+  .cd-date-row{display:flex;gap:8px;margin-bottom:8px}
+  .cd-lorebook-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r);margin-bottom:4px;cursor:pointer;transition:all .15s;background:var(--bg3);border:1px solid var(--border)}
+  .cd-lorebook-row.linked{background:var(--accent-dim);border-color:var(--accent2)}
+  .cd-lore-info{flex:1;min-width:0}
+  .cd-lore-name{font-size:13px;font-weight:500;color:var(--text)}
+  .cd-lore-name.linked{color:var(--accent)}
+  .cd-lore-desc{font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cd-linked-pill{display:flex;align-items:center;gap:6px;background:var(--accent-dim);border:1px solid var(--accent2);border-radius:var(--r);padding:4px 10px;font-size:12px;color:var(--accent)}
+  .cd-remove-btn{background:none;border:none;color:var(--text3);cursor:pointer;padding:0;font-size:13px;line-height:1}
+  .cd-lore-entry-hdr{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+  .cd-reapply-row{display:flex;gap:8px;margin-bottom:4px}
+  .cd-save-row{display:flex;gap:8px;align-items:center}
+  .cd-no-world{padding:16px;color:var(--text3)}
+  .cd-no-tpl{padding:16px}
+  .cd-restore-drop{border-radius:var(--r);padding:16px;text-align:center;font-size:12px;color:var(--text3);margin-bottom:12px;transition:all .15s;cursor:pointer}
+  .cd-restore-drop.idle{border:2px dashed var(--border2);background:transparent}
+  .cd-restore-drop.active{border:2px dashed var(--accent);background:var(--accent-dim)}
+  .cd-restore-footer{display:flex;justify-content:flex-end}
   html, body, #root { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); }
   body { opacity: 0; }
   body.app-ready { opacity: 1; transition: opacity 0.15s ease; }
@@ -4649,7 +4708,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
           <div className="info-card">
             <h4>Tags</h4>
             <div className="char-tags">{(charData.tags||[]).map(t=><span key={t} className="tag">{t}</span>)}</div>
-            {(charData.fandom_tags||[]).length>0&&<div className="char-tags" style={{marginTop:6}}>{charData.fandom_tags.map(t=><span key={t} className="tag">{t}</span>)}</div>}
+            {(charData.fandom_tags||[]).length>0&&<div className="char-tags" >{charData.fandom_tags.map(t=><span key={t} className="tag">{t}</span>)}</div>}
           </div>
         </div>
         <div className="char-main">
@@ -4944,11 +5003,11 @@ function LorebookEntryTab({charData, data, update, updChar}) {
   const [msg, setMsg] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState(worldTemplates[0]?.id||'');
 
-  if(!world) return <div style={{padding:16,color:'var(--text3)'}}>Assign this character to a world first to use lorebook entry templates.</div>;
+  if(!world) return <div className="cd-no-world">Assign this character to a world first to use lorebook entry templates.</div>;
   if(worldTemplates.length === 0) return (
-    <div style={{padding:16}}>
-      <div style={{color:'var(--text3)',marginBottom:12}}>No lorebook templates set up for <strong style={{color:'var(--text)'}}>{world.name}</strong>.</div>
-      <div style={{fontSize:12,color:'var(--text3)'}}>Go to <strong style={{color:'var(--text)'}}>World Info → Lorebook Templates</strong> to create one.</div>
+    <div className="cd-no-tpl">
+      <div className="cd-sub" style={{marginBottom:12}}>No lorebook templates set up for <strong style={{color:'var(--text)'}}>{world.name}</strong>.</div>
+      <div className="cd-sub12">Go to <strong style={{color:'var(--text)'}}>World Info → Lorebook Templates</strong> to create one.</div>
     </div>
   );
 
@@ -4986,12 +5045,11 @@ function LorebookEntryTab({charData, data, update, updChar}) {
   const targetLorebook = tpl ? data.lorebooks.find(l=>l.id===tpl.lorebook_id) : null;
 
   return (
-    <div style={{display:'flex',flexDirection:'column',gap:12}}>
+    <div className="cd-col12">
       {worldTemplates.length > 1 && (
         <div className="field-block">
           <label>Template</label>
-          <select value={selectedTemplateId} onChange={e=>setSelectedTemplateId(e.target.value)}
-            style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none',width:'100%'}}>
+          <select value={selectedTemplateId} onChange={e=>setSelectedTemplateId(e.target.value)} style={CS.templateSelect}>
             {worldTemplates.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
         </div>
@@ -4999,11 +5057,11 @@ function LorebookEntryTab({charData, data, update, updChar}) {
       {(()=>{
         const [showHelp,setShowHelp]=useState(false);
         return <div>
-          <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:8}}>
-            <span style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',flex:1}}>Lorebook Entry</span>
-            <button onClick={()=>setShowHelp(h=>!h)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:13,padding:'0 2px',lineHeight:1}} title="How does this work?">?</button>
+          <div className="cd-lore-entry-hdr">
+            <span className="cd-world-lbl" style={{flex:1,marginBottom:0}}>Lorebook Entry</span>
+            <button onClick={()=>setShowHelp(h=>!h)} style={CS.helpBtn} title="How does this work?">?</button>
           </div>
-          {showHelp&&<div style={{padding:'10px 12px',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',fontSize:12,color:'var(--text3)',lineHeight:1.7,marginBottom:10}}>
+          {showHelp&&<div style={CS.helpBox}>
             <strong style={{color:'var(--text)',display:'block',marginBottom:6}}>How lorebook entries work:</strong>
             1. Set up a template in <strong style={{color:'var(--text)'}}>World Info → Lorebook Templates</strong><br/>
             2. Edit the chapter title and body below<br/>
@@ -5019,24 +5077,20 @@ function LorebookEntryTab({charData, data, update, updChar}) {
         <span style={{color:'var(--text)',fontWeight:500}}>{targetLorebook?.name||<span style={{color:'var(--red)'}}>No lorebook linked</span>}</span>
         {targetLorebook&&<span style={{color:'var(--text3)',marginLeft:'auto',fontSize:11}}>{(targetLorebook.content||[]).find(ch=>ch.char_id===charData.id)?'✓ entry exists':'new entry'}</span>}
       </div>
-      <div style={{display:'flex',gap:8,marginBottom:4}}>
+      <div className="cd-reapply-row">
         <button className="btn" style={{fontSize:11}} onClick={applyTemplate}><i className="ti ti-refresh"></i>Re-apply template</button>
-        <span style={{fontSize:11,color:'var(--text3)',alignSelf:'center'}}>resets title and body from template</span>
+        <span className="cd-sub" style={{alignSelf:'center'}}>resets title and body from template</span>
       </div>
       <div className="field-block" style={{marginBottom:8}}>
         <label>Chapter title</label>
-        <input value={entryTitle} onChange={e=>setEntryTitle(e.target.value)}
-          style={{fontWeight:600,fontFamily:'monospace',fontSize:13}}
-          placeholder="e.g. GABRIEL OLLARSON | BUTTERFLY STROKE | CAPTAIN"/>
+        <input value={entryTitle} onChange={e=>setEntryTitle(e.target.value)} style={CS.titleInp} placeholder="e.g. GABRIEL OLLARSON | BUTTERFLY STROKE | CAPTAIN"/>
       </div>
-      <textarea value={entryText} onChange={e=>setEntryText(e.target.value)}
-        style={{width:'100%',minHeight:500,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'10px 12px',borderRadius:'var(--r)',fontSize:12,outline:'none',resize:'vertical',fontFamily:'monospace',lineHeight:1.6}}
-        placeholder="Your lorebook entry content…"/>
-      <div style={{display:'flex',gap:8,alignItems:'center'}}>
+      <textarea value={entryText} onChange={e=>setEntryText(e.target.value)} style={CS.loreTextarea} placeholder="Your lorebook entry content…"/>
+      <div className="cd-save-row">
         <button className="btn primary" style={{fontSize:12}} onClick={saveToLorebook} disabled={saving||!targetLorebook}>
           <i className="ti ti-device-floppy"></i>{saving?'Saving…':'Save to Lorebook'}
         </button>
-        {msg&&<span style={{fontSize:12,color:'#6ee7b7'}}>{msg}</span>}
+        {msg&&<span style={{fontSize:12,color:'var(--green)'}}>{msg}</span>}
       </div>
     </div>
   );
@@ -5119,24 +5173,22 @@ function LoreItemRestoreCard({lorebook, update}) {
         <input ref={loreFileRef} type="file" accept=".json" style={{display:'none'}} onChange={handleLoreFileSelect}/>
       </div>
       <div style={{marginBottom:8}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
-          <span style={{fontSize:12,color:'var(--text3)'}}>Paste Lore Book Backup:</span>
+        <div style={CS.pasteLblRow}>
+          <span style={CS.pasteLabel}>Paste Lore Book Backup:</span>
           <button className="btn" style={{padding:'2px 8px',fontSize:11}} onClick={handleLorePaste}><i className="ti ti-clipboard"></i>Paste</button>
         </div>
-        <textarea value={pasteText} onChange={e=>handleLoreText(e.target.value)}
-          style={{width:'100%',minHeight:120,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px',borderRadius:'var(--r)',fontSize:11,fontFamily:'monospace',outline:'none',resize:'vertical'}}
-          placeholder="{...paste lorebook JSON here...}"/>
+        <textarea value={pasteText} onChange={e=>handleLoreText(e.target.value)} style={CS.pasteArea} placeholder="{...paste lorebook JSON here...}"/>
       </div>
       <div onClick={()=>loreFileRef.current&&loreFileRef.current.click()}
         onDragOver={e=>{e.preventDefault();setDropActive(true);}} onDragLeave={()=>setDropActive(false)} onDrop={handleLoreFileDrop}
-        style={{border:'2px dashed '+(dropActive?'var(--accent)':'var(--border2)'),borderRadius:'var(--r)',padding:'16px',textAlign:'center',fontSize:12,color:'var(--text3)',marginBottom:12,background:dropActive?'var(--accent-dim)':'transparent',transition:'all 0.15s',cursor:'pointer'}}>
+        className={"cd-restore-drop "+(dropActive?'active':'idle')}>
         {'Drag & drop a JSON file here, or click to select a file'}
       </div>
       {errors.length>0&&<div style={{marginBottom:10}}>
-        <div style={{fontSize:12,fontWeight:600,color:'var(--red)',marginBottom:4}}>Validation errors:</div>
-        {errors.map((err,ei)=><div key={ei} style={{fontSize:11,color:'var(--red)',paddingLeft:8}}>{'• '+err}</div>)}
+        <div style={CS.errHdr}>Validation errors:</div>
+        {errors.map((err,ei)=><div key={ei} style={CS.errItem}>{'• '+err}</div>)}
       </div>}
-      <div style={{display:'flex',justifyContent:'flex-end'}}>
+      <div className="cd-restore-footer">
         <button className="btn primary" disabled={!loreCanRestore} onClick={doLoreRestore}><i className="ti ti-restore"></i>Restore Data</button>
       </div>
     </div>
