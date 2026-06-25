@@ -2148,7 +2148,116 @@ function FormatConvertTool() {
   );
 }
 
-function ToolsPanel({data}) {
+
+function ImagePromptTool({currentChar}) {
+  const ART_STYLES = ['digital art','anime / manga','photorealistic','oil painting','watercolor','3D render','concept art','pencil sketch','comic book','pixel art'];
+  const MOODS = ['dramatic','soft & warm','dark & moody','bright & vibrant','mysterious','ethereal','cinematic','cozy & intimate'];
+
+  const [artStyle,setArtStyle] = React.useState('digital art');
+  const [mood,setMood] = React.useState('dramatic');
+  const [notes,setNotes] = React.useState('');
+  const [result,setResult] = React.useState('');
+  const [loading,setLoading] = React.useState(false);
+  const [status,setStatus] = React.useState('');
+  const [copied,setCopied] = React.useState(false);
+
+  const generate = async () => {
+    setLoading(true); setStatus(''); setResult('');
+    const name = currentChar ? currentChar.name : '(character)';
+    const desc = currentChar ? (currentChar.short_description||'') : '';
+    const tags = currentChar ? (currentChar.tags||[]).slice(0,20).join(', ') : '';
+    const card = currentChar ? (currentChar.card||'').slice(0,500) : '';
+    const nl = '\n';
+    const parts = [
+      'You are an expert at writing image generation prompts for AI art tools.',
+      '',
+      'Character:',
+      'Name: ' + name
+    ];
+    if(desc) parts.push('Description: ' + desc);
+    if(tags) parts.push('Tags: ' + tags);
+    if(card) parts.push('Appearance/card notes: ' + card);
+    if(notes) parts.push('Extra context: ' + notes);
+    parts.push('');
+    parts.push('Write a single detailed image generation prompt for this character.');
+    parts.push('Art style: ' + artStyle);
+    parts.push('Mood/lighting: ' + mood);
+    parts.push('');
+    parts.push('Rules: Return ONLY the prompt text, no preamble. Be specific about appearance, clothing, pose, setting, lighting, and composition. End with quality tags (high detail, sharp focus). Under 200 words.');
+    const prompt = parts.join(nl);
+        try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:400,messages:[{role:'user',content:prompt}]})
+      });
+      const resp = await res.json();
+      if(resp.content&&resp.content[0]&&resp.content[0].text) {
+        setResult(resp.content[0].text.trim());
+      } else {
+        setStatus('No response — check API key in Claude panel settings');
+      }
+    } catch(e) { setStatus('Error: ' + e.message); }
+    setLoading(false);
+  };
+
+  const copy = () => {
+    if(!result) return;
+    navigator.clipboard.writeText(result).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});
+  };
+
+  const S2 = {box:{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:12},label:{fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:6,display:'block'}};
+  const inp = {width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none',boxSizing:'border-box'};
+  const labelMt = {fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:6,display:'block',marginTop:10};
+  const notesArea = {width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none',boxSizing:'border-box',minHeight:56,resize:'vertical'};
+  const genBtn = {justifyContent:'center',width:'100%'};
+  const charName2 = {fontSize:12,fontWeight:600,color:'var(--text)'};
+  const charSub = {fontSize:11,color:'var(--text3)',marginTop:2};
+  const resultBox = {background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:10,fontSize:11,color:'var(--text)',lineHeight:1.65,whiteSpace:'pre-wrap',wordBreak:'break-word'};
+  const copyBtn = {justifyContent:'center',width:'100%',marginTop:8};
+  const statusTxt = {fontSize:11,color:'var(--red)',marginTop:4};
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:10}}>
+      <div style={S2.box}>
+        <span style={S2.label}>Character context</span>
+        {currentChar ? (
+          <div>
+            <div style={charName2}>{currentChar.name}</div>
+            <div style={charSub}>{(currentChar.short_description||'').slice(0,90)||'No description'}</div>
+          </div>
+        ) : (
+          <div style={charSub}>Open a character to use their data, or generate a generic prompt below.</div>
+        )}
+        <span style={labelMt}>Art style</span>
+        <select value={artStyle} onChange={e=>setArtStyle(e.target.value)} style={inp}>
+          {ART_STYLES.map(s=><option key={s} value={s}>{s}</option>)}
+        </select>
+        <span style={labelMt}>Mood & lighting</span>
+        <select value={mood} onChange={e=>setMood(e.target.value)} style={inp}>
+          {MOODS.map(m=><option key={m} value={m}>{m}</option>)}
+        </select>
+        <span style={labelMt}>Extra notes (optional)</span>
+        <textarea value={notes} onChange={e=>setNotes(e.target.value)} style={notesArea} placeholder="Specific pose, outfit, background, expression…"/>
+      </div>
+      <button className="btn" style={genBtn} onClick={generate} disabled={loading}>
+        <i className={loading?'ti ti-loader-2':'ti ti-sparkles'}></i>{loading?'Generating…':'Generate Prompt'}
+      </button>
+      {status&&<div style={statusTxt}>{status}</div>}
+      {result&&(
+        <div style={S2.box}>
+          <span style={S2.label}>Generated prompt</span>
+          <div style={resultBox}>{result}</div>
+          <button className="btn" style={copyBtn} onClick={copy}>
+            <i className={copied?'ti ti-check':'ti ti-copy'}></i>{copied?'Copied!':'Copy'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ToolsPanel({data, currentChar}) {
   const [tool, setTool] = useState(null);
   const [cm, setCm] = useState('');
   const [ftIn, setFtIn] = useState({ft:'',in:''});
@@ -2196,6 +2305,7 @@ function ToolsPanel({data}) {
     {id:'img-convert',icon:'ti-transform',label:'Img Convert'},
     {id:'paste-save',icon:'ti-clipboard-copy',label:'Paste & Save'},
     {id:'crop',icon:'ti-crop',label:'Crop'},
+    {id:'img-prompt',icon:'ti-sparkles',label:'Img Prompt'},
   ];
 
   const S={box:{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:12},label:{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10,display:'block'},input:{width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none'}};
@@ -2282,6 +2392,7 @@ function ToolsPanel({data}) {
       {tool==='img-convert'&&<FormatConvertTool/>}
       {tool==='paste-save'&&<PasteAndSaveTool/>}
       {tool==='crop'&&<CropTool/>}
+      {tool==='img-prompt'&&<ImagePromptTool currentChar={currentChar}/>}
 
       {tool==='chinese-zodiac'&&<ChineseZodiacTool/>}
       {tool==='hockey'&&<HockeyTool/>}
@@ -3287,7 +3398,7 @@ function RightPanel({tab,setTab,data,update,currentWorld,currentChar,currentPage
             />
           </>
         )}
-        {tab==='tools'&&<ToolsPanel data={data}/>}
+        {tab==='tools'&&<ToolsPanel data={data} currentChar={currentChar}/>}
         {tab==='claude'&&<ClaudePanel data={data} currentWorld={currentWorld} currentChar={currentChar} currentPage={currentPage} setPage={setPage}/>}
         {tab==='map'&&<RelationshipsPage data={data} update={update} initialWorld={currentWorld?.id||null}/>}
       </div>

@@ -1,5 +1,5 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 24, 2026 (session 26)**
+**Last updated: June 24, 2026 (session 27)**
 
 ---
 
@@ -588,35 +588,29 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 
 ## What's Next (Priority Order)
 
-### Import/Export Audit (session 22 flagged, partially done session 25)
-Duplicate `exportAll` / "Backup everything" button removed. Import/Export page reorganised into three cards: Backup, Restore, Import. Character Export tab merged into Settings tab; Example Dialogue tab merged into Formatting tab.
+### 1. CharDetailPage UI cleanup
+Oldest component, most inline styles. Structurally fine — this pass converts inline styles to CSS classes for consistency with the rest of the app. No functional changes.
 
-Remaining gaps to verify:
-- Are all export paths (character/lorebook/collection single-item + world ZIP) keeping the same required Saucepan fields? Spot-check after any future export change.
-- `importJSON` (single-item modal drop) still handles full data restore silently if a full-backup JSON is picked — consider blocking this path or routing to Restore explicitly.
-- World topbar Export ZIP: verify it still matches the individual export paths for all three content types.
+### 2. UI consistency check
+After CharDetailPage is done: open every page/tab modified across sessions 22–27 and verify no layout breaks at default font size, large font size, and narrow window (~900px). Check tab bars don't overflow, no orphaned styles.
 
-### Image Tools (remaining)
-- **Image prompt generator** — Claude API call using character name/description/tags to generate an image generation prompt; lives in the right panel Tools section
+### 3. Help page update
+Last — written against the final stable UI. Sections to add/update: all four image tools (Format Converter, Paste & Save, Crop, Image Prompt Generator), Import/Export page reorganisation, colorblind mode, character tab changes (Example Dialogue → Formatting, Export → Settings), import/export test flow.
 
-### Tools (remaining)
-- **Map generator** — region/landmark randomiser; output as text description or simple ASCII map (design TBD)
+### 4. Standalone / Public Version
+Configurable data path, strip Saucepan-specific fields, packaged `.exe`, optional rename/theming, README.md.
 
-### UI Overhaul (remaining)
-- **CharDetailPage** — has the most inline styles of any component (oldest and most complex); structurally fine, worth a cleanup pass later when there's time, not urgent
-- **Standalone / Public Version** — configurable data path, strip Saucepan-specific stuff, packaged `.exe`, optional rename/theming; README.md goes here
-
-### Before shipping any major feature batch
-- **Update help page** — the Help tab (`HelpPage` component) has a section per feature area; add/update any section touched by the new tools or UI changes. Keep it accurate — stale help is worse than no help.
-- **UI consistency check** — open every page modified in the session and verify: no layout breaks at default font size, large font size, and with a narrow window (~900px); tab bars don't overflow; no orphaned inline styles that conflict with CSS classes.
+### Import/Export — remaining gaps to verify
+- `importJSON` still handles full data restore silently if a full-backup JSON is picked — consider blocking or routing to Restore explicitly.
+- World topbar Export ZIP: verify it still matches individual export paths for all three content types.
 
 ### Won't do
-
 - Per-world color theming
 - Age calculator in tools
 - Text stats in tools
 - Schedule page (replaced by dashboard calendar)
 - Relationship dynamic generator
+- Map generator
 
 ### Very long term
 - Android build
@@ -752,3 +746,4 @@ This has happened multiple times this project: a chat session's fixes only exist
 Full feature list — see sections above for details on each. Chronological build order is in the Session Log table above.
 | 25 | Jun 24 | **Import/Export page reorganisation; character tab reduction.** Import/Export page ("Batch Import") rebuilt into three side-by-side cards — **Backup** (export full ZIP + per-world dropdown+button, replacing individual per-world buttons that would overflow with many worlds), **Restore** (from backup ZIP with explicit note that full backup replaces all / world backup merges; from last-good auto-save), **Import** (single item JSON + batch scan + how-it-works). Duplicate "Backup everything" button removed (was identical to "Export full backup"). All action buttons now use standard `btn` style (no `primary` colouring). Backup/restore state inlined from old `BackupRestorePanel` component which is no longer rendered. Character detail page tab count reduced from 13 to 11: **Example Dialogue** tab removed — textarea moved into Formatting tab below Advanced Prompt. **Export** tab removed — `CharExportTab` (Update from JSON / Export JSON / Export Markdown) moved into Settings tab above Delete Character button. |
 | 26 | Jun 24 | **Image tools (Format Converter, Paste & Save, Crop); data array recovery; Babel size management.** Added three image tools to the right panel Tools section. Format Converter: load any image → select output format (JPEG/PNG/WebP) + quality slider → convert via canvas `toBlob()` → save via new `save-image` IPC (binary save with dialog). Paste & Save: paste from clipboard via `paste-image` IPC (`clipboard.readImage()` in main process) or drag-and-drop → preview with dimensions → set filename → save as PNG. Crop: interactive canvas crop with corner handles, aspect ratio presets (1:1/3:4/16:9/4:1/Free), rule-of-thirds grid; `applyCrop` loads a fresh clean `Image()` from stored `imgSrc` base64 to avoid drawing the overlay; all style objects inside `&&` conditionals pre-defined as variables (Babel deoptimisation fix). Added `save-image` IPC to main.js + `saveImage` to preload.js; added `clipboard` to electron imports + `paste-image` IPC. Data array recovery: extraction script bug caused 9 arrays (SAUCEPAN_TAGS 61KB, PLOT_DESCRIPTIONS, WESTERN_SIGNS, CHINESE_SIGNS, HOCKEY_POSITIONS, SWIM_EVENTS, MACROS, NAMES_MASC, NAMES_FEM) to be removed from Babel but silently fail to append to the plain JS block — recovered from test environment file. Fixed two comment+const merge bugs (HOCKEY_HANDEDNESS, SWIM_ROLES) left by extraction. Plain JS block now 110KB (15 arrays total); Babel block 425KB. |
+| 27 | Jun 24 | **Image Prompt Generator; map generator cancelled.** Added `ImagePromptTool` to right panel Tools section (Img Prompt pill). Receives `currentChar` prop threaded from App → RightPanel → ToolsPanel → tool. Shows current character name/description auto-populated; art style dropdown (10 options); mood/lighting dropdown (8 options); optional extra notes textarea. Calls `claude-sonnet-4-6` via Anthropic API; builds prompt as `parts.join(nl)` array to avoid multiline JS string literals (Babel restriction). Copy button with 2-second confirmation flash. Map generator removed from What's Next → Won't do (design too open-ended). |
