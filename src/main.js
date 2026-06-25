@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, session } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, session, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const AdmZip = require('adm-zip');
@@ -122,6 +122,35 @@ ipcMain.handle('save-data', async (event, data) => {
 });
 
 ipcMain.handle('get-data-path', () => DATA_FILE);
+
+// Read image from system clipboard
+ipcMain.handle('paste-image', async () => {
+  const img = clipboard.readImage();
+  if (!img || img.isEmpty()) return null;
+  const png = img.toPNG();
+  const size = img.getSize();
+  return {
+    base64: 'data:image/png;base64,' + png.toString('base64'),
+    width: size.width,
+    height: size.height
+  };
+});
+
+// Save a binary image file via save dialog — used by image tools
+ipcMain.handle('save-image', async (event, { base64, defaultName }) => {
+  const ext = (defaultName.split('.').pop() || 'jpg').toLowerCase();
+  const extMap = { jpg:'JPEG', jpeg:'JPEG', png:'PNG', webp:'WebP', gif:'GIF' };
+  const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
+    defaultPath: path.join(os.homedir(), 'Desktop', defaultName),
+    filters: [{ name: extMap[ext]||'Image', extensions: [ext] }, { name: 'All Files', extensions: ['*'] }]
+  });
+  if (canceled || !filePath) return { cancelled: true };
+  try {
+    const b64data = base64.includes(',') ? base64.split(',')[1] : base64;
+    fs.writeFileSync(filePath, Buffer.from(b64data, 'base64'));
+    return { success: true, path: filePath };
+  } catch(e) { return { success: false, error: e.message }; }
+});
 
 // ── File export ──────────────────────────────────────────
 ipcMain.handle('export-file', async (event, { defaultName, content, folder }) => {

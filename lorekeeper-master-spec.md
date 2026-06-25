@@ -609,7 +609,12 @@ Remaining gaps to verify:
 - **CharDetailPage** — has the most inline styles of any component (oldest and most complex); structurally fine, worth a cleanup pass later when there's time, not urgent
 - **Standalone / Public Version** — configurable data path, strip Saucepan-specific stuff, packaged `.exe`, optional rename/theming; README.md goes here
 
+### Before shipping any major feature batch
+- **Update help page** — the Help tab (`HelpPage` component) has a section per feature area; add/update any section touched by the new tools or UI changes. Keep it accurate — stale help is worse than no help.
+- **UI consistency check** — open every page modified in the session and verify: no layout breaks at default font size, large font size, and with a narrow window (~900px); tab bars don't overflow; no orphaned inline styles that conflict with CSS classes.
+
 ### Won't do
+
 - Per-world color theming
 - Age calculator in tools
 - Text stats in tools

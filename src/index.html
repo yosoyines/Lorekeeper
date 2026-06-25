@@ -541,6 +541,300 @@ const LITERARY_ARCHETYPES = [
   {name:"The Last Defender",desc:"Stands alone or with few allies as the final protector of something precious or sacred."},
   {name:"The Reluctant Leader",desc:"Thrust into leadership despite resisting it; grows into the role through trial and sacrifice."},
 ];
+
+const SAUCEPAN_TAGS = {"dead_dove": {"c": "Content Warnings", "d": "Content warning: Content may be actively disturbing or distressing in roleplay. See tags/description for more details."}, "noncon_dubcon": {"c": "Content Warnings", "d": "Content warning: Material contains non-consensual or dubiously consensual elements"}, "abuse": {"c": "Content Warnings", "d": "Content warning: Material depicts physical, emotional, or psychological mistreatment"}, "blackmail": {"c": "Content Warnings", "d": "Content warning: Coercive leverage through threats or exposure"}, "slur_usage": {"c": "Content Warnings", "d": "Content warning: Material contains usage of derogatory slurs or offensive language"}, "self_harm_suicide": {"c": "Content Warnings", "d": "Content warning: Material references or depicts self-harm, suicidal ideation, or suicide attempts"}, "violence": {"c": "Content Warnings", "d": "Content warning: Material contains explicit violent themes"}, "gore": {"c": "Content Warnings", "d": "Content warning: Material contains graphic depictions of blood and injuries"}, "drugs_addiction": {"c": "Content Warnings", "d": "Content warning: Material involves substance use and dependency"}, "incest_stepcest": {"c": "Content Warnings", "d": "Content warning: Material involves romantic or sexual relationships between step-relatives. Blood incest is not allowed on Saucepan."}, "vore": {"c": "Content Warnings", "d": "Content warning: Material contains themes of characters being consumed, swallowed whole, or absorbed by other characters"}, "cannibalism": {"c": "Content Warnings", "d": "Content warning: Material contains themes of characters consuming or eating other characters"}, "feral": {"c": "Content Warnings", "d": "Content warning: Material involves romantic or sexual content with sentient animal characters (real-life animals with human-level intelligence, not fictional species)"}, "trauma": {"c": "Content Warnings", "d": "Content warning: Material contains depictions of traumatic experiences or their aftermath"}, "terminal_illness": {"c": "Content Warnings", "d": "Content warning: Material contains depictions of illness, disease, or medical conditions"}, "user_harm": {"c": "Content Warnings", "d": "Content warning: Material contains scenarios where the user character may be harmed"}, "death": {"c": "Content Warnings", "d": "Content warning: Material deals with dying, loss of life, or grief"}, "body_horror": {"c": "Content Warnings", "d": "Content warning: Material contains graphic depictions of monstrous/grotesque bodily imagery"}, "eating_disorder": {"c": "Content Warnings", "d": "Content warning: Material depicts anorexia, bulimia, or other harmful relationships with food"}, "amputation": {"c": "Content Warnings", "d": "Content warning: Material containing non-consensual amputations or loss of limbs"}, "miscarriage": {"c": "Content Warnings", "d": "Content warning: Material depicting loss of a child or pregnancy"}, "male": {"c": "Character Identity", "d": "Characters with a focus on a male identity and experience."}, "female": {"c": "Character Identity", "d": "Characters with a focus on a female identity and experience."}, "non_binary": {"c": "Character Identity", "d": "Companions who identify outside the traditional gender binary"}, "trans": {"c": "Character Identity", "d": "Companions whose identity differs from their assigned gender"}, "intersex": {"c": "Character Identity", "d": "Companions with variations in sex characteristics (e.g. genitals, reproductive organs, hormonal patterns)"}, "altersex": {"c": "Character Identity", "d": "Companions with alternative or non-standard sex characteristics, often in fantasy or speculative settings"}, "masc": {"c": "Character Identity", "d": "Masculine presenting person, regardless of gender identity"}, "fem": {"c": "Character Identity", "d": "Feminine presenting person, regardless of gender identity"}, "andro": {"c": "Character Identity", "d": "Androgynous presenting person, regardless of gender identity"}, "genderfluid": {"c": "Character Identity", "d": "Characters whose gender identity changes"}, "gender_norms": {"c": "Character Identity", "d": "Characters who explore, challenge, or otherwise engage with gender as a social construct"}, "multiple_genders": {"c": "Character Identity", "d": "Cast contains more than one gender, great for ensemble bots with diverse representation"}, "any_pov": {"c": "Point of View", "d": "Content inclusive and accessible to all readers"}, "male_pov": {"c": "Point of View", "d": "Content from masculine perspectives"}, "fem_pov": {"c": "Point of View", "d": "Content from feminine perspectives"}, "nb_pov": {"c": "Point of View", "d": "Content for non-binary users perspective and experiences"}, "poc_user": {"c": "Point of View", "d": "Content for people of color users perspective and experiences"}, "plus_size_user": {"c": "Point of View", "d": "Content for plus-sized users perspective and experiences"}, "disabled_user": {"c": "Point of View", "d": "Content for disabled users perspective and experiences"}, "trans_pov": {"c": "Point of View", "d": "Content for trans perspectives and experiences"}, "intersex_pov": {"c": "Point of View", "d": "Content for intersex perspectives and experiences"}, "demi_pov": {"c": "Point of View", "d": "Content for demi-human perspectives and experiences"}, "monster_pov": {"c": "Point of View", "d": "Content from a monster's perspective"}, "villain_pov": {"c": "Point of View", "d": "Content from a villain's perspective"}, "good_person_pov": {"c": "Point of View", "d": "Content from a hero/good person perspective (counterpart to VillainPOV)"}, "non_human_pov": {"c": "Point of View", "d": "Content from a non-human/creature perspective"}, "older_user": {"c": "Point of View", "d": "For bots designed with user being an older person in mind (40s and above)"}, "injured_user": {"c": "Point of View", "d": "Roleplay starts with user sick or injured"}, "tall_user": {"c": "Point of View", "d": "For users that are really tall (7ft or more)"}, "short_user": {"c": "Point of View", "d": "For users that are really short (Below 5ft)"}, "victim_pov": {"c": "Point of View", "d": "Content told from a victim's perspective"}, "second_person_pov": {"c": "Point of View", "d": "Narration addresses the reader as 'you'"}, "third_person_pov": {"c": "Point of View", "d": "External narration using he/she/they"}, "first_person_pov": {"c": "Point of View", "d": "Character's narrative uses 'I'"}, "mlm": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to men"}, "wlw": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to women"}, "m4a": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to any gender"}, "w4a": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to any gender"}, "m4nb": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to non-binary"}, "w4nb": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to non-binary"}, "m4w": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to women"}, "w4m": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to men"}, "m4t": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to trans"}, "w4t": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to trans"}, "nb4m": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to men"}, "nb4w": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to women"}, "nb4a": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to any gender"}, "nb4nb": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to non-binary"}, "t4m": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to men"}, "t4w": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to women"}, "t4t": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to trans"}, "t4a": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to any gender"}, "t4nb": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to non-binary"}, "bi": {"c": "Sexual & Romantic Orientation", "d": "Characters attracted to more than one gender"}, "pansexual": {"c": "Sexual & Romantic Orientation", "d": "Characters attracted to people regardless of gender"}, "asexual": {"c": "Sexual & Romantic Orientation", "d": "Characters who experience little to no sexual attraction"}, "demisexual": {"c": "Sexual & Romantic Orientation", "d": "Characters who only experience sexual attraction after forming an emotional bond"}, "aromantic": {"c": "Sexual & Romantic Orientation", "d": "Characters who experience little to no romantic attraction"}, "queer": {"c": "Sexual & Romantic Orientation", "d": "Sexuality or identity that is harder to label; umbrella term for diverse orientations"}, "closeted": {"c": "Sexual & Romantic Orientation", "d": "Characters secretly hiding their true sexuality or gender identity from those around them"}, "dom": {"c": "Relationship Structure & Dynamics", "d": "Dominant companions in power dynamics"}, "sub": {"c": "Relationship Structure & Dynamics", "d": "Submissive companions in power dynamics"}, "switch": {"c": "Relationship Structure & Dynamics", "d": "Companions that can switch between dominant and submissive roles"}, "multiple": {"c": "Relationship Structure & Dynamics", "d": "Stories with polyamorous or multiple-companion dynamics"}, "vanilla": {"c": "Relationship Structure & Dynamics", "d": "Stories with traditional romantic dynamics"}, "bdsm": {"c": "Relationship Structure & Dynamics", "d": "Stories exploring power dynamics, bondage, discipline and consensual kink"}, "ntr": {"c": "Relationship Structure & Dynamics", "d": "Stories involving infidelity, cuckoldry, or cheating"}, "unestablished_relationship": {"c": "Relationship Structure & Dynamics", "d": "Stories where relationships are developing or undefined"}, "contractual_relationship": {"c": "Relationship Structure & Dynamics", "d": "Relationships bound by formal agreement - contracts, obligations, or arranged terms"}, "qpr": {"c": "Relationship Structure & Dynamics", "d": "Queer Platonic Relationship - an intimate, committed relationship that is not romantic in nature"}, "sugar_parent": {"c": "Relationship Structure & Dynamics", "d": "Relationship dynamic where one partner provides financial support in exchange for companionship"}, "platonic": {"c": "Relationship Structure & Dynamics", "d": "Non-romantic relationships focused on friendship"}, "step_sibling": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving step-siblings"}, "neighbor": {"c": "Relationship Structure & Dynamics", "d": "Relationships between people living next to each other"}, "roommate": {"c": "Relationship Structure & Dynamics", "d": "Relationships between people sharing living quarters"}, "spouse": {"c": "Relationship Structure & Dynamics", "d": "Relationships between married partners"}, "step_parent": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving step-parents"}, "lover": {"c": "Relationship Structure & Dynamics", "d": "Romantic partners in established relationships"}, "childhood_friend": {"c": "Relationship Structure & Dynamics", "d": "Relationships with friends from childhood"}, "butler": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving a servant or household staff member"}, "senpai": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving a senior or older companion"}, "kouhai": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving a junior or younger companion"}, "power_dynamics": {"c": "Relationship Structure & Dynamics", "d": "Content involving dominance and submission in a consensual context"}, "age_gap": {"c": "Relationship Structure & Dynamics", "d": "Content involving a significant age difference between companions"}, "ex": {"c": "Relationship Structure & Dynamics", "d": "Content involving former romantic partners or relationships"}, "cheating": {"c": "Relationship Structure & Dynamics", "d": "Content involving infidelity. Different from NTR in that it doesn't involve cuckoldry."}, "unrequited_love": {"c": "Relationship Structure & Dynamics", "d": "One-sided romantic feelings that aren't reciprocated"}, "forbidden_love": {"c": "Relationship Structure & Dynamics", "d": "Content involving love that is prohibited or taboo"}, "soulmate": {"c": "Relationship Structure & Dynamics", "d": "Characters bound by fate, destiny, or a supernatural bond"}, "boss": {"c": "Relationship Structure & Dynamics", "d": "Content involving a boss-employee relationship dynamic"}, "harem": {"c": "Relationship Structure & Dynamics", "d": "Relationship structures featuring one focal partner with multiple romantic interests"}, "concubine": {"c": "Relationship Structure & Dynamics", "d": "Historical or hierarchical companion in a secondary spouse/consort role"}, "captive": {"c": "Relationship Structure & Dynamics", "d": "Scenarios where someone is held against will"}, "dark_romance": {"c": "Relationship Structure & Dynamics", "d": "Toxic, intense, and/or abusive love scenarios"}, "best_friend": {"c": "Relationship Structure & Dynamics", "d": "Close friend, long-time companion, or confidant"}, "taken": {"c": "Relationship Structure & Dynamics", "d": "Characters already in committed relationship with someone not User"}, "colleague": {"c": "Relationship Structure & Dynamics", "d": "Person with mostly professional relationship"}, "crush": {"c": "Relationship Structure & Dynamics", "d": "Passionate, romantic attraction to someone not their partner"}, "fwb": {"c": "Relationship Structure & Dynamics", "d": "Friends with benefits; casual sexual relationships without romance"}, "hookup": {"c": "Relationship Structure & Dynamics", "d": "Intimacy without romance (one-time, distinct from FWB)"}, "rejection": {"c": "Relationship Structure & Dynamics", "d": "Refusal or dismissal of someone's feelings/proposals"}, "lovers_to_enemies": {"c": "Relationship Structure & Dynamics", "d": "Relationships shift from romance to hostility"}, "savior": {"c": "Relationship Structure & Dynamics", "d": "One character rescues another (from bullies, jail, bad situations)"}, "partner": {"c": "Relationship Structure & Dynamics", "d": "Fellow cop, firefighter, soldier; someone you trust to watch your back"}, "teammate": {"c": "Relationship Structure & Dynamics", "d": "Someone on the same team, whether sports, esports, military squad, or any shared-goal group"}, "party_member": {"c": "Relationship Structure & Dynamics", "d": "Fellow adventurers in your party, bonded through dungeon crawls, quests, and shared danger"}, "objectification": {"c": "Relationship Structure & Dynamics", "d": "Treated as less than human and more like something to be owned"}, "stranger": {"c": "Relationship Structure & Dynamics", "d": "Encounters with someone completely unknown, no prior connection or history"}, "pbf": {"c": "Relationship Structure & Dynamics", "d": "Romantic or sexual tension with a parent's close friend from the older generation"}, "parent_in_law": {"c": "Relationship Structure & Dynamics", "d": "Complicated or romantic dynamics with a spouse's mother or father"}, "top": {"c": "Relationship Structure & Dynamics", "d": "Characters who exclusively take the dominant or penetrative role in intimacy"}, "bottom": {"c": "Relationship Structure & Dynamics", "d": "Characters who exclusively take the receptive or submissive role in intimacy"}, "soft_dom": {"c": "Relationship Structure & Dynamics", "d": "Dominant but leads with care, patience and a gentle touch"}, "selfcest": {"c": "Relationship Structure & Dynamics", "d": "Romantic/sexual relationship with a clone, AU version, or time-travelling self"}, "enemies_to_lovers": {"c": "Plot Devices & Structure", "d": "Stories of conflict transforming into romance"}, "friends_to_lovers": {"c": "Plot Devices & Structure", "d": "Stories where friendship evolves into romantic relationship"}, "love_triangle": {"c": "Plot Devices & Structure", "d": "Stories involving three people in a complicated romantic dynamic"}, "forced_proximity": {"c": "Plot Devices & Structure", "d": "Stories where characters are forced to stay close together"}, "arranged_marriage": {"c": "Plot Devices & Structure", "d": "Marriages planned by families, politics, or duty rather than personal choice"}, "fake_relationship": {"c": "Plot Devices & Structure", "d": "Partners pretending to date or be together for ulterior motives"}, "pregnant": {"c": "Plot Devices & Structure", "d": "Scenarios involving pregnancy"}, "oc": {"c": "Plot Devices & Structure", "d": "Original user-created characters"}, "scenario": {"c": "Plot Devices & Structure", "d": "A companion built around a specific situation or premise rather than a character"}, "interactive_rpg": {"c": "Plot Devices & Structure", "d": "This companion functions as an interactive roleplaying game"}, "amnesia": {"c": "Plot Devices & Structure", "d": "Stories featuring memory loss as a plot device"}, "gender_bend": {"c": "Plot Devices & Structure", "d": "Stories featuring characters transformed into the opposite gender"}, "time_travel": {"c": "Plot Devices & Structure", "d": "Content where characters move between different time periods"}, "chosen_one": {"c": "Plot Devices & Structure", "d": "Narratives with specially selected characters destined for greatness"}, "prophecy": {"c": "Plot Devices & Structure", "d": "Content involving predicted events or destinies"}, "quest": {"c": "Plot Devices & Structure", "d": "Stories structured around journeys to achieve specific goals"}, "tournament": {"c": "Plot Devices & Structure", "d": "Narratives centered on competitions or formalized contests"}, "found_family": {"c": "Plot Devices & Structure", "d": "Stories about non-biological family bonds formed through circumstance"}, "ensemble_cast": {"c": "Plot Devices & Structure", "d": "Stories featuring multiple main characters of equal importance"}, "unreliable_narrator": {"c": "Plot Devices & Structure", "d": "Content told from the perspective of a character whose credibility is questionable"}, "colleagues_to_lovers": {"c": "Plot Devices & Structure", "d": "Stories where professional relationships evolve into romance"}, "curse": {"c": "Plot Devices & Structure", "d": "Stories where character/setting is under supernatural harm/misfortune"}, "mistaken_identity": {"c": "Plot Devices & Structure", "d": "Characters led to believe someone's identity is another's"}, "chance_meeting": {"c": "Plot Devices & Structure", "d": "Stories about characters who just happen to run into each other"}, "kidnapping": {"c": "Plot Devices & Structure", "d": "Scenario involving forced abduction and confinement"}, "hostage": {"c": "Plot Devices & Structure", "d": "Scenario where person is held against their will"}, "lore_heavy": {"c": "Plot Devices & Structure", "d": "Companions deeply tied to the lore of their world; may require reading canon material"}, "passional_crime": {"c": "Plot Devices & Structure", "d": "A violent crime committed in a sudden heat of passion or rage"}, "sexual_awakening": {"c": "Plot Devices & Structure", "d": "Characters discovering or coming to terms with a previously unexplored side of their sexuality"}, "parallel_universe": {"c": "Plot Devices & Structure", "d": "Stories featuring alternate versions of reality or different dimensions that exist alongside our own"}, "portal": {"c": "Plot Devices & Structure", "d": "Stories where characters are transported or reincarnated into a different world, often with fantasy or game-like elements"}, "smut": {"c": "Story Genres & Styles", "d": "Content with mature themes and consensual intimacy"}, "fluff": {"c": "Story Genres & Styles", "d": "Heartwarming content celebrating joy and comfort"}, "angst": {"c": "Story Genres & Styles", "d": "Stories heavy with emotional pain, inner conflict, and suffering"}, "comfort": {"c": "Story Genres & Styles", "d": "Content focused on providing emotional support and reassurance"}, "hurt_comfort": {"c": "Story Genres & Styles", "d": "Content featuring emotional or physical hurt followed by comfort and care"}, "hurt_no_comfort": {"c": "Story Genres & Styles", "d": "Content featuring emotional or physical hurt without resolution or comfort"}, "comedy": {"c": "Story Genres & Styles", "d": "Content focused on humor and joy"}, "horror": {"c": "Story Genres & Styles", "d": "Stories designed to frighten, unsettle, or create dread"}, "fantasy": {"c": "Story Genres & Styles", "d": "Content with magical and otherworldly elements"}, "adventure": {"c": "Story Genres & Styles", "d": "Content focused on exploration and discovery"}, "action": {"c": "Story Genres & Styles", "d": "Content with dynamic and exciting sequences"}, "romance": {"c": "Story Genres & Styles", "d": "Content focused on romantic relationships and emotions"}, "slice_of_life": {"c": "Story Genres & Styles", "d": "Content depicting ordinary day-to-day experiences"}, "noir": {"c": "Story Genres & Styles", "d": "Stories with dark, cynical themes and stylized crime drama"}, "urban_fantasy": {"c": "Story Genres & Styles", "d": "Stories blending magical elements with modern city settings"}, "magical": {"c": "Story Genres & Styles", "d": "Stories where magic, spells, and enchantment are central to the world"}, "sci_fi": {"c": "Story Genres & Styles", "d": "Stories set in futuristic or technologically advanced worlds"}, "mystery": {"c": "Story Genres & Styles", "d": "Content involving secrets, puzzles, or unsolved questions"}, "conspiracy": {"c": "Story Genres & Styles", "d": "Stories featuring hidden plots and secret schemes"}, "heist": {"c": "Story Genres & Styles", "d": "Narratives about elaborate theft or complex robberies"}, "slow_burn": {"c": "Story Genres & Styles", "d": "Content where relationships develop gradually over extended periods"}, "politics": {"c": "Story Genres & Styles", "d": "Stories centered on political intrigue, governance, and power struggles"}, "religion": {"c": "Story Genres & Styles", "d": "Content exploring faith and spirituality"}, "philosophy": {"c": "Story Genres & Styles", "d": "Content examining life's big questions"}, "coming_of_age": {"c": "Story Genres & Styles", "d": "Stories focusing on growth and transition from youth to adulthood"}, "redemption": {"c": "Story Genres & Styles", "d": "Stories about characters seeking forgiveness or atonement"}, "revenge": {"c": "Story Genres & Styles", "d": "Narratives centered on retribution for past wrongs"}, "justice": {"c": "Story Genres & Styles", "d": "Content exploring fairness, morality, and consequences"}, "betrayal": {"c": "Story Genres & Styles", "d": "Stories involving deception and broken trust"}, "sacrifice": {"c": "Story Genres & Styles", "d": "Narratives featuring characters giving up something valuable"}, "survival": {"c": "Story Genres & Styles", "d": "Content focusing on perseverance against difficult circumstances"}, "identity": {"c": "Story Genres & Styles", "d": "Stories exploring who characters are and their sense of self"}, "freedom": {"c": "Story Genres & Styles", "d": "Content examining liberation and autonomy"}, "otome": {"c": "Story Genres & Styles", "d": "Content involving female-centric romantic relationships"}, "supernatural": {"c": "Story Genres & Styles", "d": "Stories featuring paranormal phenomena - ghosts, cryptids, unexplained events"}, "psychological": {"c": "Story Genres & Styles", "d": "Stories exploring the mind - mental illness, manipulation, paranoia, or psychological tension"}, "thriller": {"c": "Story Genres & Styles", "d": "Content involving suspense, danger, and unexpected twists"}, "urban_fiction": {"c": "Story Genres & Styles", "d": "Gritty, street-level narratives set in modern city environments"}, "wuxia": {"c": "Story Genres & Styles", "d": "Martial arts heroes and mystical cultivation in Chinese-inspired settings"}, "non_canonical_au": {"c": "Story Genres & Styles", "d": "Stories in established universe not related to/changed from original"}, "canon_compliant": {"c": "Story Genres & Styles", "d": "Roleplays that stay true to media source with canon references"}, "sfw": {"c": "Story Genres & Styles", "d": "Stories not designed to be sexually motivated (for spicy-tagged bots)"}, "war": {"c": "Story Genres & Styles", "d": "Narratives set during armed conflicts"}, "peace": {"c": "Story Genres & Styles", "d": "Stories focusing on harmony and conflict resolution"}, "contemporary": {"c": "Locations and Eras", "d": "Content set in the present day with realistic elements"}, "renaissance": {"c": "Locations and Eras", "d": "Stories set in the cultural rebirth period of 14th-17th century Europe"}, "prison": {"c": "Locations and Eras", "d": "Stories set in prison or correctional facilities"}, "victorian": {"c": "Locations and Eras", "d": "Stories set in the Victorian era (1837-1901)"}, "college": {"c": "Locations and Eras", "d": "Stories set in higher education environments"}, "hospital": {"c": "Locations and Eras", "d": "Stories set in medical facilities and healthcare environments"}, "library": {"c": "Locations and Eras", "d": "Stories set in libraries and archives of knowledge"}, "tavern_inn": {"c": "Locations and Eras", "d": "Stories set in traditional inns, taverns, and guesthouses"}, "hotel": {"c": "Locations and Eras", "d": "Stories set in hotels and modern accommodation facilities"}, "mansion": {"c": "Locations and Eras", "d": "Stories set in large, luxurious estates and grand homes"}, "home": {"c": "Locations and Eras", "d": "Stories set in domestic home environments"}, "island": {"c": "Locations and Eras", "d": "Stories set on islands, both tropical and remote"}, "bar": {"c": "Locations and Eras", "d": "Stories set in modern bars and drinking establishments"}, "club": {"c": "Locations and Eras", "d": "Stories set in nightclubs and dance venues"}, "circus": {"c": "Locations and Eras", "d": "Stories set in circuses and traveling entertainment shows"}, "holidays": {"c": "Locations and Eras", "d": "Stories centered around holiday celebrations and seasonal festivities"}, "small_town": {"c": "Locations and Eras", "d": "Stories set in tight-knit rural or suburban communities"}, "gym": {"c": "Locations and Eras", "d": "Stories set in fitness centers and athletic training environments"}, "workplace": {"c": "Locations and Eras", "d": "Stories set in professional work environments"}, "cyberpunk": {"c": "Locations and Eras", "d": "Stories set in high-tech, low-life dystopian futures"}, "steampunk": {"c": "Locations and Eras", "d": "Stories set in Victorian-inspired worlds with steam-powered technology"}, "solarpunk": {"c": "Locations and Eras", "d": "Stories set in sustainable futures powered by renewable energy"}, "post_apocalyptic": {"c": "Locations and Eras", "d": "Stories set after a global catastrophe or civilization collapse"}, "medieval": {"c": "Locations and Eras", "d": "Stories set in middle ages-inspired settings"}, "space": {"c": "Locations and Eras", "d": "Stories set in outer space or on other planets"}, "underwater": {"c": "Locations and Eras", "d": "Stories set beneath the ocean or in aquatic environments"}, "military": {"c": "Locations and Eras", "d": "Stories set in military or armed forces environments"}, "wild_west": {"c": "Locations and Eras", "d": "Stories set in the American frontier era"}, "historical": {"c": "Locations and Eras", "d": "Stories set in past historical periods or ancient times"}, "historical_china": {"c": "Locations and Eras", "d": "Stories set in ancient or imperial China"}, "vintage": {"c": "Locations and Eras", "d": "Stories set in the 1900s era with classic, retro aesthetics"}, "y2k": {"c": "Locations and Eras", "d": "Stories set in the early 2000s with millennium-era aesthetics"}, "online": {"c": "Locations and Eras", "d": "Stories set mainly over internet or digital settings"}, "wilderness": {"c": "Locations and Eras", "d": "Stories set in remote outdoors / nature biomes (forests, savannahs, plains, tundras)"}, "desert": {"c": "Locations and Eras", "d": "Stories set in desert or arid land settings"}, "laboratory": {"c": "Locations and Eras", "d": "Stories set within laboratory or research facilities"}, "eatery": {"c": "Locations and Eras", "d": "Stories set in restaurant, fast food, or meal service areas"}, "temple_church": {"c": "Locations and Eras", "d": "Stories set within places of religious worship"}, "party_festival": {"c": "Locations and Eras", "d": "Stories set at social gathering or celebration"}, "beach": {"c": "Locations and Eras", "d": "Stories set on sandy shores with sun, surf, boardwalks, and coastal vibes"}, "remote_cabin": {"c": "Locations and Eras", "d": "Stories set in remote areas like cabin in woods or lake house"}, "farm_setting": {"c": "Locations and Eras", "d": "Working with the land, managing natural resources, raising animals, cultivating crops"}, "regency_era": {"c": "Locations and Eras", "d": "Content from 1795–1837 in Britain; high-fashion, neoclassical architecture, strict social etiquette"}, "mpreg": {"c": "World-Building Concepts", "d": "World setting featuring male pregnancy"}, "omegaverse": {"c": "World-Building Concepts", "d": "World setting with alpha/beta/omega dynamics"}, "bdsm_verse": {"c": "World-Building Concepts", "d": "World setting where dom/sub/switch dynamics are a fundamental part of society"}, "guide_sentinel": {"c": "World-Building Concepts", "d": "World setting featuring enhanced sensory guides and their protectors"}, "dystopian": {"c": "World-Building Concepts", "d": "Content set in oppressive, troubled future societies"}, "utopian": {"c": "World-Building Concepts", "d": "Content set in idealized, perfect future societies"}, "disabled": {"c": "Character Archetypes & Personalities", "d": "Companions with a physical or mental condition that limits their movements, senses, or activities"}, "neurodivergent": {"c": "Character Archetypes & Personalities", "d": "Companions who are neurodivergent, including autism, ADHD, and other neurological differences"}, "hero": {"c": "Character Archetypes & Personalities", "d": "Protagonists who fight for good, protect others, or champion a cause"}, "villain": {"c": "Character Archetypes & Personalities", "d": "Antagonists who oppose the protagonist - from cunning schemers to outright evil"}, "villainess": {"c": "Character Archetypes & Personalities", "d": "Female antagonists and morally grey characters"}, "anti_hero": {"c": "Character Archetypes & Personalities", "d": "Protagonists with questionable morals or unconventional methods"}, "royalty": {"c": "Character Archetypes & Personalities", "d": "Characters in positions of privilege and power"}, "nobility": {"c": "Character Archetypes & Personalities", "d": "Characters belonging to the noble class or aristocracy"}, "duke_duchess": {"c": "Character Archetypes & Personalities", "d": "Characters holding the title of duke or duchess"}, "pirate": {"c": "Character Archetypes & Personalities", "d": "Seafaring outlaws, treasure hunters, and swashbucklers"}, "dilf": {"c": "Character Archetypes & Personalities", "d": "Content featuring an attractive older male character, often a father figure"}, "milf": {"c": "Character Archetypes & Personalities", "d": "Content featuring an attractive older female character, often a mother figure"}, "emo": {"c": "Character Archetypes & Personalities", "d": "Characters with dark, emotional, and introspective personalities"}, "murderer": {"c": "Character Archetypes & Personalities", "d": "Characters who have committed homicide"}, "jock": {"c": "Character Archetypes & Personalities", "d": "Athletic characters often associated with sports"}, "nerd": {"c": "Character Archetypes & Personalities", "d": "Characters who are intellectual and nerdy"}, "bimbo_himbo": {"c": "Character Archetypes & Personalities", "d": "Attractive characters who appear superficial but have good hearts"}, "bully": {"c": "Character Archetypes & Personalities", "d": "Characters who intimidate or mistreat others"}, "rival": {"c": "Character Archetypes & Personalities", "d": "Characters in competition with each other"}, "virgin": {"c": "Character Archetypes & Personalities", "d": "Characters who haven't experienced sexual intimacy"}, "promiscuous": {"c": "Character Archetypes & Personalities", "d": "Characters with multiple sexual partners or casual attitudes toward sex"}, "filthy": {"c": "Character Archetypes & Personalities", "d": "Content featuring dirty, unhygienic, or unclean characters"}, "wealthy": {"c": "Character Archetypes & Personalities", "d": "Characters with significant financial resources"}, "healer": {"c": "Character Archetypes & Personalities", "d": "Characters who specialize in healing, whether magical or medical"}, "rogue": {"c": "Character Archetypes & Personalities", "d": "Stealthy, cunning characters skilled in trickery or thievery"}, "warrior": {"c": "Character Archetypes & Personalities", "d": "Characters skilled in combat and battle"}, "mage": {"c": "Character Archetypes & Personalities", "d": "Characters with magical abilities or training"}, "tsundere": {"c": "Character Archetypes & Personalities", "d": "Characters who mask affection with hostility before revealing their true feelings"}, "yandere": {"c": "Character Archetypes & Personalities", "d": "Characters whose love manifests in obsessive or dangerous ways"}, "kuudere": {"c": "Character Archetypes & Personalities", "d": "Characters who are emotionally reserved but caring underneath"}, "dandere": {"c": "Character Archetypes & Personalities", "d": "Quiet, shy characters who open up over time"}, "deredere": {"c": "Character Archetypes & Personalities", "d": "Sweet, affectionate characters who are openly loving"}, "himedere": {"c": "Character Archetypes & Personalities", "d": "Characters who act like royalty and expect to be treated as such"}, "kamidere": {"c": "Character Archetypes & Personalities", "d": "Arrogant characters with a god complex or superiority attitude"}, "bakadere": {"c": "Character Archetypes & Personalities", "d": "Silly, clumsy characters who are often naive or oblivious"}, "kakkodere": {"c": "Character Archetypes & Personalities", "d": "Characters who are normally cool and confident, but become cute, affectionate, and deredere for their love interest"}, "introverted": {"c": "Character Archetypes & Personalities", "d": "Reserved characters who gain energy from solitude"}, "extroverted": {"c": "Character Archetypes & Personalities", "d": "Outgoing characters who gain energy from social interactions"}, "anxious": {"c": "Character Archetypes & Personalities", "d": "Characters who experience worry, nervousness, or unease"}, "ambitious": {"c": "Character Archetypes & Personalities", "d": "Characters with strong desire and determination to achieve goals"}, "incel": {"c": "Character Archetypes & Personalities", "d": "Involuntarily celibate characters consumed by romantic or sexual frustration"}, "stalker": {"c": "Character Archetypes & Personalities", "d": "Characters who are a little *too* obsessive"}, "needy_clingy": {"c": "Character Archetypes & Personalities", "d": "Personalities marked by intense attachment and reassurance seeking"}, "biker": {"c": "Character Archetypes & Personalities", "d": "Outlaw club or motorcycle culture archetype"}, "ninja_samurai": {"c": "Character Archetypes & Personalities", "d": "Traditional Japanese warriors and stealth fighters"}, "esl": {"c": "Character Archetypes & Personalities", "d": "Non‑native speaker character trait affecting language and cadence"}, "grumpy": {"c": "Character Archetypes & Personalities", "d": "Characters with a consistently irritable or bad-tempered personality"}, "brat": {"c": "Character Archetypes & Personalities", "d": "Characters who are defiant, playfully disobedient, and enjoy pushing boundaries"}, "masochist": {"c": "Character Archetypes & Personalities", "d": "Characters who derive pleasure from receiving pain or humiliation"}, "sadist": {"c": "Character Archetypes & Personalities", "d": "Characters who derive pleasure from inflicting pain or humiliation"}, "person_next_door": {"c": "Character Archetypes & Personalities", "d": "Approachable, relatable characters with an everyday charm"}, "gentle_giant": {"c": "Character Archetypes & Personalities", "d": "Large, imposing characters with a surprisingly soft and caring nature"}, "reluctant_hero": {"c": "Character Archetypes & Personalities", "d": "Characters who are thrust into heroic roles despite their own resistance"}, "mastermind": {"c": "Character Archetypes & Personalities", "d": "Brilliant strategists who orchestrate complex plans and manipulations"}, "well_intentioned_extremist": {"c": "Character Archetypes & Personalities", "d": "Characters who pursue noble goals through morally questionable methods"}, "daredevil": {"c": "Character Archetypes & Personalities", "d": "Thrill-seekers who live for danger and take extreme risks"}, "mean_catty": {"c": "Character Archetypes & Personalities", "d": "Sharp-tongued, petty, and quick to tear others down"}, "perverted": {"c": "Character Archetypes & Personalities", "d": "Lecherous and dirty-minded characters"}, "sensitive": {"c": "Character Archetypes & Personalities", "d": "Emotionally/physically over-reactive characters"}, "loyal": {"c": "Character Archetypes & Personalities", "d": "Devoted and faithful characters"}, "manipulator": {"c": "Character Archetypes & Personalities", "d": "Scheming characters who gaslight and control"}, "corrupt": {"c": "Character Archetypes & Personalities", "d": "Morally depraved characters"}, "mentally_ill": {"c": "Character Archetypes & Personalities", "d": "Characters with any mental illness (includes delusional)"}, "cosplayer": {"c": "Character Archetypes & Personalities", "d": "Characters who dress as other media characters as hobby"}, "two_faced": {"c": "Character Archetypes & Personalities", "d": "Present façade while hiding true personality"}, "stoner": {"c": "Character Archetypes & Personalities", "d": "Characters/settings involving cannabis use or stoner culture"}, "widowed": {"c": "Character Archetypes & Personalities", "d": "Someone who lost their partner"}, "divorced": {"c": "Character Archetypes & Personalities", "d": "Characters navigating life after the end of a marriage"}, "clown": {"c": "Character Archetypes & Personalities", "d": "Individuals who work as clowns, jesters, or similar entertainment"}, "sassy": {"c": "Character Archetypes & Personalities", "d": "Confident, flamboyant, \"extra\", but not malicious/mean-spirited"}, "drag_crossdress": {"c": "Character Archetypes & Personalities", "d": "Wearing clothing associated with another gender"}, "tomboy": {"c": "Character Archetypes & Personalities", "d": "Female character who enjoys typically masculine activities and style"}, "femboy": {"c": "Character Archetypes & Personalities", "d": "Male character who enjoys typically feminine activities and style"}, "gyaru": {"c": "Character Archetypes & Personalities", "d": "Tanned skin, bleached/dyed hair, glamorous fashion and makeup, rebellious attitude"}, "popular": {"c": "Character Archetypes & Personalities", "d": "Characters who command social authority and attention within their peer group"}, "genki": {"c": "Character Archetypes & Personalities", "d": "Character has excessive amounts of energy and enthusiasm"}, "emotionally_unavailable": {"c": "Character Archetypes & Personalities", "d": "Detached and unwilling to connect"}, "hedonistic": {"c": "Character Archetypes & Personalities", "d": "Lives for excess, constantly chasing pleasure, luxury, and indulgence"}, "charismatic": {"c": "Character Archetypes & Personalities", "d": "Effortlessly charming characters who draw others in with magnetic personality"}, "telepath": {"c": "Character Archetypes & Personalities", "d": "Character is able to read minds"}, "empath": {"c": "Character Archetypes & Personalities", "d": "Deeply attuned to the emotions of others on an instinctual, near-supernatural level"}, "unreliable": {"c": "Character Archetypes & Personalities", "d": "Wishy-washy, often say what they don't mean"}, "selfish": {"c": "Character Archetypes & Personalities", "d": "Think of themselves above all others"}, "empathetic": {"c": "Character Archetypes & Personalities", "d": "Connect to others on deep emotional level"}, "playful": {"c": "Character Archetypes & Personalities", "d": "Enjoy playing around and teasing"}, "independent": {"c": "Character Archetypes & Personalities", "d": "Self-sufficient, don't need to rely on others"}, "celebrity": {"c": "Professions", "d": "Public figures and their experiences"}, "detective": {"c": "Professions", "d": "Characters who investigate and seek truth"}, "assistant": {"c": "Professions", "d": "Personal assistants or secretaries who support their employers"}, "executive": {"c": "Professions", "d": "Characters in high-level management positions"}, "business_owner": {"c": "Professions", "d": "Characters who own and operate their own businesses or enterprises"}, "o_l": {"c": "Professions", "d": "Female white-collar office workers - a common character archetype in Japanese media"}, "content_creator": {"c": "Professions", "d": "Digital creators and online personalities"}, "vtuber": {"c": "Professions", "d": "Virtual YouTubers who stream and create content as anime avatars"}, "idol": {"c": "Professions", "d": "Performers who entertain and inspire fans"}, "performer": {"c": "Professions", "d": "Artists who entertain audiences through various forms of performance"}, "mafia": {"c": "Professions", "d": "Characters involved in organized crime"}, "gangster": {"c": "Professions", "d": "Characters involved in street-level criminal activities and urban gangs"}, "musician": {"c": "Professions", "d": "Artists who create and perform music"}, "teacher_professor": {"c": "Professions", "d": "Educators who impart knowledge and skills"}, "student": {"c": "Professions", "d": "Individuals pursuing education and learning"}, "nurse": {"c": "Professions", "d": "Healthcare professionals who provide care and support"}, "doctor": {"c": "Professions", "d": "Medical professionals who diagnose and treat illnesses"}, "police_officer": {"c": "Professions", "d": "Law enforcement officers who maintain public safety"}, "firefighter": {"c": "Professions", "d": "Emergency responders who combat fires and rescue people"}, "pilot": {"c": "Professions", "d": "Aviation professionals who operate aircraft"}, "soldier": {"c": "Professions", "d": "Military personnel who serve and protect"}, "chef": {"c": "Professions", "d": "Culinary artists who create and prepare food"}, "athlete": {"c": "Professions", "d": "Sports professionals who compete and excel"}, "lawyer": {"c": "Professions", "d": "Legal professionals who represent and advise clients"}, "politician": {"c": "Professions", "d": "Public servants who govern and make decisions"}, "scientist": {"c": "Professions", "d": "Researchers who explore and discover new knowledge"}, "engineer": {"c": "Professions", "d": "Professionals who design and build structures and systems"}, "artist": {"c": "Professions", "d": "Creative individuals who express themselves through art"}, "writer": {"c": "Professions", "d": "Authors who create and share written works"}, "journalist": {"c": "Professions", "d": "Reporters who gather and disseminate news and information"}, "model": {"c": "Professions", "d": "Individuals who showcase fashion and products"}, "actor": {"c": "Professions", "d": "Performers who portray characters in various media"}, "intern": {"c": "Professions", "d": "Individuals gaining experience and training in a profession"}, "librarian": {"c": "Professions", "d": "Professionals who manage and organize information resources"}, "plumber": {"c": "Professions", "d": "Skilled workers who install and repair plumbing systems"}, "cowboy_cowgirl": {"c": "Professions", "d": "Individuals associated with ranching and the American West"}, "maid_butler": {"c": "Professions", "d": "Domestic workers who provide cleaning and personal services"}, "bartender": {"c": "Professions", "d": "Professionals who mix and serve alcoholic beverages"}, "waiter_waitress": {"c": "Professions", "d": "Service professionals who take orders and serve food"}, "stripper": {"c": "Professions", "d": "Performers who entertain through dance and striptease"}, "porn_star": {"c": "Professions", "d": "Adult film actors who perform in explicit content"}, "hikikomori": {"c": "Professions", "d": "Individuals who withdraw from society and live in isolation"}, "unemployed": {"c": "Professions", "d": "Individuals without a job or source of income"}, "homeless": {"c": "Professions", "d": "Individuals without a permanent place to live"}, "bodyguard": {"c": "Professions", "d": "Professionals who provide personal protection and security"}, "viking": {"c": "Professions", "d": "Norse-inspired seafaring warriors, raiders, and explorers"}, "adventurer": {"c": "Professions", "d": "Bold explorers who seek treasure, glory, and excitement"}, "hunter": {"c": "Professions", "d": "Characters who track and hunt prey, game, or targets"}, "blue_collar": {"c": "Professions", "d": "Those who typically perform physical labor"}, "white_collar": {"c": "Professions", "d": "Those who typically work in an office"}, "pink_collar": {"c": "Professions", "d": "Those who work roles typically associated with women"}, "pro_dom": {"c": "Professions", "d": "Professionals who provide domination services"}, "retail": {"c": "Professions", "d": "Those who work in retail stores"}, "cashier": {"c": "Professions", "d": "Those who handle money and transactions"}, "surfer": {"c": "Professions", "d": "Those who embody the \"go with the flow\" mentality"}, "servant": {"c": "Professions", "d": "Those who serve others in various capacities"}, "special_agents": {"c": "Professions", "d": "Law enforcement officers with specialized training"}, "spy": {"c": "Professions", "d": "Covert operative involved in intelligence gathering and infiltration"}, "part_timer": {"c": "Professions", "d": "Character working limited hours, side job, or flexible shifts"}, "pimp": {"c": "Professions", "d": "Manager within the sex trade overseeing workers and clientele"}, "priest": {"c": "Professions", "d": "Religious clergy figure offering rites, guidance, or counsel"}, "florist": {"c": "Professions", "d": "Artisan who arranges and sells flowers, often with a gentle demeanor"}, "assassin": {"c": "Professions", "d": "Professional killer trained in stealth and lethal techniques"}, "mail_carrier": {"c": "Professions", "d": "Postal worker who delivers mail and packages to homes and businesses"}, "masseuse": {"c": "Professions", "d": "Professional who provides therapeutic massage and bodywork"}, "therapist": {"c": "Professions", "d": "Mental health professional who provides counseling and psychological support"}, "barista": {"c": "Professions", "d": "Coffee specialist who crafts specialty drinks at cafes"}, "housespouse": {"c": "Professions", "d": "Characters with stay-at-home domestic role"}, "coach": {"c": "Professions", "d": "Athletic trainers, team coaches, or personal fitness mentors"}, "fan": {"c": "Professions", "d": "Devoted admirers, superfans, or groupies fixated on someone they idolize"}, "lessor": {"c": "Professions", "d": "Characters who lease housing to tenants"}, "sex_worker": {"c": "Professions", "d": "Individuals who engage in sexual activity for monetary exchange"}, "frat_sorority": {"c": "Professions", "d": "Individuals in college Greek life organizations"}, "farmer": {"c": "Professions", "d": "Individuals who own or work on a farm"}, "mechanic": {"c": "Professions", "d": "Person working as mechanic (cars, planes, mechs, etc.)"}, "owner": {"c": "Professions", "d": "Characters who own (slave master, pet owner, etc.)"}, "pet": {"c": "Professions", "d": "Pet characters (demi-humans, etc. kept as pets)"}, "sugar_baby": {"c": "Professions", "d": "Person who receives cash in exchange for their companionship"}, "racer": {"c": "Professions", "d": "High stakes, loud engines, no mercy on the track"}, "tech": {"c": "Professions", "d": "Works in the tech sector, hackers, cyber security"}, "indentured": {"c": "Professions", "d": "Characters in a state of ownership or servitude"}, "astronaut": {"c": "Professions", "d": "Explorers, pilots, and crew venturing beyond Earth's atmosphere"}, "martial_artist": {"c": "Professions", "d": "Professional boxers, fighters, and combat sports athletes"}, "hacker": {"c": "Professions", "d": "Person who hacks into computers for work, whether legal or illegal"}, "non_human": {"c": "Species/Being Types", "d": "Characters who are not human - covers any non-human species or entity"}, "monster": {"c": "Species/Being Types", "d": "Fearsome or grotesque creatures distinct from demi-humans and furries"}, "monster_girl": {"c": "Species/Being Types", "d": "Feminine characters with monstrous or inhuman physical features"}, "demi_human": {"c": "Species/Being Types", "d": "Characters blending human and animal traits"}, "furry": {"c": "Species/Being Types", "d": "Anthropomorphic animal characters with human-like traits and personalities"}, "giant": {"c": "Species/Being Types", "d": "Characters of extraordinary size"}, "robot": {"c": "Species/Being Types", "d": "Fully artificial or mechanical beings - androids, automata, AI constructs"}, "vampire": {"c": "Species/Being Types", "d": "Blood-drinking immortals, often with supernatural powers and dark allure"}, "alien": {"c": "Species/Being Types", "d": "Extraterrestrial beings from other planets or dimensions"}, "elf": {"c": "Species/Being Types", "d": "Graceful, long-lived beings often associated with magic, beauty, or nature"}, "dragon": {"c": "Species/Being Types", "d": "Powerful mythical reptilian beings with magic and ancient wisdom"}, "zombie": {"c": "Species/Being Types", "d": "Undead beings reanimated through supernatural means"}, "orc": {"c": "Species/Being Types", "d": "Strong warrior beings often portrayed as fierce and tribal"}, "centaur": {"c": "Species/Being Types", "d": "Half-human, half-horse beings combining human intellect with equine strength"}, "goblin": {"c": "Species/Being Types", "d": "Small mischievous creatures known for cunning and trickery"}, "werewolf": {"c": "Species/Being Types", "d": "Humans who transform into wolves or wolf-like beasts, often under the full moon"}, "werekin": {"c": "Species/Being Types", "d": "People who identify as werecreatures, humans with animal forms (not just wolves)"}, "beastkin": {"c": "Species/Being Types", "d": "Humanoids with animal traits like ears, tails, or fur; part human, part beast"}, "deity": {"c": "Species/Being Types", "d": "Divine beings, gods, or goddesses with supernatural powers"}, "kemono": {"c": "Species/Being Types", "d": "Japanese-style anthropomorphic animal characters"}, "monster_boy": {"c": "Species/Being Types", "d": "Male or masculine characters with monster or supernatural features"}, "mermaid": {"c": "Species/Being Types", "d": "Mythical beings with a human upper body and a fish tail"}, "eldritch": {"c": "Species/Being Types", "d": "Cosmic or incomprehensible beings, often tied to horror and the unknown."}, "fairy": {"c": "Species/Being Types", "d": "Small, magical beings from folklore, known for enchantment and mischief."}, "fae": {"c": "Species/Being Types", "d": "Mysterious magical folk from the faerie realm, often tricky or ancient."}, "demon": {"c": "Species/Being Types", "d": "Supernatural beings from the underworld, often embodying temptation, chaos, or dark power"}, "cryptid": {"c": "Species/Being Types", "d": "Mysterious creatures from folklore and urban legends, whose existence remains unproven"}, "ghost": {"c": "Species/Being Types", "d": "Disembodied spirit or lingering presence from the afterlife"}, "kobold": {"c": "Species/Being Types", "d": "Small reptilian or draconic creatures known for their cunning and trap-making"}, "dwarf": {"c": "Species/Being Types", "d": "Stout, bearded humanoids known for mining, crafting, and fierce loyalty"}, "undead": {"c": "Species/Being Types", "d": "Creatures that have died but continue to exist through supernatural means"}, "angel": {"c": "Species/Being Types", "d": "Celestial beings associated with divine light, purity, and guidance"}, "human": {"c": "Species/Being Types", "d": "Ordinary people without supernatural, magical, or non-human traits"}, "insectoid": {"c": "Species/Being Types", "d": "Characters possessing insect-like traits"}, "tiefling": {"c": "Species/Being Types", "d": "Draconic/demonic-appearing characters"}, "demigod": {"c": "Species/Being Types", "d": "Characters descended from gods (not gods themselves)"}, "mutant": {"c": "Species/Being Types", "d": "Characters with abilities or traits arising from genetic mutation"}, "enhanced": {"c": "Species/Being Types", "d": "Characters with enhanced abilities (typically through science)"}, "shapechanger": {"c": "Species/Being Types", "d": "Characters that can change forms (usually at will)"}, "cyborg": {"c": "Species/Being Types", "d": "Character that is partially machine (distinct from fully mechanical Robot)"}, "naga": {"c": "Species/Being Types", "d": "Characters with the upper body of a human and lower body of a serpent"}, "plus_sized_bot": {"c": "Species/Being Types", "d": "Companions who are plus-sized (counterpart to existing plus_size_user)"}, "mythological": {"c": "Species/Being Types", "d": "Characters or creatures from myths, legends, and folklore"}, "futa": {"c": "Kinks & Intimate Content", "d": "Companions identifying as futanari, with both male and female traits."}, "breeding": {"c": "Kinks & Intimate Content", "d": "Content involving impregnation fantasies"}, "somnophilia": {"c": "Kinks & Intimate Content", "d": "Content involving attraction to sleeping or unconscious individuals"}, "body_worship": {"c": "Kinks & Intimate Content", "d": "Content focusing on adoration and reverence of a partner's body"}, "pet_play": {"c": "Kinks & Intimate Content", "d": "Content involving roleplaying as pets or owners in a power dynamic"}, "praise_kink": {"c": "Kinks & Intimate Content", "d": "Content focusing on verbal affirmation and positive reinforcement"}, "bondage": {"c": "Kinks & Intimate Content", "d": "Content involving restraint for sensual pleasure"}, "voyeurism": {"c": "Kinks & Intimate Content", "d": "Content involving the excitement of watching others"}, "exhibitionism": {"c": "Kinks & Intimate Content", "d": "Content involving the thrill of being seen by others"}, "size_difference": {"c": "Kinks & Intimate Content", "d": "Content emphasizing height or body size disparities between partners"}, "hyper": {"c": "Kinks & Intimate Content", "d": "Content featuring exaggerated or extreme anatomical proportions"}, "orgasm_denial": {"c": "Kinks & Intimate Content", "d": "Content involving controlling or delaying release for heightened pleasure"}, "humiliation": {"c": "Kinks & Intimate Content", "d": "Content exploring embarrassment and degradation"}, "impact_play": {"c": "Kinks & Intimate Content", "d": "Content involving physical force or impact for sexual pleasure"}, "blood_play": {"c": "Kinks & Intimate Content", "d": "Content involving the use of blood for sexual pleasure"}, "breath_play": {"c": "Kinks & Intimate Content", "d": "Content involving the intentional restriction of oxygen for sexual pleasure"}, "temperature_play": {"c": "Kinks & Intimate Content", "d": "Content involving temperature-based sensations for sexual pleasure"}, "cnc": {"c": "Kinks & Intimate Content", "d": "Content involving consensual non-consent role-play scenarios"}, "brat_taming": {"c": "Kinks & Intimate Content", "d": "Content involving the disciplining of defiant or rebellious partners"}, "weapon_play": {"c": "Kinks & Intimate Content", "d": "Content involving the use of weapons for sexual pleasure"}, "sensory_play": {"c": "Kinks & Intimate Content", "d": "Focus on heightened sensations and stimulus experimentation"}, "age_play": {"c": "Kinks & Intimate Content", "d": "Roleplay involving caregiver and regressed roles by agreement"}, "mind_control": {"c": "Kinks & Intimate Content", "d": "Themes of compelled thought, altered will, or implanted urges"}, "watersports": {"c": "Kinks & Intimate Content", "d": "Uro‑centric play involving fluids as part of intimacy"}, "dollification": {"c": "Kinks & Intimate Content", "d": "Transformation or treatment of a partner as a living doll"}, "hair_kink": {"c": "Kinks & Intimate Content", "d": "Content involving attraction to or play with hair"}, "transformation": {"c": "Kinks & Intimate Content", "d": "Content involving physical or mental transformation of characters"}, "food_play": {"c": "Kinks & Intimate Content", "d": "Incorporating food into intimate activities for sensory pleasure"}, "wax_play": {"c": "Kinks & Intimate Content", "d": "Using warm or hot wax for sensory stimulation during intimacy"}, "freeuse": {"c": "Kinks & Intimate Content", "d": "Consensual arrangement where one partner is available at any time"}, "oral": {"c": "Kinks & Intimate Content", "d": "Focus on mouth-to-genital acts for sexual pleasure"}, "safe_sex": {"c": "Kinks & Intimate Content", "d": "Practice of safe and consensual sex with protection"}, "face_sitting": {"c": "Kinks & Intimate Content", "d": "One partner sits on the other's face for oral stimulation"}, "feet": {"c": "Kinks & Intimate Content", "d": "Focus on feet worship/attraction for sexual pleasure"}, "primal_play": {"c": "Kinks & Intimate Content", "d": "Raw, animalistic intimacy (growling, biting, scratching, wrestling, predator/prey)"}, "drunk_sex": {"c": "Kinks & Intimate Content", "d": "Content involving characters under influence during sex (aphrodisiacs, drugs, alcohol)"}, "findom": {"c": "Kinks & Intimate Content", "d": "Sexual control over another's financial assets"}, "tendrils": {"c": "Kinks & Intimate Content", "d": "Sexual use of tentacles or tentacle-like appendages"}, "e_sex": {"c": "Kinks & Intimate Content", "d": "Sexual activities in digital/online spaces (phone, VR, etc.)"}, "omorashi": {"c": "Kinks & Intimate Content", "d": "Arousal from holding one's bladder/lack of control"}, "chastity": {"c": "Kinks & Intimate Content", "d": "Confinement of genitalia for ownership, pain, or pleasure denial"}, "non_human_genitalia": {"c": "Kinks & Intimate Content", "d": "Exotic or fantastical anatomy like knots, ovipositors, hemipenes, and other inhuman features"}, "olfactophilia": {"c": "Kinks & Intimate Content", "d": "Arousal from scents and smells, including body odour, perfume, and natural aromas"}, "lactation": {"c": "Kinks & Intimate Content", "d": "Lactation and/or consuming human breast milk"}, "sexual_roleplay": {"c": "Kinks & Intimate Content", "d": "Consensual sexual LARPing or acting out roles"}, "ovipositor": {"c": "Kinks & Intimate Content", "d": "Laying eggs for sexual pleasure"}, "plushophilia": {"c": "Kinks & Intimate Content", "d": "Sexually interacting with stuffed animals"}, "small_anatomy": {"c": "Kinks & Intimate Content", "d": "Characters who have below average or small penises or breasts"}, "large_anatomy": {"c": "Kinks & Intimate Content", "d": "Characters who have above average or large penises or breasts"}, "masturbation": {"c": "Kinks & Intimate Content", "d": "Content that involves sexual self-gratification"}, "breastplay": {"c": "Kinks & Intimate Content", "d": "Erotic focus on fondling, sucking, or stimulating breasts"}, "sex_toys": {"c": "Kinks & Intimate Content", "d": "Use of sex toys or objects for sexual pleasure"}, "risque": {"c": "Kinks & Intimate Content", "d": "Stories that aren't inherently \"very intimate\" but can have a sensual undertone"}, "inflation": {"c": "Kinks & Intimate Content", "d": "Characters who are inflated or will inflate to extreme and unnatural limits"}, "heat_rut": {"c": "Kinks & Intimate Content", "d": "A period of intense, instinct-driven sexual desire or mating cycle (Alpha/Omega dynamics)"}, "glory_hole": {"c": "Kinks & Intimate Content", "d": "A hole in a wall or partition for anonymous sexual activity"}, "dacryphilia": {"c": "Kinks & Intimate Content", "d": "Sexual interest in tears or sobbing"}, "ugly_bastard": {"c": "Kinks & Intimate Content", "d": "Sexual content involving an unattractive or repulsive character"}, "game": {"c": "Media Sources", "d": "Characters from video games"}, "rpg": {"c": "Media Sources", "d": "Content from roleplaying games"}, "anime": {"c": "Media Sources", "d": "Characters from Japanese media"}, "books": {"c": "Media Sources", "d": "Characters from literature"}, "movie": {"c": "Media Sources", "d": "Characters from films"}, "tv_show": {"c": "Media Sources", "d": "Characters from television"}, "comic": {"c": "Media Sources", "d": "Characters from visual storytelling"}, "theatre": {"c": "Media Sources", "d": "Characters from theatrical performances"}, "utility": {"c": "Other", "d": "Content focused on practical or functional purposes"}, "unknown": {"c": "Other", "d": "Content that doesn't fit into any other category"}};
+
+const PLOT_DESCRIPTIONS = {
+  "Hero's Journey":"A protagonist embarks on an adventurous quest, facing challenges and mentors, ultimately transforming to achieve a goal.",
+  "Coming of Age":"Focuses on the growth and maturation of a young character as they transition from adolescence to adulthood.",
+  "Love Triangle":"Involves three characters entangled in a complex romantic relationship.",
+  "Revenge":"A character seeks retribution against those who have wronged them or their loved ones.",
+  "Forbidden Love":"Characters from opposing backgrounds fall in love, facing societal or familial opposition.",
+  "Rags to Riches":"A character rises from poverty or obscurity to wealth, success, or recognition.",
+  "Underdog":"A disadvantaged protagonist faces formidable challenges and overcomes them against all odds.",
+  "Quest":"Characters embark on a journey to retrieve a valuable object, attain knowledge, or fulfill a significant purpose.",
+  "Sacrifice":"A character makes a selfless act for the greater good, often leading to personal growth or redemption.",
+  "Mystery":"Involves solving a puzzling and often crime-related enigma.",
+  "Betrayal":"A character experiences betrayal from someone they trust, leading to emotional turmoil and conflict.",
+  "Chosen One":"The protagonist is destined to fulfill a particular role or destiny, often with extraordinary abilities.",
+  "Fish Out of Water":"A character finds themselves in an unfamiliar environment, leading to humorous or challenging situations.",
+  "Redemption":"A character seeks to atone for past mistakes or bad actions.",
+  "The Mentor":"An experienced figure guides and trains a less experienced protagonist.",
+  "Parallel Worlds":"Characters interact with alternate realities or dimensions.",
+  "Dystopia":"A dark and oppressive society serves as the backdrop for the story.",
+  "Overcoming the Monster":"The protagonist confronts and defeats a powerful and threatening antagonist.",
+  "Escape":"Characters strive to break free from confinement or oppressive circumstances.",
+  "Survival":"The main focus is on characters' efforts to stay alive in challenging situations.",
+  "War":"The story revolves around the conflicts, struggles, and consequences of war.",
+  "Discovery":"Characters uncover hidden truths, lost civilizations, or valuable artifacts.",
+  "Identity Crisis":"A character grapples with their true identity or faces amnesia.",
+  "The Double":"Involves doppelgangers, clones, or twins and explores themes of identity and duality.",
+  "Voyage and Return":"Characters journey to a strange land, face trials, and then return transformed.",
+  "Family Drama":"Focuses on familial relationships, conflicts, and dynamics.",
+  "Rebellion":"Characters challenge authority or oppressive systems.",
+  "Time Travel":"Characters move backward or forward in time, impacting the past or future.",
+  "Apocalypse":"The story centers around a catastrophic event that threatens the survival of humanity.",
+  "Power and Corruption":"Characters deal with the abuse of power, political intrigue, and corruption.",
+  "Redemption Quest":"The protagonist seeks redemption for past sins through a series of trials.",
+  "Unrequited Love":"Focuses on a character's one-sided romantic feelings, often leading to emotional conflict.",
+  "Tragedy":"A story in which the protagonist faces downfall or failure, often due to their own flaws.",
+  "Reincarnation":"Characters are reborn in different eras or bodies, often with the goal of finding each other again.",
+  "Survival of the Fittest":"Characters must compete or fight against each other to survive or achieve a specific goal.",
+  "Stranger in a Strange Land":"A character from a different culture experiences life in an unfamiliar setting.",
+  "Escape from Death":"The protagonist is faced with imminent death or doom and must find a way to survive.",
+  "Forbidden Knowledge":"Characters pursue knowledge or power that is dangerous or forbidden.",
+  "Society vs Individual":"Focuses on the conflict between societal norms and the individual's desires or beliefs.",
+  "Supernatural Encounter":"Characters encounter supernatural beings, creatures, or events.",
+  "Body Swap":"Characters switch bodies, leading to humorous or insightful situations.",
+  "The Prophecy":"The story revolves around a prophecy or prediction that shapes the characters' actions and fate.",
+  "Seeking Home":"The protagonist embarks on a journey to find a place where they belong.",
+  "Framed for a Crime":"The protagonist is wrongly accused of a crime, leading to a quest for justice.",
+  "Wandering Hero":"A heroic character roams from place to place, helping others and righting wrongs.",
+  "The Masquerade":"Characters conceal their true identities or intentions behind masks or deception.",
+  "Time Loop":"Characters are trapped in a repeating time cycle, reliving events until a resolution is reached.",
+  "Love at First Sight":"Characters fall deeply in love immediately upon meeting each other.",
+  "Human vs Nature":"Characters struggle against natural disasters, animals, or environmental challenges.",
+  "Heir to the Throne":"A character must step up and take on a significant responsibility or leadership role.",
+  "Corrupting Influence":"Characters are influenced or manipulated by a malevolent force or individual.",
+  "The Big Game":"The story centers around a high-stakes competition or tournament.",
+  "Cursed Object":"A cursed item brings misfortune or danger to those who possess it.",
+  "Mistaken Identity":"Characters are mistaken for someone else, leading to humorous or dramatic situations.",
+  "Apocalypse Survival":"Characters navigate and survive in a post-apocalyptic world.",
+  "Immortality Quest":"Characters seek immortality or eternal life, facing challenges and consequences.",
+  "Sworn Enemies":"Bitter enemies must join forces to face a common threat.",
+  "Impossible Love":"Characters from different species or existences fall in love, defying the odds.",
+  "Revenge of the Underdog":"The underdog protagonist seeks revenge against those who have oppressed them.",
+  "The Artifact":"Characters quest to find or protect a powerful, magical, or ancient artifact.",
+  "Betrayal of Trust":"A character experiences betrayal from someone close, leading to emotional turmoil.",
+  "Man vs Machine":"The conflict between humanity and advanced technology or artificial intelligence.",
+  "Amnesia":"The protagonist has lost their memory and must piece together their past.",
+  "Forbidden Power":"Characters grapple with the responsibility of possessing a dangerous power.",
+  "Madness and Sanity":"Explores themes of madness, psychological struggles, and the thin line between sanity and insanity.",
+  "Race Against Time":"Characters must complete a task before a crucial deadline or impending disaster.",
+  "The Last of Their Kind":"The protagonist is the sole survivor or last representative of their species or group.",
+  "The Secret Society":"Characters become involved with a secretive organization with hidden agendas.",
+  "Forbidden Journey":"Characters venture into a forbidden or dangerous place against all warnings.",
+  "Parental Sacrifice":"Parents make sacrifices for the sake of their children or loved ones.",
+  "The MacGuffin":"A mysterious object or goal drives the plot, even if its true nature is irrelevant.",
+  "Crime and Punishment":"Explores the consequences of criminal actions and the pursuit of justice.",
+  "Parallel Lives":"The narrative follows the interconnected lives of multiple characters.",
+  "The Fall from Grace":"The protagonist experiences a dramatic downfall from a position of power or prestige.",
+  "The False Prophecy":"Characters discover that a prophecy they believed in was a deception or misinterpretation.",
+  "Hidden Heir":"The protagonist discovers their royal or significant lineage, leading to a change in status.",
+  "Cursed Bloodline":"Characters grapple with a cursed family, facing generational consequences.",
+  "Generation Gap":"Highlights the conflict and misunderstandings between different generations.",
+  "Navigating the Afterlife":"Characters journey through the afterlife, facing challenges and exploring existence.",
+  "Obsession":"A character becomes consumed by an obsession, leading to their downfall or transformation.",
+  "The Long Return Home":"Characters face a challenging journey back to their home after a long absence.",
+  "Twist of Fate":"The story takes unexpected turns due to chance or fate, altering the characters' paths.",
+  "The Dark Past":"A character's dark or mysterious past comes back to haunt them.",
+  "The Heirloom":"A significant family heirloom holds secrets or powers that affect the protagonist's life.",
+  "The Final Stand":"Characters face a climactic, last-ditch battle against overwhelming odds.",
+  "The Perfect Crime":"A character plans and executes a seemingly flawless crime.",
+  "The Sacrificial Hero":"The protagonist makes a heroic sacrifice to save others or the world.",
+  "The Lost Civilization":"Characters discover and explore an ancient, advanced, or lost civilization.",
+  "The Hidden Enemy":"Characters must uncover a hidden traitor or enemy within their ranks.",
+  "The Time Paradox":"Characters encounter time loops, alternate timelines, or paradoxes that challenge reality.",
+  "The Orphan Seeking Kin":"Driven by a desire to find their true origins or family; journey intertwines with larger events.",
+  "The Puppet Master":"Characters are controlled or manipulated by a powerful, unseen force.",
+  "Framed for Betrayal":"The protagonist is set up for a betrayal they did not commit, leading to a quest for vindication.",
+  "The Broken Peacemaker":"Strives for peace but has personal traumas or conflicts that they struggle with.",
+  "The Tormented Artist":"Creates profound art but is plagued by personal demons or societal misunderstandings.",
+  "The Reluctant Leader":"Thrust into leadership despite resisting it; grows into the role through trial and sacrifice.",
+  "Mentor's Redemption":"The mentor figure seeks redemption or reconciliation for past mistakes or failures.",
+  "The Tinkerer at the Crossroads":"Always inventing or tweaking; their creations might bring about significant change or disaster.",
+  "The Scheming Villain with Principles":"Pursues villainous goals but operates within a strict personal code they will not break.",
+  "The Last Defender":"Stands alone as the final protector of something precious or sacred.",
+};
+
+const WESTERN_SIGNS = [
+  {
+    name:"Aries", symbol:"♈", dates:"Mar 21 – Apr 19", element:"Fire", modality:"Cardinal",
+    traits:"Bold, impulsive, competitive, pioneering. Rushes in headfirst — thinks later. Infectious energy that drags people along for the ride.",
+    shadow:"Impatient, short-tempered, self-centred. Drops things the moment they get hard.",
+    vibe:"The one who starts the fight and somehow wins it."
+  },
+  {
+    name:"Taurus", symbol:"♉", dates:"Apr 20 – May 20", element:"Earth", modality:"Fixed",
+    traits:"Stubborn, sensual, reliable, deeply comfort-seeking. Knows exactly what they like and refuses to settle for less.",
+    shadow:"Possessive, resistant to change, holds grudges for years without saying a word.",
+    vibe:"Would rather die than cancel plans — but also their couch is genuinely the best place on earth."
+  },
+  {
+    name:"Gemini", symbol:"♊", dates:"May 21 – Jun 20", element:"Air", modality:"Mutable",
+    traits:"Curious, witty, adaptable, perpetually restless. Two moods, both valid. Can talk to anyone about anything.",
+    shadow:"Inconsistent, prone to gossip, commitment is a foreign concept.",
+    vibe:"Has seventeen projects on the go and will finish two of them."
+  },
+  {
+    name:"Cancer", symbol:"♋", dates:"Jun 21 – Jul 22", element:"Water", modality:"Cardinal",
+    traits:"Intuitive, nurturing, deeply emotional, fiercely protective. Remembers every birthday and every slight in equal detail.",
+    shadow:"Moody, clingy, retreats into the shell at the first sign of conflict.",
+    vibe:"Will feed you until you can't move and then cry when you leave."
+  },
+  {
+    name:"Leo", symbol:"♌", dates:"Jul 23 – Aug 22", element:"Fire", modality:"Fixed",
+    traits:"Charismatic, generous, warm, dramatic in the best possible way. Natural performer who genuinely wants everyone to shine.",
+    shadow:"Ego-driven, needs constant validation, sulks magnificently when ignored.",
+    vibe:"Entered the room and somehow everyone already knows their name."
+  },
+  {
+    name:"Virgo", symbol:"♍", dates:"Aug 23 – Sep 22", element:"Earth", modality:"Mutable",
+    traits:"Analytical, precise, helpful to a fault, quietly brilliant. Notices everything. Fixes things before anyone realises they were broken.",
+    shadow:"Hypercritical, anxious, perfectionism that edges into self-destruction.",
+    vibe:"Already made a colour-coded plan for the thing you haven't brought up yet."
+  },
+  {
+    name:"Libra", symbol:"♎", dates:"Sep 23 – Oct 22", element:"Air", modality:"Cardinal",
+    traits:"Charming, diplomatic, fairness-obsessed, aesthetically driven. Makes everyone feel heard — sometimes at the cost of their own opinion.",
+    shadow:"Indecisive, avoidant of conflict to the point of dishonesty, people-pleaser.",
+    vibe:"Spent forty-five minutes deciding what to order and it was still the wrong thing."
+  },
+  {
+    name:"Scorpio", symbol:"♏", dates:"Oct 23 – Nov 21", element:"Water", modality:"Fixed",
+    traits:"Intense, perceptive, magnetic, relentlessly transformative. Sees through every lie. Loyal beyond reason to those who earn it.",
+    shadow:"Vindictive, secretive, obsessive. Does not forget. Does not forgive easily.",
+    vibe:"Already knows. Has known for a while. Was waiting to see what you'd do."
+  },
+  {
+    name:"Sagittarius", symbol:"♐", dates:"Nov 22 – Dec 21", element:"Fire", modality:"Mutable",
+    traits:"Optimistic, philosophical, freedom-loving, brutally honest. Chases the horizon. Big ideas, big laugh, big mouth.",
+    shadow:"Tactless, unreliable, allergic to being told what to do.",
+    vibe:"Booked a one-way flight at 2am and texted from the airport."
+  },
+  {
+    name:"Capricorn", symbol:"♑", dates:"Dec 22 – Jan 19", element:"Earth", modality:"Cardinal",
+    traits:"Disciplined, ambitious, dry-humoured, quietly relentless. Plans twenty years ahead. Gets there.",
+    shadow:"Workaholic, emotionally guarded, can come across as cold or ruthless.",
+    vibe:"Was old at twenty-five and will be young at seventy."
+  },
+  {
+    name:"Aquarius", symbol:"♒", dates:"Jan 20 – Feb 18", element:"Air", modality:"Fixed",
+    traits:"Visionary, unconventional, humanitarian, emotionally detached. Marches to a completely different rhythm and doesn't notice you're not keeping up.",
+    shadow:"Contrarian for its own sake, emotionally unavailable, self-righteous.",
+    vibe:"Has strong opinions about everything and is probably right, unfortunately."
+  },
+  {
+    name:"Pisces", symbol:"♓", dates:"Feb 19 – Mar 20", element:"Water", modality:"Mutable",
+    traits:"Dreamy, empathetic, creative, deeply spiritual. Absorbs the emotions of everyone in the room. Art comes naturally; reality is optional.",
+    shadow:"Escapist, self-pitying, boundary-free, loses itself in others.",
+    vibe:"Cried at an ad and then wrote a beautiful poem about it."
+  },
+];
+
+const CHINESE_SIGNS = [
+  {
+    name:"Rat", symbol:"🐀", element:"Water", years:"1924 1936 1948 1960 1972 1984 1996 2008 2020",
+    traits:"Quick-witted, resourceful, charming, opportunistic. First into every new situation. Makes connections everywhere and cashes them in strategically.",
+    shadow:"Cunning, manipulative, tight-fisted, will throw you under a bus if cornered.",
+    vibe:"Somehow already knows someone who can help."
+  },
+  {
+    name:"Ox", symbol:"🐂", element:"Earth", years:"1925 1937 1949 1961 1973 1985 1997 2009 2021",
+    traits:"Dependable, methodical, hardworking, stoic. Moves slowly and gets there. Says very little but means every word.",
+    shadow:"Stubborn, uncompromising, holds grudges with impressive patience.",
+    vibe:"The most reliable person in the room and they know it."
+  },
+  {
+    name:"Tiger", symbol:"🐅", element:"Wood", years:"1926 1938 1950 1962 1974 1986 1998 2010 2022",
+    traits:"Brave, competitive, unpredictable, magnetic. Natural leader who hates being led. Lives with full intensity.",
+    shadow:"Reckless, arrogant, can't resist a fight.",
+    vibe:"Has a scar and a good story for every single one."
+  },
+  {
+    name:"Rabbit", symbol:"🐇", element:"Wood", years:"1927 1939 1951 1963 1975 1987 1999 2011 2023",
+    traits:"Gentle, diplomatic, artistic, perceptive. Moves through conflict without touching it. Exquisite taste in everything.",
+    shadow:"Avoidant, overly cautious, can be superficial.",
+    vibe:"Declined the party but somehow still knows everything that happened."
+  },
+  {
+    name:"Dragon", symbol:"🐉", element:"Earth", years:"1928 1940 1952 1964 1976 1988 2000 2012 2024",
+    traits:"Charismatic, visionary, confident, larger than life. Expects excellence from themselves and everyone around them.",
+    shadow:"Intolerant, arrogant, burns out when unchallenged.",
+    vibe:"Makes everything feel like an event worth attending."
+  },
+  {
+    name:"Snake", symbol:"🐍", element:"Fire", years:"1929 1941 1953 1965 1977 1989 2001 2013 2025",
+    traits:"Wise, intuitive, mysterious, deliberate. Never acts without thinking. Quietly collects information and uses it perfectly.",
+    shadow:"Suspicious, possessive, holds secrets longer than necessary.",
+    vibe:"Said almost nothing at the meeting and walked out with exactly what they wanted."
+  },
+  {
+    name:"Horse", symbol:"🐎", element:"Fire", years:"1930 1942 1954 1966 1978 1990 2002 2014 2026",
+    traits:"Energetic, independent, sociable, rebellious. Needs room to move. Brilliant company right up until they bolt.",
+    shadow:"Impatient, hot-headed, can't be tied down.",
+    vibe:"Leaving again but you can't even be mad about it."
+  },
+  {
+    name:"Goat", symbol:"🐐", element:"Earth", years:"1931 1943 1955 1967 1979 1991 2003 2015 2027",
+    traits:"Creative, compassionate, gentle, deeply feeling. Thrives in beauty and calm. Art, music, and the quiet things.",
+    shadow:"Insecure, pessimistic, over-reliant on others.",
+    vibe:"Made something beautiful and immediately apologised for it."
+  },
+  {
+    name:"Monkey", symbol:"🐒", element:"Metal", years:"1932 1944 1956 1968 1980 1992 2004 2016 2028",
+    traits:"Clever, inventive, mischievous, versatile. Solves problems for fun. Can improvise their way out of anything.",
+    shadow:"Unreliable, vain, gets bored and breaks things.",
+    vibe:"Already figured out the trick but pretended they hadn't."
+  },
+  {
+    name:"Rooster", symbol:"🐓", element:"Metal", years:"1933 1945 1957 1969 1981 1993 2005 2017 2029",
+    traits:"Observant, hardworking, confident, detail-oriented. Keeps everything running. High standards for themselves and everyone else.",
+    shadow:"Overcritical, boastful, inflexible.",
+    vibe:"Their kitchen is colour-coded and they will tell you why that matters."
+  },
+  {
+    name:"Dog", symbol:"🐕", element:"Earth", years:"1934 1946 1958 1970 1982 1994 2006 2018 2030",
+    traits:"Loyal, honest, brave, morally driven. Will defend the people they love to the last. Anxious about almost everything else.",
+    shadow:"Cynical, stubborn, prone to catastrophising.",
+    vibe:"Worried about you specifically since Tuesday."
+  },
+  {
+    name:"Pig", symbol:"🐖", element:"Water", years:"1935 1947 1959 1971 1983 1995 2007 2019 2031",
+    traits:"Generous, sincere, diligent, pleasure-seeking. Genuinely kind without agenda. Works hard and plays harder.",
+    shadow:"Naive, over-indulgent, easily taken advantage of.",
+    vibe:"Trusted someone they shouldn't have and somehow doesn't regret it."
+  },
+];
+
+const HOCKEY_POSITIONS = [
+  {pos:"Centre",role:"The engine of the line. Controls faceoffs, drives offensive play, expected to backcheck hard. High hockey IQ, reads plays before they happen."},
+  {pos:"Left Wing",role:"Crash the net, finish in close, win puck battles along the boards. Physical presence and a short-range shot more important than playmaking."},
+  {pos:"Right Wing",role:"Often the sniper on the line. Uses the off-wing for a one-timer setup, patrols the half-wall, provides an outlet on the breakout."},
+  {pos:"Left Defence",role:"Controls the left side of the blue line. Quarterbacks the power play from the point, responsible for gap control on the rush."},
+  {pos:"Right Defence",role:"Controls the right side. Shot from the point is a weapon. Must be strong in one-on-one puck battles below the goal line."},
+  {pos:"Enforcer",role:"Physical intimidation and team protection. Drops the gloves when needed. Presence alone changes how opponents play against the team."},
+  {pos:"Grinder / Checker",role:"No glory, all work. Wins puck races, kills penalties, forechecks relentlessly. Makes life miserable for the other team's top line."},
+  {pos:"Power Forward",role:"Combines scoring touch with physical dominance. Parks in front of the net, takes a beating to screen the goalie, garbage goals and tip-ins."},
+  {pos:"Offensive Defenceman",role:"Joins the rush as a fourth attacker. Quarterback on the power play. Offensive upside accepted at the cost of some defensive risk."},
+  {pos:"Shutdown Defenceman",role:"One job: neutralise the other team's best forward. Physical, disciplined, no fancy moves. Makes them earn every inch."},
+  {pos:"Goaltender",role:"Last line of defence. The position that wins or loses series. Butterfly or hybrid style; reads shooters, controls rebounds, talks to the defence constantly."},
+  {pos:"4th Line Centre",role:"Eats tough minutes, wins faceoffs in the defensive zone, provides energy shifts after goals. The team's conscience on the ice."},
+];
+
+const SWIM_EVENTS = [
+  {stroke:"Freestyle",distances:["50m","100m","200m","400m","800m","1500m"],desc:"The fastest and most versatile stroke. High elbow catch, rotation-driven power, flip turns. Most competitive swimmers' main event."},
+  {stroke:"Backstroke",distances:["50m","100m","200m"],desc:"Only stroke swum on the back. Rhythm and shoulder rotation are everything. Touch walls blind — timing a flip turn is an art form."},
+  {stroke:"Breaststroke",distances:["50m","100m","200m"],desc:"The oldest stroke. Slow and technical; a fraction off on the pullout or timing costs the race. Underwater phase after every turn is crucial."},
+  {stroke:"Butterfly",distances:["50m","100m","200m"],desc:"The hardest stroke. Dolphin kick, simultaneous arm pull, brutal on the lungs. Either beautiful to watch or a disaster — no middle ground."},
+  {stroke:"Individual Medley",distances:["100m","200m","400m"],desc:"All four strokes in one race: butterfly, backstroke, breaststroke, freestyle. True test of versatility. Butterfly leg makes or breaks it."},
+  {stroke:"Open Water",distances:["5km","10km","25km"],desc:"No walls, no lane lines. Sighting, drafting, and pack swimming replace pure technique. Physical and psychological endurance over speed."},
+];
+
+const MACROS = [
+  {group:'User', items:[['{{user}}',"User's name"],['{{yn}}','Short alias']]},
+  {group:'Companion', items:[['{{char}}',"Companion's name"],['{{cn}}','Short alias']]},
+  {group:'Pronouns', items:[['{{they}}','Subjective'],['{{them}}','Objective'],['{{their}}','Possessive'],['{{theirs}}','Poss. pronoun'],['{{themselves}}','Reflexive']]},
+  {group:'Gender word', items:[['{{mfx|male|female|person}}','Picks by pronoun']]},
+  {group:'Plurality', items:[['{{plural?are:is}}','are/is'],['{{p?have:has}}','have/has (short)']]},
+  {group:'Time & Date', items:[['{{time}}','HH:MM AM/PM'],['{{date}}','YYYY-MM-DD'],['{{day_of_week}}','Monday…']]},
+  {group:'Formatting', items:[['*text*','Italics'],['**text**','Bold'],['~text~','Strikethrough'],['_text_','Underline'],['>!text!<','Spoiler']]},
+  {group:'Alignment', items:[['(left default)','Left (no tag)'],['>>text>>','Right align'],['>>text<<','Center align']]},
+];
+
+const NAMES_MASC = ['Adrián','Aleksei','Anders','Arash','Bastian','Cillian','Dario','Emre','Esteban','Ezra','Fabian','Felix','Finn','Gabriel','Hadrian','Ignacio','Ivan','Jae-won','Jasper','Kenji','Lachlan','Leandro','Lucian','Marek','Mateo','Nico','Oisín','Orion','Rafael','Rémi','Rhys','Roman','Ryōta','Saoirse','Sebastian','Silas','Søren','Stellan','Tariq','Tobias','Tomás','Valentín','Viktor','Wren','Xander','Yusuf','Zaid'];
+
+const NAMES_FEM = ['Aelinn','Amara','Ariadne','Astrid','Beatriz','Brynn','Calla','Camille','Demi','Elowen','Emara','Esme','Faye','Freya','Ginevra','Hana','Ingrid','Isolde','Juno','Kassia','Lena','Liora','Lourdes','Luna','Maëlle','Margot','Mirela','Nadia','Noa','Odessa','Paloma','Petra','Rosaline','Sable','Saskia','Selene','Serra','Signe','Solène','Tamsin','Teodora','Valentina','Veda','Wren','Yara','Zara','Zélie'];
 </script>
 <script type="text/babel">
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
@@ -1219,17 +1513,6 @@ function TagInput({value, onChange, max}) {
   />;
 }
 
-const MACROS = [
-  {group:'User', items:[['{{user}}',"User's name"],['{{yn}}','Short alias']]},
-  {group:'Companion', items:[['{{char}}',"Companion's name"],['{{cn}}','Short alias']]},
-  {group:'Pronouns', items:[['{{they}}','Subjective'],['{{them}}','Objective'],['{{their}}','Possessive'],['{{theirs}}','Poss. pronoun'],['{{themselves}}','Reflexive']]},
-  {group:'Gender word', items:[['{{mfx|male|female|person}}','Picks by pronoun']]},
-  {group:'Plurality', items:[['{{plural?are:is}}','are/is'],['{{p?have:has}}','have/has (short)']]},
-  {group:'Time & Date', items:[['{{time}}','HH:MM AM/PM'],['{{date}}','YYYY-MM-DD'],['{{day_of_week}}','Monday…']]},
-  {group:'Formatting', items:[['*text*','Italics'],['**text**','Bold'],['~text~','Strikethrough'],['_text_','Underline'],['>!text!<','Spoiler']]},
-  {group:'Alignment', items:[['(left default)','Left (no tag)'],['>>text>>','Right align'],['>>text<<','Center align']]},
-];
-
 function MacroReference() {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(null);
@@ -1259,11 +1542,7 @@ function MacroReference() {
 }
 
 
-const pick = arr => arr[Math.floor(Math.random()*arr.length)];
-
-const NAMES_MASC = ['Adrián','Aleksei','Anders','Arash','Bastian','Cillian','Dario','Emre','Esteban','Ezra','Fabian','Felix','Finn','Gabriel','Hadrian','Ignacio','Ivan','Jae-won','Jasper','Kenji','Lachlan','Leandro','Lucian','Marek','Mateo','Nico','Oisín','Orion','Rafael','Rémi','Rhys','Roman','Ryōta','Saoirse','Sebastian','Silas','Søren','Stellan','Tariq','Tobias','Tomás','Valentín','Viktor','Wren','Xander','Yusuf','Zaid'];
-const NAMES_FEM = ['Aelinn','Amara','Ariadne','Astrid','Beatriz','Brynn','Calla','Camille','Demi','Elowen','Emara','Esme','Faye','Freya','Ginevra','Hana','Ingrid','Isolde','Juno','Kassia','Lena','Liora','Lourdes','Luna','Maëlle','Margot','Mirela','Nadia','Noa','Odessa','Paloma','Petra','Rosaline','Sable','Saskia','Selene','Serra','Signe','Solène','Tamsin','Teodora','Valentina','Veda','Wren','Yara','Zara','Zélie'];
-const NAMES_NEUTRAL = ['Aiden','Alev','Ash','Avery','Blair','Cairo','Cameron','Cedar','Coda','Cypress','Dakota','Ember','Everest','Falco','Harbor','Haven','Indigo','Joss','Kai','Kendall','Lake','Lark','Lennon','Lumen','Maren','Marlowe','Morgan','Nova','Onyx','Pax','Quinn','Rayne','Reed','Remy','River','Roan','Rowan','Sage','Scout','Shiloh','Skye','Sol','Soren','Story','Storm','Sable','Theo','Vale','Winter','Zephyr'];
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];const NAMES_NEUTRAL = ['Aiden','Alev','Ash','Avery','Blair','Cairo','Cameron','Cedar','Coda','Cypress','Dakota','Ember','Everest','Falco','Harbor','Haven','Indigo','Joss','Kai','Kendall','Lake','Lark','Lennon','Lumen','Maren','Marlowe','Morgan','Nova','Onyx','Pax','Quinn','Rayne','Reed','Remy','River','Roan','Rowan','Sage','Scout','Shiloh','Skye','Sol','Soren','Story','Storm','Sable','Theo','Vale','Winter','Zephyr'];
 const SURNAMES = ['Adeyemi','Alvarado','Ashford','Beaumont','Blackwell','Callahan','Castillo','Chen','Delacroix','Dimitriou','Espinoza','Ferreira','Fontaine','Gallagher','Hansson','Hayashi','Ibrahim','Johansson','Kaczmarek','Kaur','Khalil','Kim','Kowalski','Laurent','Lévesque','Malik','Marchetti','Mori','Nakamura','Navarro','Nguyen',"O'Brien",'Okafor','Osei','Park','Petrov','Qon','Reyes','Rosewood','Rousseau','Saito','Santos','Schmidt','Seo','Sharma','Tanaka','Thorne','Torres','Vance','Vasquez','Volkov','Walsh','Yamamoto','Yilmaz','Zhao'];
 
 const EYE_BASE = ['brown','dark brown','light brown','hazel','amber','green','light green','blue','light blue','steel blue','grey','dark grey','blue-grey','grey-green','violet','black'];
@@ -1290,81 +1569,6 @@ function GenResult({label, value, onCopy}) {
 }
 
 // ── Western Zodiac Tool ──────────────────────────────────────────────────
-const WESTERN_SIGNS = [
-  {
-    name:"Aries", symbol:"♈", dates:"Mar 21 – Apr 19", element:"Fire", modality:"Cardinal",
-    traits:"Bold, impulsive, competitive, pioneering. Rushes in headfirst — thinks later. Infectious energy that drags people along for the ride.",
-    shadow:"Impatient, short-tempered, self-centred. Drops things the moment they get hard.",
-    vibe:"The one who starts the fight and somehow wins it."
-  },
-  {
-    name:"Taurus", symbol:"♉", dates:"Apr 20 – May 20", element:"Earth", modality:"Fixed",
-    traits:"Stubborn, sensual, reliable, deeply comfort-seeking. Knows exactly what they like and refuses to settle for less.",
-    shadow:"Possessive, resistant to change, holds grudges for years without saying a word.",
-    vibe:"Would rather die than cancel plans — but also their couch is genuinely the best place on earth."
-  },
-  {
-    name:"Gemini", symbol:"♊", dates:"May 21 – Jun 20", element:"Air", modality:"Mutable",
-    traits:"Curious, witty, adaptable, perpetually restless. Two moods, both valid. Can talk to anyone about anything.",
-    shadow:"Inconsistent, prone to gossip, commitment is a foreign concept.",
-    vibe:"Has seventeen projects on the go and will finish two of them."
-  },
-  {
-    name:"Cancer", symbol:"♋", dates:"Jun 21 – Jul 22", element:"Water", modality:"Cardinal",
-    traits:"Intuitive, nurturing, deeply emotional, fiercely protective. Remembers every birthday and every slight in equal detail.",
-    shadow:"Moody, clingy, retreats into the shell at the first sign of conflict.",
-    vibe:"Will feed you until you can't move and then cry when you leave."
-  },
-  {
-    name:"Leo", symbol:"♌", dates:"Jul 23 – Aug 22", element:"Fire", modality:"Fixed",
-    traits:"Charismatic, generous, warm, dramatic in the best possible way. Natural performer who genuinely wants everyone to shine.",
-    shadow:"Ego-driven, needs constant validation, sulks magnificently when ignored.",
-    vibe:"Entered the room and somehow everyone already knows their name."
-  },
-  {
-    name:"Virgo", symbol:"♍", dates:"Aug 23 – Sep 22", element:"Earth", modality:"Mutable",
-    traits:"Analytical, precise, helpful to a fault, quietly brilliant. Notices everything. Fixes things before anyone realises they were broken.",
-    shadow:"Hypercritical, anxious, perfectionism that edges into self-destruction.",
-    vibe:"Already made a colour-coded plan for the thing you haven't brought up yet."
-  },
-  {
-    name:"Libra", symbol:"♎", dates:"Sep 23 – Oct 22", element:"Air", modality:"Cardinal",
-    traits:"Charming, diplomatic, fairness-obsessed, aesthetically driven. Makes everyone feel heard — sometimes at the cost of their own opinion.",
-    shadow:"Indecisive, avoidant of conflict to the point of dishonesty, people-pleaser.",
-    vibe:"Spent forty-five minutes deciding what to order and it was still the wrong thing."
-  },
-  {
-    name:"Scorpio", symbol:"♏", dates:"Oct 23 – Nov 21", element:"Water", modality:"Fixed",
-    traits:"Intense, perceptive, magnetic, relentlessly transformative. Sees through every lie. Loyal beyond reason to those who earn it.",
-    shadow:"Vindictive, secretive, obsessive. Does not forget. Does not forgive easily.",
-    vibe:"Already knows. Has known for a while. Was waiting to see what you'd do."
-  },
-  {
-    name:"Sagittarius", symbol:"♐", dates:"Nov 22 – Dec 21", element:"Fire", modality:"Mutable",
-    traits:"Optimistic, philosophical, freedom-loving, brutally honest. Chases the horizon. Big ideas, big laugh, big mouth.",
-    shadow:"Tactless, unreliable, allergic to being told what to do.",
-    vibe:"Booked a one-way flight at 2am and texted from the airport."
-  },
-  {
-    name:"Capricorn", symbol:"♑", dates:"Dec 22 – Jan 19", element:"Earth", modality:"Cardinal",
-    traits:"Disciplined, ambitious, dry-humoured, quietly relentless. Plans twenty years ahead. Gets there.",
-    shadow:"Workaholic, emotionally guarded, can come across as cold or ruthless.",
-    vibe:"Was old at twenty-five and will be young at seventy."
-  },
-  {
-    name:"Aquarius", symbol:"♒", dates:"Jan 20 – Feb 18", element:"Air", modality:"Fixed",
-    traits:"Visionary, unconventional, humanitarian, emotionally detached. Marches to a completely different rhythm and doesn't notice you're not keeping up.",
-    shadow:"Contrarian for its own sake, emotionally unavailable, self-righteous.",
-    vibe:"Has strong opinions about everything and is probably right, unfortunately."
-  },
-  {
-    name:"Pisces", symbol:"♓", dates:"Feb 19 – Mar 20", element:"Water", modality:"Mutable",
-    traits:"Dreamy, empathetic, creative, deeply spiritual. Absorbs the emotions of everyone in the room. Art comes naturally; reality is optional.",
-    shadow:"Escapist, self-pitying, boundary-free, loses itself in others.",
-    vibe:"Cried at an ad and then wrote a beautiful poem about it."
-  },
-];
-
 function WesternZodiacTool() {
   const [result, setResult] = useState(null);
   const roll = () => setResult(pick(WESTERN_SIGNS));
@@ -1389,81 +1593,6 @@ function WesternZodiacTool() {
 }
 
 // ── Chinese Zodiac Tool ───────────────────────────────────────────────────
-const CHINESE_SIGNS = [
-  {
-    name:"Rat", symbol:"🐀", element:"Water", years:"1924 1936 1948 1960 1972 1984 1996 2008 2020",
-    traits:"Quick-witted, resourceful, charming, opportunistic. First into every new situation. Makes connections everywhere and cashes them in strategically.",
-    shadow:"Cunning, manipulative, tight-fisted, will throw you under a bus if cornered.",
-    vibe:"Somehow already knows someone who can help."
-  },
-  {
-    name:"Ox", symbol:"🐂", element:"Earth", years:"1925 1937 1949 1961 1973 1985 1997 2009 2021",
-    traits:"Dependable, methodical, hardworking, stoic. Moves slowly and gets there. Says very little but means every word.",
-    shadow:"Stubborn, uncompromising, holds grudges with impressive patience.",
-    vibe:"The most reliable person in the room and they know it."
-  },
-  {
-    name:"Tiger", symbol:"🐅", element:"Wood", years:"1926 1938 1950 1962 1974 1986 1998 2010 2022",
-    traits:"Brave, competitive, unpredictable, magnetic. Natural leader who hates being led. Lives with full intensity.",
-    shadow:"Reckless, arrogant, can't resist a fight.",
-    vibe:"Has a scar and a good story for every single one."
-  },
-  {
-    name:"Rabbit", symbol:"🐇", element:"Wood", years:"1927 1939 1951 1963 1975 1987 1999 2011 2023",
-    traits:"Gentle, diplomatic, artistic, perceptive. Moves through conflict without touching it. Exquisite taste in everything.",
-    shadow:"Avoidant, overly cautious, can be superficial.",
-    vibe:"Declined the party but somehow still knows everything that happened."
-  },
-  {
-    name:"Dragon", symbol:"🐉", element:"Earth", years:"1928 1940 1952 1964 1976 1988 2000 2012 2024",
-    traits:"Charismatic, visionary, confident, larger than life. Expects excellence from themselves and everyone around them.",
-    shadow:"Intolerant, arrogant, burns out when unchallenged.",
-    vibe:"Makes everything feel like an event worth attending."
-  },
-  {
-    name:"Snake", symbol:"🐍", element:"Fire", years:"1929 1941 1953 1965 1977 1989 2001 2013 2025",
-    traits:"Wise, intuitive, mysterious, deliberate. Never acts without thinking. Quietly collects information and uses it perfectly.",
-    shadow:"Suspicious, possessive, holds secrets longer than necessary.",
-    vibe:"Said almost nothing at the meeting and walked out with exactly what they wanted."
-  },
-  {
-    name:"Horse", symbol:"🐎", element:"Fire", years:"1930 1942 1954 1966 1978 1990 2002 2014 2026",
-    traits:"Energetic, independent, sociable, rebellious. Needs room to move. Brilliant company right up until they bolt.",
-    shadow:"Impatient, hot-headed, can't be tied down.",
-    vibe:"Leaving again but you can't even be mad about it."
-  },
-  {
-    name:"Goat", symbol:"🐐", element:"Earth", years:"1931 1943 1955 1967 1979 1991 2003 2015 2027",
-    traits:"Creative, compassionate, gentle, deeply feeling. Thrives in beauty and calm. Art, music, and the quiet things.",
-    shadow:"Insecure, pessimistic, over-reliant on others.",
-    vibe:"Made something beautiful and immediately apologised for it."
-  },
-  {
-    name:"Monkey", symbol:"🐒", element:"Metal", years:"1932 1944 1956 1968 1980 1992 2004 2016 2028",
-    traits:"Clever, inventive, mischievous, versatile. Solves problems for fun. Can improvise their way out of anything.",
-    shadow:"Unreliable, vain, gets bored and breaks things.",
-    vibe:"Already figured out the trick but pretended they hadn't."
-  },
-  {
-    name:"Rooster", symbol:"🐓", element:"Metal", years:"1933 1945 1957 1969 1981 1993 2005 2017 2029",
-    traits:"Observant, hardworking, confident, detail-oriented. Keeps everything running. High standards for themselves and everyone else.",
-    shadow:"Overcritical, boastful, inflexible.",
-    vibe:"Their kitchen is colour-coded and they will tell you why that matters."
-  },
-  {
-    name:"Dog", symbol:"🐕", element:"Earth", years:"1934 1946 1958 1970 1982 1994 2006 2018 2030",
-    traits:"Loyal, honest, brave, morally driven. Will defend the people they love to the last. Anxious about almost everything else.",
-    shadow:"Cynical, stubborn, prone to catastrophising.",
-    vibe:"Worried about you specifically since Tuesday."
-  },
-  {
-    name:"Pig", symbol:"🐖", element:"Water", years:"1935 1947 1959 1971 1983 1995 2007 2019 2031",
-    traits:"Generous, sincere, diligent, pleasure-seeking. Genuinely kind without agenda. Works hard and plays harder.",
-    shadow:"Naive, over-indulgent, easily taken advantage of.",
-    vibe:"Trusted someone they shouldn't have and somehow doesn't regret it."
-  },
-];
-
 function ChineseZodiacTool() {
   const [result, setResult] = useState(null);
   const roll = () => setResult(pick(CHINESE_SIGNS));
@@ -1548,20 +1677,6 @@ function EsperTool() {
 }
 
 // ── Hockey Positions Tool ─────────────────────────────────────────────────
-const HOCKEY_POSITIONS = [
-  {pos:"Centre",role:"The engine of the line. Controls faceoffs, drives offensive play, expected to backcheck hard. High hockey IQ, reads plays before they happen."},
-  {pos:"Left Wing",role:"Crash the net, finish in close, win puck battles along the boards. Physical presence and a short-range shot more important than playmaking."},
-  {pos:"Right Wing",role:"Often the sniper on the line. Uses the off-wing for a one-timer setup, patrols the half-wall, provides an outlet on the breakout."},
-  {pos:"Left Defence",role:"Controls the left side of the blue line. Quarterbacks the power play from the point, responsible for gap control on the rush."},
-  {pos:"Right Defence",role:"Controls the right side. Shot from the point is a weapon. Must be strong in one-on-one puck battles below the goal line."},
-  {pos:"Enforcer",role:"Physical intimidation and team protection. Drops the gloves when needed. Presence alone changes how opponents play against the team."},
-  {pos:"Grinder / Checker",role:"No glory, all work. Wins puck races, kills penalties, forechecks relentlessly. Makes life miserable for the other team's top line."},
-  {pos:"Power Forward",role:"Combines scoring touch with physical dominance. Parks in front of the net, takes a beating to screen the goalie, garbage goals and tip-ins."},
-  {pos:"Offensive Defenceman",role:"Joins the rush as a fourth attacker. Quarterback on the power play. Offensive upside accepted at the cost of some defensive risk."},
-  {pos:"Shutdown Defenceman",role:"One job: neutralise the other team's best forward. Physical, disciplined, no fancy moves. Makes them earn every inch."},
-  {pos:"Goaltender",role:"Last line of defence. The position that wins or loses series. Butterfly or hybrid style; reads shooters, controls rebounds, talks to the defence constantly."},
-  {pos:"4th Line Centre",role:"Eats tough minutes, wins faceoffs in the defensive zone, provides energy shifts after goals. The team's conscience on the ice."},
-];
 const HOCKEY_HANDEDNESS = ["Shoots left","Shoots right"];
 const HOCKEY_TRAITS = [
   "Dangles past three defenders like they're pylons",
@@ -1604,14 +1719,6 @@ function HockeyTool() {
 }
 
 // ── Swim Strokes Tool ─────────────────────────────────────────────────────
-const SWIM_EVENTS = [
-  {stroke:"Freestyle",distances:["50m","100m","200m","400m","800m","1500m"],desc:"The fastest and most versatile stroke. High elbow catch, rotation-driven power, flip turns. Most competitive swimmers' main event."},
-  {stroke:"Backstroke",distances:["50m","100m","200m"],desc:"Only stroke swum on the back. Rhythm and shoulder rotation are everything. Touch walls blind — timing a flip turn is an art form."},
-  {stroke:"Breaststroke",distances:["50m","100m","200m"],desc:"The oldest stroke. Slow and technical; a fraction off on the pullout or timing costs the race. Underwater phase after every turn is crucial."},
-  {stroke:"Butterfly",distances:["50m","100m","200m"],desc:"The hardest stroke. Dolphin kick, simultaneous arm pull, brutal on the lungs. Either beautiful to watch or a disaster — no middle ground."},
-  {stroke:"Individual Medley",distances:["100m","200m","400m"],desc:"All four strokes in one race: butterfly, backstroke, breaststroke, freestyle. True test of versatility. Butterfly leg makes or breaks it."},
-  {stroke:"Open Water",distances:["5km","10km","25km"],desc:"No walls, no lane lines. Sighting, drafting, and pack swimming replace pure technique. Physical and psychological endurance over speed."},
-];
 const SWIM_ROLES = [
   "The anchor on every relay — coaches don't trust anyone else in the water last",
   "Technician. Form is flawless; every practice drill is done at race pace",
@@ -1645,6 +1752,392 @@ function SwimTool() {
           <GenResult label="Distance" value={result.distance}/>
           <GenResult label="About" value={result.desc}/>
           <GenResult label="Swimmer type" value={result.role}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
+
+function CropTool() {
+  const cvRef = React.useRef();
+  const [img, setImg] = React.useState(null);
+  const [imgSrc, setImgSrc] = React.useState(null); // raw base64 — used by applyCrop to draw clean (no overlay)
+  const [imgName, setImgName] = React.useState('');
+  const [ratio, setRatio] = React.useState('3:4');
+  const [box, setBox] = React.useState(null);   // crop box in canvas px
+  const [drag, setDrag] = React.useState(null); // {type,sx,sy,sb}
+  const [result, setResult] = React.useState(null);
+  const [status, setStatus] = React.useState('');
+
+  const RATIOS = {'1:1':1, '3:4':3/4, '16:9':16/9, '4:1':4, 'free':null};
+  const HANDLE = 10; // handle hit radius px
+
+  // Load image via file picker
+  const loadFile = async () => {
+    const res = await window.lorekeeper.importImage();
+    if(!res||!res.base64) return;
+    const image = new Image();
+    image.onload = () => { setImg(image); setImgSrc(res.base64); setImgName(res.name||'image'); setResult(null); setStatus(''); };
+    image.src = res.base64;
+  };
+
+  // Canvas internal size (capped at 900px wide for memory)
+  const getCW = im => im ? Math.min(im.naturalWidth, 900) : 0;
+  const getCH = im => im ? Math.round(im.naturalHeight * (getCW(im)/im.naturalWidth)) : 0;
+
+  // Initialise / reset crop box when image or ratio changes
+  React.useEffect(() => {
+    if(!img) return;
+    const cw = getCW(img), ch = getCH(img);
+    const r = RATIOS[ratio];
+    let bw = cw * 0.8, bh = ch * 0.8;
+    if(r) { if(bw/bh > r) bw = bh*r; else bh = bw/r; }
+    bw = Math.min(bw,cw); bh = Math.min(bh,ch);
+    setBox({x:(cw-bw)/2, y:(ch-bh)/2, w:bw, h:bh});
+    setResult(null);
+  }, [img, ratio]);
+
+  // Draw canvas whenever box changes
+  React.useEffect(() => {
+    if(!img||!box||!cvRef.current) return;
+    const cv = cvRef.current;
+    const cw = getCW(img), ch = getCH(img);
+    cv.width = cw; cv.height = ch;
+    const ctx = cv.getContext('2d');
+    ctx.drawImage(img, 0, 0, cw, ch);
+    // Dark overlay outside crop
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0,0,cw,box.y);
+    ctx.fillRect(0,box.y,box.x,box.h);
+    ctx.fillRect(box.x+box.w,box.y,cw-box.x-box.w,box.h);
+    ctx.fillRect(0,box.y+box.h,cw,ch-box.y-box.h);
+    // Crop border
+    ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 2;
+    ctx.strokeRect(box.x,box.y,box.w,box.h);
+    // Rule-of-thirds grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1;
+    [1/3,2/3].forEach(t => {
+      ctx.beginPath(); ctx.moveTo(box.x+box.w*t,box.y); ctx.lineTo(box.x+box.w*t,box.y+box.h); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(box.x,box.y+box.h*t); ctx.lineTo(box.x+box.w,box.y+box.h*t); ctx.stroke();
+    });
+    // Corner handles
+    ctx.fillStyle = '#a78bfa';
+    const handles=[[box.x,box.y],[box.x+box.w,box.y],[box.x,box.y+box.h],[box.x+box.w,box.y+box.h]];
+    for(let i=0;i<handles.length;i++){ctx.fillRect(handles[i][0]-5,handles[i][1]-5,10,10);}
+  }, [img, box]);
+
+  // Map CSS mouse coords → canvas internal px
+  const cvPt = e => {
+    const rect = cvRef.current.getBoundingClientRect();
+    return { x:(e.clientX-rect.left)*(cvRef.current.width/rect.width), y:(e.clientY-rect.top)*(cvRef.current.height/rect.height) };
+  };
+
+  const hitHandle = (x,y) => {
+    if(!box) return null;
+    const corners = [{cx:box.x,cy:box.y,t:'tl'},{cx:box.x+box.w,cy:box.y,t:'tr'},{cx:box.x,cy:box.y+box.h,t:'bl'},{cx:box.x+box.w,cy:box.y+box.h,t:'br'}];
+    for(let i=0;i<corners.length;i++){if(Math.abs(x-corners[i].cx)<HANDLE&&Math.abs(y-corners[i].cy)<HANDLE)return corners[i].t;}
+    if(x>box.x&&x<box.x+box.w&&y>box.y&&y<box.y+box.h) return 'move';
+    return null;
+  };
+
+  const onMD = e => {
+    const {x,y} = cvPt(e);
+    const type = hitHandle(x,y);
+    if(type) setDrag({type,sx:x,sy:y,sb:{...box}});
+  };
+
+  const onMM = e => {
+    if(!drag||!img) return;
+    const {x,y} = cvPt(e);
+    const dx=x-drag.sx, dy=y-drag.sy;
+    const sb=drag.sb, r=RATIOS[ratio];
+    const cw=getCW(img), ch=getCH(img);
+    let {x:bx,y:by,w:bw,h:bh} = sb;
+    if(drag.type==='move') {
+      bx = Math.max(0,Math.min(cw-bw, bx+dx));
+      by = Math.max(0,Math.min(ch-bh, by+dy));
+    } else {
+      if(drag.type==='tl') { bw=Math.max(20,sb.w-dx); bh=r?bw/r:Math.max(20,sb.h-dy); bx=sb.x+sb.w-bw; by=sb.y+sb.h-bh; }
+      else if(drag.type==='tr') { bw=Math.max(20,sb.w+dx); bh=r?bw/r:Math.max(20,sb.h-dy); by=sb.y+sb.h-bh; }
+      else if(drag.type==='bl') { bw=Math.max(20,sb.w-dx); bh=r?bw/r:Math.max(20,sb.h+dy); bx=sb.x+sb.w-bw; }
+      else if(drag.type==='br') { bw=Math.max(20,sb.w+dx); bh=r?bw/r:Math.max(20,sb.h+dy); }
+      bx=Math.max(0,bx); by=Math.max(0,by);
+      bw=Math.min(cw-bx,bw); bh=Math.min(ch-by,bh);
+    }
+    setBox({x:bx,y:by,w:bw,h:bh});
+  };
+
+  const onMU = () => setDrag(null);
+
+  // Apply crop — loads a CLEAN copy of the image (no overlay) and crops at full resolution
+  const applyCrop = () => {
+    if(!imgSrc||!box||!img) return;
+    const scale = img.naturalWidth / Math.min(img.naturalWidth, 900);
+    const sx=Math.round(box.x*scale), sy=Math.round(box.y*scale);
+    const sw=Math.round(box.w*scale), sh=Math.round(box.h*scale);
+    if(sw<=0||sh<=0) return;
+    const clean = new Image();
+    clean.onload = () => {
+      const out = document.createElement('canvas');
+      out.width=sw; out.height=sh;
+      out.getContext('2d').drawImage(clean, sx,sy,sw,sh, 0,0,sw,sh);
+      setResult(out.toDataURL('image/png'));
+      setStatus('');
+    };
+    clean.src = imgSrc;
+  };
+
+  const save = async () => {
+    if(!result) return;
+    const base = imgName.replace(/\.[^.]+$/,'')||'image';
+    const res = await window.lorekeeper.saveImage({base64:result, defaultName:base+'-cropped.png'});
+    if(res&&res.success) setStatus('✓ Saved');
+    else if(res&&!res.cancelled) setStatus('Save failed');
+  };
+
+  const S2 = {box:{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:12}, label:{fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:6,display:'block'}};
+  const pxW = img&&box ? Math.round(box.w*(img.naturalWidth/getCW(img))) : 0;
+  const pxH = img&&box ? Math.round(box.h*(img.naturalHeight/getCH(img))) : 0;
+  // Pre-define styles to avoid Babel issues with style={{}} inside && conditionals
+  const cvWrap = {borderRadius:'var(--r)',overflow:'hidden',lineHeight:0,userSelect:'none'};
+  const footerRow = {display:'flex',alignItems:'center',justifyContent:'space-between',gap:8};
+  const dimText = {fontSize:10,color:'var(--text3)'};
+  const resultImg = {width:'100%',maxHeight:180,objectFit:'contain',borderRadius:4,background:'var(--bg)',display:'block'};
+  const saveBtn = {justifyContent:'center',width:'100%',marginTop:8};
+  const statusStyle = {fontSize:11,marginTop:4,color:status.startsWith('\u2713')?'var(--green)':'var(--red)'};
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:10}}>
+      <button className="btn" style={{justifyContent:'center'}} onClick={loadFile}>
+        <i className="ti ti-photo-up"></i>Load image…
+      </button>
+      {img&&(
+        <div style={S2.box}>
+          <span style={S2.label}>Aspect ratio</span>
+          <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+            {Object.keys(RATIOS).map(r=>(
+              <button key={r} className={"btn"+(ratio===r?' primary':'')} style={{flex:1,justifyContent:'center',fontSize:11}} onClick={()=>setRatio(r)}>
+                {r==='free'?'□ Free':r}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {img&&box&&(
+        <div style={cvWrap}>
+          <canvas ref={cvRef}
+            style={{width:'100%',display:'block',cursor:drag?'grabbing':'crosshair'}}
+            onMouseDown={onMD} onMouseMove={onMM} onMouseUp={onMU} onMouseLeave={onMU}/>
+        </div>
+      )}
+      {img&&box&&(
+        <div style={footerRow}>
+          <span style={dimText}>{pxW} × {pxH} px</span>
+          <button className="btn" onClick={applyCrop}><i className="ti ti-crop"></i>Crop</button>
+        </div>
+      )}
+      {result&&(
+        <div style={S2.box}>
+          <span style={S2.label}>Cropped result</span>
+          <img src={result} style={resultImg} alt="cropped"/>
+          <button className="btn" style={saveBtn} onClick={save}>
+            <i className="ti ti-download"></i>Save…
+          </button>
+          {status&&<div style={statusStyle}>{status}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PasteAndSaveTool() {
+  const [src,setSrc]=React.useState(null);
+  const [dims,setDims]=React.useState(null);
+  const [filename,setFilename]=React.useState('');
+  const [drop,setDrop]=React.useState(false);
+  const [status,setStatus]=React.useState('');
+
+  const S2={box:{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:12},label:{fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:6,display:'block'}};
+
+  const setImage=(base64,w,h,name)=>{
+    setSrc(base64);
+    setDims(w&&h?{w,h}:null);
+    const ts=new Date().toISOString().slice(0,19).replace('T','-').replace(/:/g,'');
+    setFilename(name||('paste-'+ts));
+    setStatus('');
+  };
+
+  const paste=async()=>{
+    const res=await window.lorekeeper.pasteImage();
+    if(!res||!res.base64){setStatus('Nothing on clipboard — copy an image first');return;}
+    setImage(res.base64,res.width,res.height,'');
+  };
+
+  const handleDrop=e=>{
+    e.preventDefault(); setDrop(false);
+    const file=[...e.dataTransfer.files].find(f=>f.type.startsWith('image/'));
+    if(!file){setStatus('Drop an image file');return;}
+    const reader=new FileReader();
+    reader.onload=ev=>setImage(ev.target.result,null,null,file.name.replace(/\.[^.]+$/,''));
+    reader.readAsDataURL(file);
+  };
+
+  const save=async()=>{
+    if(!src||!filename.trim()){setStatus('Enter a filename first');return;}
+    const res=await window.lorekeeper.saveImage({base64:src,defaultName:filename.trim()+'.png'});
+    if(res&&res.success) setStatus('\u2713 Saved to '+res.path);
+    else if(res&&!res.cancelled) setStatus('Save failed');
+  };
+
+  const zoneStyle={
+    border:'2px dashed '+(drop?'var(--accent)':'var(--border2)'),
+    borderRadius:'var(--r)',padding:'24px 12px',textAlign:'center',
+    color:'var(--text3)',fontSize:12,cursor:'pointer',
+    background:drop?'var(--accent-dim)':'transparent',
+    transition:'border-color 0.15s,background 0.15s'
+  };
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:10}}>
+      <button className="btn" style={{justifyContent:'center'}} onClick={paste}>
+        <i className="ti ti-clipboard-copy"></i>Paste from clipboard
+      </button>
+      <div style={zoneStyle}
+        onDragOver={e=>{e.preventDefault();setDrop(true);}}
+        onDragLeave={()=>setDrop(false)}
+        onDrop={handleDrop}
+        onClick={paste}>
+        <i className="ti ti-photo-down" style={{fontSize:22,marginBottom:6,display:'block'}}></i>
+        Drag & drop an image here
+      </div>
+      {src&&(
+        <div style={S2.box}>
+          <span style={S2.label}>Preview{dims?' \u2014 '+dims.w+'\u00d7'+dims.h:''}</span>
+          <img src={src} style={{width:'100%',maxHeight:180,objectFit:'contain',borderRadius:4,background:'var(--bg)',display:'block'}}/>
+        </div>
+      )}
+      {src&&(
+        <div>
+          <span style={S2.label}>Filename (saved as .png)</span>
+          <div style={{display:'flex',gap:6}}>
+            <input value={filename} onChange={e=>setFilename(e.target.value)}
+              style={{flex:1,background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none'}}
+              placeholder="filename"/>
+            <button className="btn" onClick={save} disabled={!filename.trim()}>
+              <i className="ti ti-download"></i>Save\u2026
+            </button>
+          </div>
+          {status&&<div style={{fontSize:11,marginTop:6,color:status.startsWith('\u2713')?'var(--green)':status.includes('Nothing')||status.includes('failed')?'var(--red)':'var(--text3)'}}>{status}</div>}
+        </div>
+      )}
+      {!src&&status&&<div style={{fontSize:11,color:'var(--red)',marginTop:4}}>{status}</div>}
+    </div>
+  );
+}
+
+function FormatConvertTool() {
+  const [src,setSrc]=React.useState(null);
+  const [srcName,setSrcName]=React.useState('');
+  const [fmt,setFmt]=React.useState('jpeg');
+  const [quality,setQuality]=React.useState(85);
+  const [result,setResult]=React.useState(null);
+  const [resultSize,setResultSize]=React.useState('');
+  const [busy,setBusy]=React.useState(false);
+  const [status,setStatus]=React.useState('');
+
+  const S2={box:{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:12},label:{fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:6,display:'block'}};
+
+  const load=async()=>{
+    const res=await window.lorekeeper.importImage();
+    if(!res||!res.base64) return;
+    setSrc(res.base64);
+    setSrcName(res.name||'image');
+    setResult(null); setStatus('');
+  };
+
+  const convert=()=>{
+    if(!src) return;
+    setBusy(true); setStatus('Converting…');
+    const img=new Image();
+    img.onload=()=>{
+      const cv=document.createElement('canvas');
+      cv.width=img.naturalWidth; cv.height=img.naturalHeight;
+      const ctx=cv.getContext('2d');
+      if(fmt==='jpeg'){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,cv.width,cv.height);}
+      ctx.drawImage(img,0,0);
+      const mime=fmt==='png'?'image/png':fmt==='webp'?'image/webp':'image/jpeg';
+      const q=(fmt==='jpeg'||fmt==='webp')?quality/100:undefined;
+      cv.toBlob(blob=>{
+        const kb=(blob.size/1024).toFixed(1);
+        setResultSize(kb+' KB');
+        const reader=new FileReader();
+        reader.onload=()=>{setResult(reader.result);setBusy(false);setStatus('');};
+        reader.readAsDataURL(blob);
+      },mime,q);
+    };
+    img.onerror=()=>{setBusy(false);setStatus('Failed to load image.');};
+    img.src=src;
+  };
+
+  const save=async()=>{
+    if(!result) return;
+    const ext=fmt==='jpeg'?'jpg':fmt;
+    const base=srcName.replace(/\.[^.]+$/,'')||'image';
+    const res=await window.lorekeeper.saveImage({base64:result,defaultName:base+'-converted.'+ext});
+    if(res&&res.success) setStatus('✓ Saved');
+    else if(res&&!res.cancelled) setStatus('Save failed');
+  };
+
+  const imgStyle={width:'100%',maxHeight:150,objectFit:'contain',borderRadius:4,background:'var(--bg)',display:'block'};
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:10}}>
+      <button className="btn" style={{justifyContent:'center'}} onClick={load}>
+        <i className="ti ti-photo-up"></i>Load image…
+      </button>
+      {src&&(
+        <div style={S2.box}>
+          <span style={S2.label}>Source</span>
+          <img src={src} style={imgStyle} alt="source"/>
+          <div style={{fontSize:10,color:'var(--text3)',marginTop:4}}>{srcName}</div>
+        </div>
+      )}
+      {src&&(
+        <div style={S2.box}>
+          <span style={S2.label}>Output format</span>
+          <div style={{display:'flex',gap:6,marginBottom:fmt==='jpeg'||fmt==='webp'?10:0}}>
+            {[['jpeg','JPEG'],['png','PNG'],['webp','WebP']].map(([v,l])=>(
+              <button key={v} className={`btn${fmt===v?' primary':''}`} style={{flex:1,justifyContent:'center',fontSize:11}} onClick={()=>setFmt(v)}>{l}</button>
+            ))}
+          </div>
+          {(fmt==='jpeg'||fmt==='webp')&&(
+            <div>
+              <span style={{...S2.label,marginBottom:4}}>Quality: {quality}%</span>
+              <input type="range" min={1} max={100} value={quality} onChange={e=>setQuality(+e.target.value)} style={{width:'100%',accentColor:'var(--accent)'}}/>
+            </div>
+          )}
+        </div>
+      )}
+      {src&&(
+        <button className="btn" style={{justifyContent:'center'}} onClick={convert} disabled={busy}>
+          <i className="ti ti-transform"></i>{busy?'Converting…':'Convert'}
+        </button>
+      )}
+      {status&&!result&&<div style={{fontSize:11,color:'var(--text3)'}}>{status}</div>}
+      {result&&(
+        <div style={S2.box}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+            <span style={S2.label}>Result ({fmt.toUpperCase()})</span>
+            <span style={{fontSize:10,color:'var(--text3)'}}>{resultSize}</span>
+          </div>
+          <img src={result} style={imgStyle} alt="result"/>
+          <button className="btn" style={{justifyContent:'center',width:'100%',marginTop:8}} onClick={save}>
+            <i className="ti ti-download"></i>Save…
+          </button>
+          {status&&<div style={{fontSize:11,color:status.startsWith('✓')?'var(--green)':'var(--red)',marginTop:4}}>{status}</div>}
         </div>
       )}
     </div>
@@ -1696,6 +2189,9 @@ function ToolsPanel({data}) {
     {id:'swim',icon:'ti-send',label:'Swim'},
     {id:'western-zodiac',icon:'ti-stars',label:'Western Zodiac'},
     {id:'chinese-zodiac',icon:'ti-yin-yang',label:'Chinese Zodiac'},
+    {id:'img-convert',icon:'ti-transform',label:'Img Convert'},
+    {id:'paste-save',icon:'ti-clipboard-copy',label:'Paste & Save'},
+    {id:'crop',icon:'ti-crop',label:'Crop'},
   ];
 
   const S={box:{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:12},label:{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10,display:'block'},input:{width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none'}};
@@ -1779,6 +2275,10 @@ function ToolsPanel({data}) {
       {tool==='plot'&&<PlotTool data={data}/>}
       {tool==='esper'&&<EsperTool/>}
       {tool==='western-zodiac'&&<WesternZodiacTool/>}
+      {tool==='img-convert'&&<FormatConvertTool/>}
+      {tool==='paste-save'&&<PasteAndSaveTool/>}
+      {tool==='crop'&&<CropTool/>}
+
       {tool==='chinese-zodiac'&&<ChineseZodiacTool/>}
       {tool==='hockey'&&<HockeyTool/>}
       {tool==='swim'&&<SwimTool/>}
@@ -1786,8 +2286,6 @@ function ToolsPanel({data}) {
   );
 }
 
-
-const SAUCEPAN_TAGS = {"dead_dove": {"c": "Content Warnings", "d": "Content warning: Content may be actively disturbing or distressing in roleplay. See tags/description for more details."}, "noncon_dubcon": {"c": "Content Warnings", "d": "Content warning: Material contains non-consensual or dubiously consensual elements"}, "abuse": {"c": "Content Warnings", "d": "Content warning: Material depicts physical, emotional, or psychological mistreatment"}, "blackmail": {"c": "Content Warnings", "d": "Content warning: Coercive leverage through threats or exposure"}, "slur_usage": {"c": "Content Warnings", "d": "Content warning: Material contains usage of derogatory slurs or offensive language"}, "self_harm_suicide": {"c": "Content Warnings", "d": "Content warning: Material references or depicts self-harm, suicidal ideation, or suicide attempts"}, "violence": {"c": "Content Warnings", "d": "Content warning: Material contains explicit violent themes"}, "gore": {"c": "Content Warnings", "d": "Content warning: Material contains graphic depictions of blood and injuries"}, "drugs_addiction": {"c": "Content Warnings", "d": "Content warning: Material involves substance use and dependency"}, "incest_stepcest": {"c": "Content Warnings", "d": "Content warning: Material involves romantic or sexual relationships between step-relatives. Blood incest is not allowed on Saucepan."}, "vore": {"c": "Content Warnings", "d": "Content warning: Material contains themes of characters being consumed, swallowed whole, or absorbed by other characters"}, "cannibalism": {"c": "Content Warnings", "d": "Content warning: Material contains themes of characters consuming or eating other characters"}, "feral": {"c": "Content Warnings", "d": "Content warning: Material involves romantic or sexual content with sentient animal characters (real-life animals with human-level intelligence, not fictional species)"}, "trauma": {"c": "Content Warnings", "d": "Content warning: Material contains depictions of traumatic experiences or their aftermath"}, "terminal_illness": {"c": "Content Warnings", "d": "Content warning: Material contains depictions of illness, disease, or medical conditions"}, "user_harm": {"c": "Content Warnings", "d": "Content warning: Material contains scenarios where the user character may be harmed"}, "death": {"c": "Content Warnings", "d": "Content warning: Material deals with dying, loss of life, or grief"}, "body_horror": {"c": "Content Warnings", "d": "Content warning: Material contains graphic depictions of monstrous/grotesque bodily imagery"}, "eating_disorder": {"c": "Content Warnings", "d": "Content warning: Material depicts anorexia, bulimia, or other harmful relationships with food"}, "amputation": {"c": "Content Warnings", "d": "Content warning: Material containing non-consensual amputations or loss of limbs"}, "miscarriage": {"c": "Content Warnings", "d": "Content warning: Material depicting loss of a child or pregnancy"}, "male": {"c": "Character Identity", "d": "Characters with a focus on a male identity and experience."}, "female": {"c": "Character Identity", "d": "Characters with a focus on a female identity and experience."}, "non_binary": {"c": "Character Identity", "d": "Companions who identify outside the traditional gender binary"}, "trans": {"c": "Character Identity", "d": "Companions whose identity differs from their assigned gender"}, "intersex": {"c": "Character Identity", "d": "Companions with variations in sex characteristics (e.g. genitals, reproductive organs, hormonal patterns)"}, "altersex": {"c": "Character Identity", "d": "Companions with alternative or non-standard sex characteristics, often in fantasy or speculative settings"}, "masc": {"c": "Character Identity", "d": "Masculine presenting person, regardless of gender identity"}, "fem": {"c": "Character Identity", "d": "Feminine presenting person, regardless of gender identity"}, "andro": {"c": "Character Identity", "d": "Androgynous presenting person, regardless of gender identity"}, "genderfluid": {"c": "Character Identity", "d": "Characters whose gender identity changes"}, "gender_norms": {"c": "Character Identity", "d": "Characters who explore, challenge, or otherwise engage with gender as a social construct"}, "multiple_genders": {"c": "Character Identity", "d": "Cast contains more than one gender, great for ensemble bots with diverse representation"}, "any_pov": {"c": "Point of View", "d": "Content inclusive and accessible to all readers"}, "male_pov": {"c": "Point of View", "d": "Content from masculine perspectives"}, "fem_pov": {"c": "Point of View", "d": "Content from feminine perspectives"}, "nb_pov": {"c": "Point of View", "d": "Content for non-binary users perspective and experiences"}, "poc_user": {"c": "Point of View", "d": "Content for people of color users perspective and experiences"}, "plus_size_user": {"c": "Point of View", "d": "Content for plus-sized users perspective and experiences"}, "disabled_user": {"c": "Point of View", "d": "Content for disabled users perspective and experiences"}, "trans_pov": {"c": "Point of View", "d": "Content for trans perspectives and experiences"}, "intersex_pov": {"c": "Point of View", "d": "Content for intersex perspectives and experiences"}, "demi_pov": {"c": "Point of View", "d": "Content for demi-human perspectives and experiences"}, "monster_pov": {"c": "Point of View", "d": "Content from a monster's perspective"}, "villain_pov": {"c": "Point of View", "d": "Content from a villain's perspective"}, "good_person_pov": {"c": "Point of View", "d": "Content from a hero/good person perspective (counterpart to VillainPOV)"}, "non_human_pov": {"c": "Point of View", "d": "Content from a non-human/creature perspective"}, "older_user": {"c": "Point of View", "d": "For bots designed with user being an older person in mind (40s and above)"}, "injured_user": {"c": "Point of View", "d": "Roleplay starts with user sick or injured"}, "tall_user": {"c": "Point of View", "d": "For users that are really tall (7ft or more)"}, "short_user": {"c": "Point of View", "d": "For users that are really short (Below 5ft)"}, "victim_pov": {"c": "Point of View", "d": "Content told from a victim's perspective"}, "second_person_pov": {"c": "Point of View", "d": "Narration addresses the reader as 'you'"}, "third_person_pov": {"c": "Point of View", "d": "External narration using he/she/they"}, "first_person_pov": {"c": "Point of View", "d": "Character's narrative uses 'I'"}, "mlm": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to men"}, "wlw": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to women"}, "m4a": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to any gender"}, "w4a": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to any gender"}, "m4nb": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to non-binary"}, "w4nb": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to non-binary"}, "m4w": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to women"}, "w4m": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to men"}, "m4t": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to trans"}, "w4t": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to trans"}, "nb4m": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to men"}, "nb4w": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to women"}, "nb4a": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to any gender"}, "nb4nb": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to non-binary"}, "t4m": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to men"}, "t4w": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to women"}, "t4t": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to trans"}, "t4a": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to any gender"}, "t4nb": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to non-binary"}, "bi": {"c": "Sexual & Romantic Orientation", "d": "Characters attracted to more than one gender"}, "pansexual": {"c": "Sexual & Romantic Orientation", "d": "Characters attracted to people regardless of gender"}, "asexual": {"c": "Sexual & Romantic Orientation", "d": "Characters who experience little to no sexual attraction"}, "demisexual": {"c": "Sexual & Romantic Orientation", "d": "Characters who only experience sexual attraction after forming an emotional bond"}, "aromantic": {"c": "Sexual & Romantic Orientation", "d": "Characters who experience little to no romantic attraction"}, "queer": {"c": "Sexual & Romantic Orientation", "d": "Sexuality or identity that is harder to label; umbrella term for diverse orientations"}, "closeted": {"c": "Sexual & Romantic Orientation", "d": "Characters secretly hiding their true sexuality or gender identity from those around them"}, "dom": {"c": "Relationship Structure & Dynamics", "d": "Dominant companions in power dynamics"}, "sub": {"c": "Relationship Structure & Dynamics", "d": "Submissive companions in power dynamics"}, "switch": {"c": "Relationship Structure & Dynamics", "d": "Companions that can switch between dominant and submissive roles"}, "multiple": {"c": "Relationship Structure & Dynamics", "d": "Stories with polyamorous or multiple-companion dynamics"}, "vanilla": {"c": "Relationship Structure & Dynamics", "d": "Stories with traditional romantic dynamics"}, "bdsm": {"c": "Relationship Structure & Dynamics", "d": "Stories exploring power dynamics, bondage, discipline and consensual kink"}, "ntr": {"c": "Relationship Structure & Dynamics", "d": "Stories involving infidelity, cuckoldry, or cheating"}, "unestablished_relationship": {"c": "Relationship Structure & Dynamics", "d": "Stories where relationships are developing or undefined"}, "contractual_relationship": {"c": "Relationship Structure & Dynamics", "d": "Relationships bound by formal agreement - contracts, obligations, or arranged terms"}, "qpr": {"c": "Relationship Structure & Dynamics", "d": "Queer Platonic Relationship - an intimate, committed relationship that is not romantic in nature"}, "sugar_parent": {"c": "Relationship Structure & Dynamics", "d": "Relationship dynamic where one partner provides financial support in exchange for companionship"}, "platonic": {"c": "Relationship Structure & Dynamics", "d": "Non-romantic relationships focused on friendship"}, "step_sibling": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving step-siblings"}, "neighbor": {"c": "Relationship Structure & Dynamics", "d": "Relationships between people living next to each other"}, "roommate": {"c": "Relationship Structure & Dynamics", "d": "Relationships between people sharing living quarters"}, "spouse": {"c": "Relationship Structure & Dynamics", "d": "Relationships between married partners"}, "step_parent": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving step-parents"}, "lover": {"c": "Relationship Structure & Dynamics", "d": "Romantic partners in established relationships"}, "childhood_friend": {"c": "Relationship Structure & Dynamics", "d": "Relationships with friends from childhood"}, "butler": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving a servant or household staff member"}, "senpai": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving a senior or older companion"}, "kouhai": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving a junior or younger companion"}, "power_dynamics": {"c": "Relationship Structure & Dynamics", "d": "Content involving dominance and submission in a consensual context"}, "age_gap": {"c": "Relationship Structure & Dynamics", "d": "Content involving a significant age difference between companions"}, "ex": {"c": "Relationship Structure & Dynamics", "d": "Content involving former romantic partners or relationships"}, "cheating": {"c": "Relationship Structure & Dynamics", "d": "Content involving infidelity. Different from NTR in that it doesn't involve cuckoldry."}, "unrequited_love": {"c": "Relationship Structure & Dynamics", "d": "One-sided romantic feelings that aren't reciprocated"}, "forbidden_love": {"c": "Relationship Structure & Dynamics", "d": "Content involving love that is prohibited or taboo"}, "soulmate": {"c": "Relationship Structure & Dynamics", "d": "Characters bound by fate, destiny, or a supernatural bond"}, "boss": {"c": "Relationship Structure & Dynamics", "d": "Content involving a boss-employee relationship dynamic"}, "harem": {"c": "Relationship Structure & Dynamics", "d": "Relationship structures featuring one focal partner with multiple romantic interests"}, "concubine": {"c": "Relationship Structure & Dynamics", "d": "Historical or hierarchical companion in a secondary spouse/consort role"}, "captive": {"c": "Relationship Structure & Dynamics", "d": "Scenarios where someone is held against will"}, "dark_romance": {"c": "Relationship Structure & Dynamics", "d": "Toxic, intense, and/or abusive love scenarios"}, "best_friend": {"c": "Relationship Structure & Dynamics", "d": "Close friend, long-time companion, or confidant"}, "taken": {"c": "Relationship Structure & Dynamics", "d": "Characters already in committed relationship with someone not User"}, "colleague": {"c": "Relationship Structure & Dynamics", "d": "Person with mostly professional relationship"}, "crush": {"c": "Relationship Structure & Dynamics", "d": "Passionate, romantic attraction to someone not their partner"}, "fwb": {"c": "Relationship Structure & Dynamics", "d": "Friends with benefits; casual sexual relationships without romance"}, "hookup": {"c": "Relationship Structure & Dynamics", "d": "Intimacy without romance (one-time, distinct from FWB)"}, "rejection": {"c": "Relationship Structure & Dynamics", "d": "Refusal or dismissal of someone's feelings/proposals"}, "lovers_to_enemies": {"c": "Relationship Structure & Dynamics", "d": "Relationships shift from romance to hostility"}, "savior": {"c": "Relationship Structure & Dynamics", "d": "One character rescues another (from bullies, jail, bad situations)"}, "partner": {"c": "Relationship Structure & Dynamics", "d": "Fellow cop, firefighter, soldier; someone you trust to watch your back"}, "teammate": {"c": "Relationship Structure & Dynamics", "d": "Someone on the same team, whether sports, esports, military squad, or any shared-goal group"}, "party_member": {"c": "Relationship Structure & Dynamics", "d": "Fellow adventurers in your party, bonded through dungeon crawls, quests, and shared danger"}, "objectification": {"c": "Relationship Structure & Dynamics", "d": "Treated as less than human and more like something to be owned"}, "stranger": {"c": "Relationship Structure & Dynamics", "d": "Encounters with someone completely unknown, no prior connection or history"}, "pbf": {"c": "Relationship Structure & Dynamics", "d": "Romantic or sexual tension with a parent's close friend from the older generation"}, "parent_in_law": {"c": "Relationship Structure & Dynamics", "d": "Complicated or romantic dynamics with a spouse's mother or father"}, "top": {"c": "Relationship Structure & Dynamics", "d": "Characters who exclusively take the dominant or penetrative role in intimacy"}, "bottom": {"c": "Relationship Structure & Dynamics", "d": "Characters who exclusively take the receptive or submissive role in intimacy"}, "soft_dom": {"c": "Relationship Structure & Dynamics", "d": "Dominant but leads with care, patience and a gentle touch"}, "selfcest": {"c": "Relationship Structure & Dynamics", "d": "Romantic/sexual relationship with a clone, AU version, or time-travelling self"}, "enemies_to_lovers": {"c": "Plot Devices & Structure", "d": "Stories of conflict transforming into romance"}, "friends_to_lovers": {"c": "Plot Devices & Structure", "d": "Stories where friendship evolves into romantic relationship"}, "love_triangle": {"c": "Plot Devices & Structure", "d": "Stories involving three people in a complicated romantic dynamic"}, "forced_proximity": {"c": "Plot Devices & Structure", "d": "Stories where characters are forced to stay close together"}, "arranged_marriage": {"c": "Plot Devices & Structure", "d": "Marriages planned by families, politics, or duty rather than personal choice"}, "fake_relationship": {"c": "Plot Devices & Structure", "d": "Partners pretending to date or be together for ulterior motives"}, "pregnant": {"c": "Plot Devices & Structure", "d": "Scenarios involving pregnancy"}, "oc": {"c": "Plot Devices & Structure", "d": "Original user-created characters"}, "scenario": {"c": "Plot Devices & Structure", "d": "A companion built around a specific situation or premise rather than a character"}, "interactive_rpg": {"c": "Plot Devices & Structure", "d": "This companion functions as an interactive roleplaying game"}, "amnesia": {"c": "Plot Devices & Structure", "d": "Stories featuring memory loss as a plot device"}, "gender_bend": {"c": "Plot Devices & Structure", "d": "Stories featuring characters transformed into the opposite gender"}, "time_travel": {"c": "Plot Devices & Structure", "d": "Content where characters move between different time periods"}, "chosen_one": {"c": "Plot Devices & Structure", "d": "Narratives with specially selected characters destined for greatness"}, "prophecy": {"c": "Plot Devices & Structure", "d": "Content involving predicted events or destinies"}, "quest": {"c": "Plot Devices & Structure", "d": "Stories structured around journeys to achieve specific goals"}, "tournament": {"c": "Plot Devices & Structure", "d": "Narratives centered on competitions or formalized contests"}, "found_family": {"c": "Plot Devices & Structure", "d": "Stories about non-biological family bonds formed through circumstance"}, "ensemble_cast": {"c": "Plot Devices & Structure", "d": "Stories featuring multiple main characters of equal importance"}, "unreliable_narrator": {"c": "Plot Devices & Structure", "d": "Content told from the perspective of a character whose credibility is questionable"}, "colleagues_to_lovers": {"c": "Plot Devices & Structure", "d": "Stories where professional relationships evolve into romance"}, "curse": {"c": "Plot Devices & Structure", "d": "Stories where character/setting is under supernatural harm/misfortune"}, "mistaken_identity": {"c": "Plot Devices & Structure", "d": "Characters led to believe someone's identity is another's"}, "chance_meeting": {"c": "Plot Devices & Structure", "d": "Stories about characters who just happen to run into each other"}, "kidnapping": {"c": "Plot Devices & Structure", "d": "Scenario involving forced abduction and confinement"}, "hostage": {"c": "Plot Devices & Structure", "d": "Scenario where person is held against their will"}, "lore_heavy": {"c": "Plot Devices & Structure", "d": "Companions deeply tied to the lore of their world; may require reading canon material"}, "passional_crime": {"c": "Plot Devices & Structure", "d": "A violent crime committed in a sudden heat of passion or rage"}, "sexual_awakening": {"c": "Plot Devices & Structure", "d": "Characters discovering or coming to terms with a previously unexplored side of their sexuality"}, "parallel_universe": {"c": "Plot Devices & Structure", "d": "Stories featuring alternate versions of reality or different dimensions that exist alongside our own"}, "portal": {"c": "Plot Devices & Structure", "d": "Stories where characters are transported or reincarnated into a different world, often with fantasy or game-like elements"}, "smut": {"c": "Story Genres & Styles", "d": "Content with mature themes and consensual intimacy"}, "fluff": {"c": "Story Genres & Styles", "d": "Heartwarming content celebrating joy and comfort"}, "angst": {"c": "Story Genres & Styles", "d": "Stories heavy with emotional pain, inner conflict, and suffering"}, "comfort": {"c": "Story Genres & Styles", "d": "Content focused on providing emotional support and reassurance"}, "hurt_comfort": {"c": "Story Genres & Styles", "d": "Content featuring emotional or physical hurt followed by comfort and care"}, "hurt_no_comfort": {"c": "Story Genres & Styles", "d": "Content featuring emotional or physical hurt without resolution or comfort"}, "comedy": {"c": "Story Genres & Styles", "d": "Content focused on humor and joy"}, "horror": {"c": "Story Genres & Styles", "d": "Stories designed to frighten, unsettle, or create dread"}, "fantasy": {"c": "Story Genres & Styles", "d": "Content with magical and otherworldly elements"}, "adventure": {"c": "Story Genres & Styles", "d": "Content focused on exploration and discovery"}, "action": {"c": "Story Genres & Styles", "d": "Content with dynamic and exciting sequences"}, "romance": {"c": "Story Genres & Styles", "d": "Content focused on romantic relationships and emotions"}, "slice_of_life": {"c": "Story Genres & Styles", "d": "Content depicting ordinary day-to-day experiences"}, "noir": {"c": "Story Genres & Styles", "d": "Stories with dark, cynical themes and stylized crime drama"}, "urban_fantasy": {"c": "Story Genres & Styles", "d": "Stories blending magical elements with modern city settings"}, "magical": {"c": "Story Genres & Styles", "d": "Stories where magic, spells, and enchantment are central to the world"}, "sci_fi": {"c": "Story Genres & Styles", "d": "Stories set in futuristic or technologically advanced worlds"}, "mystery": {"c": "Story Genres & Styles", "d": "Content involving secrets, puzzles, or unsolved questions"}, "conspiracy": {"c": "Story Genres & Styles", "d": "Stories featuring hidden plots and secret schemes"}, "heist": {"c": "Story Genres & Styles", "d": "Narratives about elaborate theft or complex robberies"}, "slow_burn": {"c": "Story Genres & Styles", "d": "Content where relationships develop gradually over extended periods"}, "politics": {"c": "Story Genres & Styles", "d": "Stories centered on political intrigue, governance, and power struggles"}, "religion": {"c": "Story Genres & Styles", "d": "Content exploring faith and spirituality"}, "philosophy": {"c": "Story Genres & Styles", "d": "Content examining life's big questions"}, "coming_of_age": {"c": "Story Genres & Styles", "d": "Stories focusing on growth and transition from youth to adulthood"}, "redemption": {"c": "Story Genres & Styles", "d": "Stories about characters seeking forgiveness or atonement"}, "revenge": {"c": "Story Genres & Styles", "d": "Narratives centered on retribution for past wrongs"}, "justice": {"c": "Story Genres & Styles", "d": "Content exploring fairness, morality, and consequences"}, "betrayal": {"c": "Story Genres & Styles", "d": "Stories involving deception and broken trust"}, "sacrifice": {"c": "Story Genres & Styles", "d": "Narratives featuring characters giving up something valuable"}, "survival": {"c": "Story Genres & Styles", "d": "Content focusing on perseverance against difficult circumstances"}, "identity": {"c": "Story Genres & Styles", "d": "Stories exploring who characters are and their sense of self"}, "freedom": {"c": "Story Genres & Styles", "d": "Content examining liberation and autonomy"}, "otome": {"c": "Story Genres & Styles", "d": "Content involving female-centric romantic relationships"}, "supernatural": {"c": "Story Genres & Styles", "d": "Stories featuring paranormal phenomena - ghosts, cryptids, unexplained events"}, "psychological": {"c": "Story Genres & Styles", "d": "Stories exploring the mind - mental illness, manipulation, paranoia, or psychological tension"}, "thriller": {"c": "Story Genres & Styles", "d": "Content involving suspense, danger, and unexpected twists"}, "urban_fiction": {"c": "Story Genres & Styles", "d": "Gritty, street-level narratives set in modern city environments"}, "wuxia": {"c": "Story Genres & Styles", "d": "Martial arts heroes and mystical cultivation in Chinese-inspired settings"}, "non_canonical_au": {"c": "Story Genres & Styles", "d": "Stories in established universe not related to/changed from original"}, "canon_compliant": {"c": "Story Genres & Styles", "d": "Roleplays that stay true to media source with canon references"}, "sfw": {"c": "Story Genres & Styles", "d": "Stories not designed to be sexually motivated (for spicy-tagged bots)"}, "war": {"c": "Story Genres & Styles", "d": "Narratives set during armed conflicts"}, "peace": {"c": "Story Genres & Styles", "d": "Stories focusing on harmony and conflict resolution"}, "contemporary": {"c": "Locations and Eras", "d": "Content set in the present day with realistic elements"}, "renaissance": {"c": "Locations and Eras", "d": "Stories set in the cultural rebirth period of 14th-17th century Europe"}, "prison": {"c": "Locations and Eras", "d": "Stories set in prison or correctional facilities"}, "victorian": {"c": "Locations and Eras", "d": "Stories set in the Victorian era (1837-1901)"}, "college": {"c": "Locations and Eras", "d": "Stories set in higher education environments"}, "hospital": {"c": "Locations and Eras", "d": "Stories set in medical facilities and healthcare environments"}, "library": {"c": "Locations and Eras", "d": "Stories set in libraries and archives of knowledge"}, "tavern_inn": {"c": "Locations and Eras", "d": "Stories set in traditional inns, taverns, and guesthouses"}, "hotel": {"c": "Locations and Eras", "d": "Stories set in hotels and modern accommodation facilities"}, "mansion": {"c": "Locations and Eras", "d": "Stories set in large, luxurious estates and grand homes"}, "home": {"c": "Locations and Eras", "d": "Stories set in domestic home environments"}, "island": {"c": "Locations and Eras", "d": "Stories set on islands, both tropical and remote"}, "bar": {"c": "Locations and Eras", "d": "Stories set in modern bars and drinking establishments"}, "club": {"c": "Locations and Eras", "d": "Stories set in nightclubs and dance venues"}, "circus": {"c": "Locations and Eras", "d": "Stories set in circuses and traveling entertainment shows"}, "holidays": {"c": "Locations and Eras", "d": "Stories centered around holiday celebrations and seasonal festivities"}, "small_town": {"c": "Locations and Eras", "d": "Stories set in tight-knit rural or suburban communities"}, "gym": {"c": "Locations and Eras", "d": "Stories set in fitness centers and athletic training environments"}, "workplace": {"c": "Locations and Eras", "d": "Stories set in professional work environments"}, "cyberpunk": {"c": "Locations and Eras", "d": "Stories set in high-tech, low-life dystopian futures"}, "steampunk": {"c": "Locations and Eras", "d": "Stories set in Victorian-inspired worlds with steam-powered technology"}, "solarpunk": {"c": "Locations and Eras", "d": "Stories set in sustainable futures powered by renewable energy"}, "post_apocalyptic": {"c": "Locations and Eras", "d": "Stories set after a global catastrophe or civilization collapse"}, "medieval": {"c": "Locations and Eras", "d": "Stories set in middle ages-inspired settings"}, "space": {"c": "Locations and Eras", "d": "Stories set in outer space or on other planets"}, "underwater": {"c": "Locations and Eras", "d": "Stories set beneath the ocean or in aquatic environments"}, "military": {"c": "Locations and Eras", "d": "Stories set in military or armed forces environments"}, "wild_west": {"c": "Locations and Eras", "d": "Stories set in the American frontier era"}, "historical": {"c": "Locations and Eras", "d": "Stories set in past historical periods or ancient times"}, "historical_china": {"c": "Locations and Eras", "d": "Stories set in ancient or imperial China"}, "vintage": {"c": "Locations and Eras", "d": "Stories set in the 1900s era with classic, retro aesthetics"}, "y2k": {"c": "Locations and Eras", "d": "Stories set in the early 2000s with millennium-era aesthetics"}, "online": {"c": "Locations and Eras", "d": "Stories set mainly over internet or digital settings"}, "wilderness": {"c": "Locations and Eras", "d": "Stories set in remote outdoors / nature biomes (forests, savannahs, plains, tundras)"}, "desert": {"c": "Locations and Eras", "d": "Stories set in desert or arid land settings"}, "laboratory": {"c": "Locations and Eras", "d": "Stories set within laboratory or research facilities"}, "eatery": {"c": "Locations and Eras", "d": "Stories set in restaurant, fast food, or meal service areas"}, "temple_church": {"c": "Locations and Eras", "d": "Stories set within places of religious worship"}, "party_festival": {"c": "Locations and Eras", "d": "Stories set at social gathering or celebration"}, "beach": {"c": "Locations and Eras", "d": "Stories set on sandy shores with sun, surf, boardwalks, and coastal vibes"}, "remote_cabin": {"c": "Locations and Eras", "d": "Stories set in remote areas like cabin in woods or lake house"}, "farm_setting": {"c": "Locations and Eras", "d": "Working with the land, managing natural resources, raising animals, cultivating crops"}, "regency_era": {"c": "Locations and Eras", "d": "Content from 1795–1837 in Britain; high-fashion, neoclassical architecture, strict social etiquette"}, "mpreg": {"c": "World-Building Concepts", "d": "World setting featuring male pregnancy"}, "omegaverse": {"c": "World-Building Concepts", "d": "World setting with alpha/beta/omega dynamics"}, "bdsm_verse": {"c": "World-Building Concepts", "d": "World setting where dom/sub/switch dynamics are a fundamental part of society"}, "guide_sentinel": {"c": "World-Building Concepts", "d": "World setting featuring enhanced sensory guides and their protectors"}, "dystopian": {"c": "World-Building Concepts", "d": "Content set in oppressive, troubled future societies"}, "utopian": {"c": "World-Building Concepts", "d": "Content set in idealized, perfect future societies"}, "disabled": {"c": "Character Archetypes & Personalities", "d": "Companions with a physical or mental condition that limits their movements, senses, or activities"}, "neurodivergent": {"c": "Character Archetypes & Personalities", "d": "Companions who are neurodivergent, including autism, ADHD, and other neurological differences"}, "hero": {"c": "Character Archetypes & Personalities", "d": "Protagonists who fight for good, protect others, or champion a cause"}, "villain": {"c": "Character Archetypes & Personalities", "d": "Antagonists who oppose the protagonist - from cunning schemers to outright evil"}, "villainess": {"c": "Character Archetypes & Personalities", "d": "Female antagonists and morally grey characters"}, "anti_hero": {"c": "Character Archetypes & Personalities", "d": "Protagonists with questionable morals or unconventional methods"}, "royalty": {"c": "Character Archetypes & Personalities", "d": "Characters in positions of privilege and power"}, "nobility": {"c": "Character Archetypes & Personalities", "d": "Characters belonging to the noble class or aristocracy"}, "duke_duchess": {"c": "Character Archetypes & Personalities", "d": "Characters holding the title of duke or duchess"}, "pirate": {"c": "Character Archetypes & Personalities", "d": "Seafaring outlaws, treasure hunters, and swashbucklers"}, "dilf": {"c": "Character Archetypes & Personalities", "d": "Content featuring an attractive older male character, often a father figure"}, "milf": {"c": "Character Archetypes & Personalities", "d": "Content featuring an attractive older female character, often a mother figure"}, "emo": {"c": "Character Archetypes & Personalities", "d": "Characters with dark, emotional, and introspective personalities"}, "murderer": {"c": "Character Archetypes & Personalities", "d": "Characters who have committed homicide"}, "jock": {"c": "Character Archetypes & Personalities", "d": "Athletic characters often associated with sports"}, "nerd": {"c": "Character Archetypes & Personalities", "d": "Characters who are intellectual and nerdy"}, "bimbo_himbo": {"c": "Character Archetypes & Personalities", "d": "Attractive characters who appear superficial but have good hearts"}, "bully": {"c": "Character Archetypes & Personalities", "d": "Characters who intimidate or mistreat others"}, "rival": {"c": "Character Archetypes & Personalities", "d": "Characters in competition with each other"}, "virgin": {"c": "Character Archetypes & Personalities", "d": "Characters who haven't experienced sexual intimacy"}, "promiscuous": {"c": "Character Archetypes & Personalities", "d": "Characters with multiple sexual partners or casual attitudes toward sex"}, "filthy": {"c": "Character Archetypes & Personalities", "d": "Content featuring dirty, unhygienic, or unclean characters"}, "wealthy": {"c": "Character Archetypes & Personalities", "d": "Characters with significant financial resources"}, "healer": {"c": "Character Archetypes & Personalities", "d": "Characters who specialize in healing, whether magical or medical"}, "rogue": {"c": "Character Archetypes & Personalities", "d": "Stealthy, cunning characters skilled in trickery or thievery"}, "warrior": {"c": "Character Archetypes & Personalities", "d": "Characters skilled in combat and battle"}, "mage": {"c": "Character Archetypes & Personalities", "d": "Characters with magical abilities or training"}, "tsundere": {"c": "Character Archetypes & Personalities", "d": "Characters who mask affection with hostility before revealing their true feelings"}, "yandere": {"c": "Character Archetypes & Personalities", "d": "Characters whose love manifests in obsessive or dangerous ways"}, "kuudere": {"c": "Character Archetypes & Personalities", "d": "Characters who are emotionally reserved but caring underneath"}, "dandere": {"c": "Character Archetypes & Personalities", "d": "Quiet, shy characters who open up over time"}, "deredere": {"c": "Character Archetypes & Personalities", "d": "Sweet, affectionate characters who are openly loving"}, "himedere": {"c": "Character Archetypes & Personalities", "d": "Characters who act like royalty and expect to be treated as such"}, "kamidere": {"c": "Character Archetypes & Personalities", "d": "Arrogant characters with a god complex or superiority attitude"}, "bakadere": {"c": "Character Archetypes & Personalities", "d": "Silly, clumsy characters who are often naive or oblivious"}, "kakkodere": {"c": "Character Archetypes & Personalities", "d": "Characters who are normally cool and confident, but become cute, affectionate, and deredere for their love interest"}, "introverted": {"c": "Character Archetypes & Personalities", "d": "Reserved characters who gain energy from solitude"}, "extroverted": {"c": "Character Archetypes & Personalities", "d": "Outgoing characters who gain energy from social interactions"}, "anxious": {"c": "Character Archetypes & Personalities", "d": "Characters who experience worry, nervousness, or unease"}, "ambitious": {"c": "Character Archetypes & Personalities", "d": "Characters with strong desire and determination to achieve goals"}, "incel": {"c": "Character Archetypes & Personalities", "d": "Involuntarily celibate characters consumed by romantic or sexual frustration"}, "stalker": {"c": "Character Archetypes & Personalities", "d": "Characters who are a little *too* obsessive"}, "needy_clingy": {"c": "Character Archetypes & Personalities", "d": "Personalities marked by intense attachment and reassurance seeking"}, "biker": {"c": "Character Archetypes & Personalities", "d": "Outlaw club or motorcycle culture archetype"}, "ninja_samurai": {"c": "Character Archetypes & Personalities", "d": "Traditional Japanese warriors and stealth fighters"}, "esl": {"c": "Character Archetypes & Personalities", "d": "Non‑native speaker character trait affecting language and cadence"}, "grumpy": {"c": "Character Archetypes & Personalities", "d": "Characters with a consistently irritable or bad-tempered personality"}, "brat": {"c": "Character Archetypes & Personalities", "d": "Characters who are defiant, playfully disobedient, and enjoy pushing boundaries"}, "masochist": {"c": "Character Archetypes & Personalities", "d": "Characters who derive pleasure from receiving pain or humiliation"}, "sadist": {"c": "Character Archetypes & Personalities", "d": "Characters who derive pleasure from inflicting pain or humiliation"}, "person_next_door": {"c": "Character Archetypes & Personalities", "d": "Approachable, relatable characters with an everyday charm"}, "gentle_giant": {"c": "Character Archetypes & Personalities", "d": "Large, imposing characters with a surprisingly soft and caring nature"}, "reluctant_hero": {"c": "Character Archetypes & Personalities", "d": "Characters who are thrust into heroic roles despite their own resistance"}, "mastermind": {"c": "Character Archetypes & Personalities", "d": "Brilliant strategists who orchestrate complex plans and manipulations"}, "well_intentioned_extremist": {"c": "Character Archetypes & Personalities", "d": "Characters who pursue noble goals through morally questionable methods"}, "daredevil": {"c": "Character Archetypes & Personalities", "d": "Thrill-seekers who live for danger and take extreme risks"}, "mean_catty": {"c": "Character Archetypes & Personalities", "d": "Sharp-tongued, petty, and quick to tear others down"}, "perverted": {"c": "Character Archetypes & Personalities", "d": "Lecherous and dirty-minded characters"}, "sensitive": {"c": "Character Archetypes & Personalities", "d": "Emotionally/physically over-reactive characters"}, "loyal": {"c": "Character Archetypes & Personalities", "d": "Devoted and faithful characters"}, "manipulator": {"c": "Character Archetypes & Personalities", "d": "Scheming characters who gaslight and control"}, "corrupt": {"c": "Character Archetypes & Personalities", "d": "Morally depraved characters"}, "mentally_ill": {"c": "Character Archetypes & Personalities", "d": "Characters with any mental illness (includes delusional)"}, "cosplayer": {"c": "Character Archetypes & Personalities", "d": "Characters who dress as other media characters as hobby"}, "two_faced": {"c": "Character Archetypes & Personalities", "d": "Present façade while hiding true personality"}, "stoner": {"c": "Character Archetypes & Personalities", "d": "Characters/settings involving cannabis use or stoner culture"}, "widowed": {"c": "Character Archetypes & Personalities", "d": "Someone who lost their partner"}, "divorced": {"c": "Character Archetypes & Personalities", "d": "Characters navigating life after the end of a marriage"}, "clown": {"c": "Character Archetypes & Personalities", "d": "Individuals who work as clowns, jesters, or similar entertainment"}, "sassy": {"c": "Character Archetypes & Personalities", "d": "Confident, flamboyant, \"extra\", but not malicious/mean-spirited"}, "drag_crossdress": {"c": "Character Archetypes & Personalities", "d": "Wearing clothing associated with another gender"}, "tomboy": {"c": "Character Archetypes & Personalities", "d": "Female character who enjoys typically masculine activities and style"}, "femboy": {"c": "Character Archetypes & Personalities", "d": "Male character who enjoys typically feminine activities and style"}, "gyaru": {"c": "Character Archetypes & Personalities", "d": "Tanned skin, bleached/dyed hair, glamorous fashion and makeup, rebellious attitude"}, "popular": {"c": "Character Archetypes & Personalities", "d": "Characters who command social authority and attention within their peer group"}, "genki": {"c": "Character Archetypes & Personalities", "d": "Character has excessive amounts of energy and enthusiasm"}, "emotionally_unavailable": {"c": "Character Archetypes & Personalities", "d": "Detached and unwilling to connect"}, "hedonistic": {"c": "Character Archetypes & Personalities", "d": "Lives for excess, constantly chasing pleasure, luxury, and indulgence"}, "charismatic": {"c": "Character Archetypes & Personalities", "d": "Effortlessly charming characters who draw others in with magnetic personality"}, "telepath": {"c": "Character Archetypes & Personalities", "d": "Character is able to read minds"}, "empath": {"c": "Character Archetypes & Personalities", "d": "Deeply attuned to the emotions of others on an instinctual, near-supernatural level"}, "unreliable": {"c": "Character Archetypes & Personalities", "d": "Wishy-washy, often say what they don't mean"}, "selfish": {"c": "Character Archetypes & Personalities", "d": "Think of themselves above all others"}, "empathetic": {"c": "Character Archetypes & Personalities", "d": "Connect to others on deep emotional level"}, "playful": {"c": "Character Archetypes & Personalities", "d": "Enjoy playing around and teasing"}, "independent": {"c": "Character Archetypes & Personalities", "d": "Self-sufficient, don't need to rely on others"}, "celebrity": {"c": "Professions", "d": "Public figures and their experiences"}, "detective": {"c": "Professions", "d": "Characters who investigate and seek truth"}, "assistant": {"c": "Professions", "d": "Personal assistants or secretaries who support their employers"}, "executive": {"c": "Professions", "d": "Characters in high-level management positions"}, "business_owner": {"c": "Professions", "d": "Characters who own and operate their own businesses or enterprises"}, "o_l": {"c": "Professions", "d": "Female white-collar office workers - a common character archetype in Japanese media"}, "content_creator": {"c": "Professions", "d": "Digital creators and online personalities"}, "vtuber": {"c": "Professions", "d": "Virtual YouTubers who stream and create content as anime avatars"}, "idol": {"c": "Professions", "d": "Performers who entertain and inspire fans"}, "performer": {"c": "Professions", "d": "Artists who entertain audiences through various forms of performance"}, "mafia": {"c": "Professions", "d": "Characters involved in organized crime"}, "gangster": {"c": "Professions", "d": "Characters involved in street-level criminal activities and urban gangs"}, "musician": {"c": "Professions", "d": "Artists who create and perform music"}, "teacher_professor": {"c": "Professions", "d": "Educators who impart knowledge and skills"}, "student": {"c": "Professions", "d": "Individuals pursuing education and learning"}, "nurse": {"c": "Professions", "d": "Healthcare professionals who provide care and support"}, "doctor": {"c": "Professions", "d": "Medical professionals who diagnose and treat illnesses"}, "police_officer": {"c": "Professions", "d": "Law enforcement officers who maintain public safety"}, "firefighter": {"c": "Professions", "d": "Emergency responders who combat fires and rescue people"}, "pilot": {"c": "Professions", "d": "Aviation professionals who operate aircraft"}, "soldier": {"c": "Professions", "d": "Military personnel who serve and protect"}, "chef": {"c": "Professions", "d": "Culinary artists who create and prepare food"}, "athlete": {"c": "Professions", "d": "Sports professionals who compete and excel"}, "lawyer": {"c": "Professions", "d": "Legal professionals who represent and advise clients"}, "politician": {"c": "Professions", "d": "Public servants who govern and make decisions"}, "scientist": {"c": "Professions", "d": "Researchers who explore and discover new knowledge"}, "engineer": {"c": "Professions", "d": "Professionals who design and build structures and systems"}, "artist": {"c": "Professions", "d": "Creative individuals who express themselves through art"}, "writer": {"c": "Professions", "d": "Authors who create and share written works"}, "journalist": {"c": "Professions", "d": "Reporters who gather and disseminate news and information"}, "model": {"c": "Professions", "d": "Individuals who showcase fashion and products"}, "actor": {"c": "Professions", "d": "Performers who portray characters in various media"}, "intern": {"c": "Professions", "d": "Individuals gaining experience and training in a profession"}, "librarian": {"c": "Professions", "d": "Professionals who manage and organize information resources"}, "plumber": {"c": "Professions", "d": "Skilled workers who install and repair plumbing systems"}, "cowboy_cowgirl": {"c": "Professions", "d": "Individuals associated with ranching and the American West"}, "maid_butler": {"c": "Professions", "d": "Domestic workers who provide cleaning and personal services"}, "bartender": {"c": "Professions", "d": "Professionals who mix and serve alcoholic beverages"}, "waiter_waitress": {"c": "Professions", "d": "Service professionals who take orders and serve food"}, "stripper": {"c": "Professions", "d": "Performers who entertain through dance and striptease"}, "porn_star": {"c": "Professions", "d": "Adult film actors who perform in explicit content"}, "hikikomori": {"c": "Professions", "d": "Individuals who withdraw from society and live in isolation"}, "unemployed": {"c": "Professions", "d": "Individuals without a job or source of income"}, "homeless": {"c": "Professions", "d": "Individuals without a permanent place to live"}, "bodyguard": {"c": "Professions", "d": "Professionals who provide personal protection and security"}, "viking": {"c": "Professions", "d": "Norse-inspired seafaring warriors, raiders, and explorers"}, "adventurer": {"c": "Professions", "d": "Bold explorers who seek treasure, glory, and excitement"}, "hunter": {"c": "Professions", "d": "Characters who track and hunt prey, game, or targets"}, "blue_collar": {"c": "Professions", "d": "Those who typically perform physical labor"}, "white_collar": {"c": "Professions", "d": "Those who typically work in an office"}, "pink_collar": {"c": "Professions", "d": "Those who work roles typically associated with women"}, "pro_dom": {"c": "Professions", "d": "Professionals who provide domination services"}, "retail": {"c": "Professions", "d": "Those who work in retail stores"}, "cashier": {"c": "Professions", "d": "Those who handle money and transactions"}, "surfer": {"c": "Professions", "d": "Those who embody the \"go with the flow\" mentality"}, "servant": {"c": "Professions", "d": "Those who serve others in various capacities"}, "special_agents": {"c": "Professions", "d": "Law enforcement officers with specialized training"}, "spy": {"c": "Professions", "d": "Covert operative involved in intelligence gathering and infiltration"}, "part_timer": {"c": "Professions", "d": "Character working limited hours, side job, or flexible shifts"}, "pimp": {"c": "Professions", "d": "Manager within the sex trade overseeing workers and clientele"}, "priest": {"c": "Professions", "d": "Religious clergy figure offering rites, guidance, or counsel"}, "florist": {"c": "Professions", "d": "Artisan who arranges and sells flowers, often with a gentle demeanor"}, "assassin": {"c": "Professions", "d": "Professional killer trained in stealth and lethal techniques"}, "mail_carrier": {"c": "Professions", "d": "Postal worker who delivers mail and packages to homes and businesses"}, "masseuse": {"c": "Professions", "d": "Professional who provides therapeutic massage and bodywork"}, "therapist": {"c": "Professions", "d": "Mental health professional who provides counseling and psychological support"}, "barista": {"c": "Professions", "d": "Coffee specialist who crafts specialty drinks at cafes"}, "housespouse": {"c": "Professions", "d": "Characters with stay-at-home domestic role"}, "coach": {"c": "Professions", "d": "Athletic trainers, team coaches, or personal fitness mentors"}, "fan": {"c": "Professions", "d": "Devoted admirers, superfans, or groupies fixated on someone they idolize"}, "lessor": {"c": "Professions", "d": "Characters who lease housing to tenants"}, "sex_worker": {"c": "Professions", "d": "Individuals who engage in sexual activity for monetary exchange"}, "frat_sorority": {"c": "Professions", "d": "Individuals in college Greek life organizations"}, "farmer": {"c": "Professions", "d": "Individuals who own or work on a farm"}, "mechanic": {"c": "Professions", "d": "Person working as mechanic (cars, planes, mechs, etc.)"}, "owner": {"c": "Professions", "d": "Characters who own (slave master, pet owner, etc.)"}, "pet": {"c": "Professions", "d": "Pet characters (demi-humans, etc. kept as pets)"}, "sugar_baby": {"c": "Professions", "d": "Person who receives cash in exchange for their companionship"}, "racer": {"c": "Professions", "d": "High stakes, loud engines, no mercy on the track"}, "tech": {"c": "Professions", "d": "Works in the tech sector, hackers, cyber security"}, "indentured": {"c": "Professions", "d": "Characters in a state of ownership or servitude"}, "astronaut": {"c": "Professions", "d": "Explorers, pilots, and crew venturing beyond Earth's atmosphere"}, "martial_artist": {"c": "Professions", "d": "Professional boxers, fighters, and combat sports athletes"}, "hacker": {"c": "Professions", "d": "Person who hacks into computers for work, whether legal or illegal"}, "non_human": {"c": "Species/Being Types", "d": "Characters who are not human - covers any non-human species or entity"}, "monster": {"c": "Species/Being Types", "d": "Fearsome or grotesque creatures distinct from demi-humans and furries"}, "monster_girl": {"c": "Species/Being Types", "d": "Feminine characters with monstrous or inhuman physical features"}, "demi_human": {"c": "Species/Being Types", "d": "Characters blending human and animal traits"}, "furry": {"c": "Species/Being Types", "d": "Anthropomorphic animal characters with human-like traits and personalities"}, "giant": {"c": "Species/Being Types", "d": "Characters of extraordinary size"}, "robot": {"c": "Species/Being Types", "d": "Fully artificial or mechanical beings - androids, automata, AI constructs"}, "vampire": {"c": "Species/Being Types", "d": "Blood-drinking immortals, often with supernatural powers and dark allure"}, "alien": {"c": "Species/Being Types", "d": "Extraterrestrial beings from other planets or dimensions"}, "elf": {"c": "Species/Being Types", "d": "Graceful, long-lived beings often associated with magic, beauty, or nature"}, "dragon": {"c": "Species/Being Types", "d": "Powerful mythical reptilian beings with magic and ancient wisdom"}, "zombie": {"c": "Species/Being Types", "d": "Undead beings reanimated through supernatural means"}, "orc": {"c": "Species/Being Types", "d": "Strong warrior beings often portrayed as fierce and tribal"}, "centaur": {"c": "Species/Being Types", "d": "Half-human, half-horse beings combining human intellect with equine strength"}, "goblin": {"c": "Species/Being Types", "d": "Small mischievous creatures known for cunning and trickery"}, "werewolf": {"c": "Species/Being Types", "d": "Humans who transform into wolves or wolf-like beasts, often under the full moon"}, "werekin": {"c": "Species/Being Types", "d": "People who identify as werecreatures, humans with animal forms (not just wolves)"}, "beastkin": {"c": "Species/Being Types", "d": "Humanoids with animal traits like ears, tails, or fur; part human, part beast"}, "deity": {"c": "Species/Being Types", "d": "Divine beings, gods, or goddesses with supernatural powers"}, "kemono": {"c": "Species/Being Types", "d": "Japanese-style anthropomorphic animal characters"}, "monster_boy": {"c": "Species/Being Types", "d": "Male or masculine characters with monster or supernatural features"}, "mermaid": {"c": "Species/Being Types", "d": "Mythical beings with a human upper body and a fish tail"}, "eldritch": {"c": "Species/Being Types", "d": "Cosmic or incomprehensible beings, often tied to horror and the unknown."}, "fairy": {"c": "Species/Being Types", "d": "Small, magical beings from folklore, known for enchantment and mischief."}, "fae": {"c": "Species/Being Types", "d": "Mysterious magical folk from the faerie realm, often tricky or ancient."}, "demon": {"c": "Species/Being Types", "d": "Supernatural beings from the underworld, often embodying temptation, chaos, or dark power"}, "cryptid": {"c": "Species/Being Types", "d": "Mysterious creatures from folklore and urban legends, whose existence remains unproven"}, "ghost": {"c": "Species/Being Types", "d": "Disembodied spirit or lingering presence from the afterlife"}, "kobold": {"c": "Species/Being Types", "d": "Small reptilian or draconic creatures known for their cunning and trap-making"}, "dwarf": {"c": "Species/Being Types", "d": "Stout, bearded humanoids known for mining, crafting, and fierce loyalty"}, "undead": {"c": "Species/Being Types", "d": "Creatures that have died but continue to exist through supernatural means"}, "angel": {"c": "Species/Being Types", "d": "Celestial beings associated with divine light, purity, and guidance"}, "human": {"c": "Species/Being Types", "d": "Ordinary people without supernatural, magical, or non-human traits"}, "insectoid": {"c": "Species/Being Types", "d": "Characters possessing insect-like traits"}, "tiefling": {"c": "Species/Being Types", "d": "Draconic/demonic-appearing characters"}, "demigod": {"c": "Species/Being Types", "d": "Characters descended from gods (not gods themselves)"}, "mutant": {"c": "Species/Being Types", "d": "Characters with abilities or traits arising from genetic mutation"}, "enhanced": {"c": "Species/Being Types", "d": "Characters with enhanced abilities (typically through science)"}, "shapechanger": {"c": "Species/Being Types", "d": "Characters that can change forms (usually at will)"}, "cyborg": {"c": "Species/Being Types", "d": "Character that is partially machine (distinct from fully mechanical Robot)"}, "naga": {"c": "Species/Being Types", "d": "Characters with the upper body of a human and lower body of a serpent"}, "plus_sized_bot": {"c": "Species/Being Types", "d": "Companions who are plus-sized (counterpart to existing plus_size_user)"}, "mythological": {"c": "Species/Being Types", "d": "Characters or creatures from myths, legends, and folklore"}, "futa": {"c": "Kinks & Intimate Content", "d": "Companions identifying as futanari, with both male and female traits."}, "breeding": {"c": "Kinks & Intimate Content", "d": "Content involving impregnation fantasies"}, "somnophilia": {"c": "Kinks & Intimate Content", "d": "Content involving attraction to sleeping or unconscious individuals"}, "body_worship": {"c": "Kinks & Intimate Content", "d": "Content focusing on adoration and reverence of a partner's body"}, "pet_play": {"c": "Kinks & Intimate Content", "d": "Content involving roleplaying as pets or owners in a power dynamic"}, "praise_kink": {"c": "Kinks & Intimate Content", "d": "Content focusing on verbal affirmation and positive reinforcement"}, "bondage": {"c": "Kinks & Intimate Content", "d": "Content involving restraint for sensual pleasure"}, "voyeurism": {"c": "Kinks & Intimate Content", "d": "Content involving the excitement of watching others"}, "exhibitionism": {"c": "Kinks & Intimate Content", "d": "Content involving the thrill of being seen by others"}, "size_difference": {"c": "Kinks & Intimate Content", "d": "Content emphasizing height or body size disparities between partners"}, "hyper": {"c": "Kinks & Intimate Content", "d": "Content featuring exaggerated or extreme anatomical proportions"}, "orgasm_denial": {"c": "Kinks & Intimate Content", "d": "Content involving controlling or delaying release for heightened pleasure"}, "humiliation": {"c": "Kinks & Intimate Content", "d": "Content exploring embarrassment and degradation"}, "impact_play": {"c": "Kinks & Intimate Content", "d": "Content involving physical force or impact for sexual pleasure"}, "blood_play": {"c": "Kinks & Intimate Content", "d": "Content involving the use of blood for sexual pleasure"}, "breath_play": {"c": "Kinks & Intimate Content", "d": "Content involving the intentional restriction of oxygen for sexual pleasure"}, "temperature_play": {"c": "Kinks & Intimate Content", "d": "Content involving temperature-based sensations for sexual pleasure"}, "cnc": {"c": "Kinks & Intimate Content", "d": "Content involving consensual non-consent role-play scenarios"}, "brat_taming": {"c": "Kinks & Intimate Content", "d": "Content involving the disciplining of defiant or rebellious partners"}, "weapon_play": {"c": "Kinks & Intimate Content", "d": "Content involving the use of weapons for sexual pleasure"}, "sensory_play": {"c": "Kinks & Intimate Content", "d": "Focus on heightened sensations and stimulus experimentation"}, "age_play": {"c": "Kinks & Intimate Content", "d": "Roleplay involving caregiver and regressed roles by agreement"}, "mind_control": {"c": "Kinks & Intimate Content", "d": "Themes of compelled thought, altered will, or implanted urges"}, "watersports": {"c": "Kinks & Intimate Content", "d": "Uro‑centric play involving fluids as part of intimacy"}, "dollification": {"c": "Kinks & Intimate Content", "d": "Transformation or treatment of a partner as a living doll"}, "hair_kink": {"c": "Kinks & Intimate Content", "d": "Content involving attraction to or play with hair"}, "transformation": {"c": "Kinks & Intimate Content", "d": "Content involving physical or mental transformation of characters"}, "food_play": {"c": "Kinks & Intimate Content", "d": "Incorporating food into intimate activities for sensory pleasure"}, "wax_play": {"c": "Kinks & Intimate Content", "d": "Using warm or hot wax for sensory stimulation during intimacy"}, "freeuse": {"c": "Kinks & Intimate Content", "d": "Consensual arrangement where one partner is available at any time"}, "oral": {"c": "Kinks & Intimate Content", "d": "Focus on mouth-to-genital acts for sexual pleasure"}, "safe_sex": {"c": "Kinks & Intimate Content", "d": "Practice of safe and consensual sex with protection"}, "face_sitting": {"c": "Kinks & Intimate Content", "d": "One partner sits on the other's face for oral stimulation"}, "feet": {"c": "Kinks & Intimate Content", "d": "Focus on feet worship/attraction for sexual pleasure"}, "primal_play": {"c": "Kinks & Intimate Content", "d": "Raw, animalistic intimacy (growling, biting, scratching, wrestling, predator/prey)"}, "drunk_sex": {"c": "Kinks & Intimate Content", "d": "Content involving characters under influence during sex (aphrodisiacs, drugs, alcohol)"}, "findom": {"c": "Kinks & Intimate Content", "d": "Sexual control over another's financial assets"}, "tendrils": {"c": "Kinks & Intimate Content", "d": "Sexual use of tentacles or tentacle-like appendages"}, "e_sex": {"c": "Kinks & Intimate Content", "d": "Sexual activities in digital/online spaces (phone, VR, etc.)"}, "omorashi": {"c": "Kinks & Intimate Content", "d": "Arousal from holding one's bladder/lack of control"}, "chastity": {"c": "Kinks & Intimate Content", "d": "Confinement of genitalia for ownership, pain, or pleasure denial"}, "non_human_genitalia": {"c": "Kinks & Intimate Content", "d": "Exotic or fantastical anatomy like knots, ovipositors, hemipenes, and other inhuman features"}, "olfactophilia": {"c": "Kinks & Intimate Content", "d": "Arousal from scents and smells, including body odour, perfume, and natural aromas"}, "lactation": {"c": "Kinks & Intimate Content", "d": "Lactation and/or consuming human breast milk"}, "sexual_roleplay": {"c": "Kinks & Intimate Content", "d": "Consensual sexual LARPing or acting out roles"}, "ovipositor": {"c": "Kinks & Intimate Content", "d": "Laying eggs for sexual pleasure"}, "plushophilia": {"c": "Kinks & Intimate Content", "d": "Sexually interacting with stuffed animals"}, "small_anatomy": {"c": "Kinks & Intimate Content", "d": "Characters who have below average or small penises or breasts"}, "large_anatomy": {"c": "Kinks & Intimate Content", "d": "Characters who have above average or large penises or breasts"}, "masturbation": {"c": "Kinks & Intimate Content", "d": "Content that involves sexual self-gratification"}, "breastplay": {"c": "Kinks & Intimate Content", "d": "Erotic focus on fondling, sucking, or stimulating breasts"}, "sex_toys": {"c": "Kinks & Intimate Content", "d": "Use of sex toys or objects for sexual pleasure"}, "risque": {"c": "Kinks & Intimate Content", "d": "Stories that aren't inherently \"very intimate\" but can have a sensual undertone"}, "inflation": {"c": "Kinks & Intimate Content", "d": "Characters who are inflated or will inflate to extreme and unnatural limits"}, "heat_rut": {"c": "Kinks & Intimate Content", "d": "A period of intense, instinct-driven sexual desire or mating cycle (Alpha/Omega dynamics)"}, "glory_hole": {"c": "Kinks & Intimate Content", "d": "A hole in a wall or partition for anonymous sexual activity"}, "dacryphilia": {"c": "Kinks & Intimate Content", "d": "Sexual interest in tears or sobbing"}, "ugly_bastard": {"c": "Kinks & Intimate Content", "d": "Sexual content involving an unattractive or repulsive character"}, "game": {"c": "Media Sources", "d": "Characters from video games"}, "rpg": {"c": "Media Sources", "d": "Content from roleplaying games"}, "anime": {"c": "Media Sources", "d": "Characters from Japanese media"}, "books": {"c": "Media Sources", "d": "Characters from literature"}, "movie": {"c": "Media Sources", "d": "Characters from films"}, "tv_show": {"c": "Media Sources", "d": "Characters from television"}, "comic": {"c": "Media Sources", "d": "Characters from visual storytelling"}, "theatre": {"c": "Media Sources", "d": "Characters from theatrical performances"}, "utility": {"c": "Other", "d": "Content focused on practical or functional purposes"}, "unknown": {"c": "Other", "d": "Content that doesn't fit into any other category"}};
 const CW_TAGS = new Set(["dead_dove", "noncon_dubcon", "abuse", "blackmail", "slur_usage", "self_harm_suicide", "violence", "gore", "drugs_addiction", "incest_stepcest", "vore", "cannibalism", "feral", "trauma", "terminal_illness", "user_harm", "death", "body_horror", "eating_disorder", "amputation", "miscarriage"]);
 const TAG_CATEGORIES = ["Content Warnings", "Character Identity", "Point of View", "Sexual & Romantic Orientation", "Relationship Structure & Dynamics", "Plot Devices & Structure", "Story Genres & Styles", "Locations and Eras", "World-Building Concepts", "Character Archetypes & Personalities", "Professions", "Species/Being Types", "Kinks & Intimate Content", "Media Sources", "Other"];
 
@@ -2412,109 +2910,6 @@ function PersonalityTool() {
 
 // ── Plot Archetypes Tool ──────────────────────────────────
 
-
-const PLOT_DESCRIPTIONS = {
-  "Hero's Journey":"A protagonist embarks on an adventurous quest, facing challenges and mentors, ultimately transforming to achieve a goal.",
-  "Coming of Age":"Focuses on the growth and maturation of a young character as they transition from adolescence to adulthood.",
-  "Love Triangle":"Involves three characters entangled in a complex romantic relationship.",
-  "Revenge":"A character seeks retribution against those who have wronged them or their loved ones.",
-  "Forbidden Love":"Characters from opposing backgrounds fall in love, facing societal or familial opposition.",
-  "Rags to Riches":"A character rises from poverty or obscurity to wealth, success, or recognition.",
-  "Underdog":"A disadvantaged protagonist faces formidable challenges and overcomes them against all odds.",
-  "Quest":"Characters embark on a journey to retrieve a valuable object, attain knowledge, or fulfill a significant purpose.",
-  "Sacrifice":"A character makes a selfless act for the greater good, often leading to personal growth or redemption.",
-  "Mystery":"Involves solving a puzzling and often crime-related enigma.",
-  "Betrayal":"A character experiences betrayal from someone they trust, leading to emotional turmoil and conflict.",
-  "Chosen One":"The protagonist is destined to fulfill a particular role or destiny, often with extraordinary abilities.",
-  "Fish Out of Water":"A character finds themselves in an unfamiliar environment, leading to humorous or challenging situations.",
-  "Redemption":"A character seeks to atone for past mistakes or bad actions.",
-  "The Mentor":"An experienced figure guides and trains a less experienced protagonist.",
-  "Parallel Worlds":"Characters interact with alternate realities or dimensions.",
-  "Dystopia":"A dark and oppressive society serves as the backdrop for the story.",
-  "Overcoming the Monster":"The protagonist confronts and defeats a powerful and threatening antagonist.",
-  "Escape":"Characters strive to break free from confinement or oppressive circumstances.",
-  "Survival":"The main focus is on characters' efforts to stay alive in challenging situations.",
-  "War":"The story revolves around the conflicts, struggles, and consequences of war.",
-  "Discovery":"Characters uncover hidden truths, lost civilizations, or valuable artifacts.",
-  "Identity Crisis":"A character grapples with their true identity or faces amnesia.",
-  "The Double":"Involves doppelgangers, clones, or twins and explores themes of identity and duality.",
-  "Voyage and Return":"Characters journey to a strange land, face trials, and then return transformed.",
-  "Family Drama":"Focuses on familial relationships, conflicts, and dynamics.",
-  "Rebellion":"Characters challenge authority or oppressive systems.",
-  "Time Travel":"Characters move backward or forward in time, impacting the past or future.",
-  "Apocalypse":"The story centers around a catastrophic event that threatens the survival of humanity.",
-  "Power and Corruption":"Characters deal with the abuse of power, political intrigue, and corruption.",
-  "Redemption Quest":"The protagonist seeks redemption for past sins through a series of trials.",
-  "Unrequited Love":"Focuses on a character's one-sided romantic feelings, often leading to emotional conflict.",
-  "Tragedy":"A story in which the protagonist faces downfall or failure, often due to their own flaws.",
-  "Reincarnation":"Characters are reborn in different eras or bodies, often with the goal of finding each other again.",
-  "Survival of the Fittest":"Characters must compete or fight against each other to survive or achieve a specific goal.",
-  "Stranger in a Strange Land":"A character from a different culture experiences life in an unfamiliar setting.",
-  "Escape from Death":"The protagonist is faced with imminent death or doom and must find a way to survive.",
-  "Forbidden Knowledge":"Characters pursue knowledge or power that is dangerous or forbidden.",
-  "Society vs Individual":"Focuses on the conflict between societal norms and the individual's desires or beliefs.",
-  "Supernatural Encounter":"Characters encounter supernatural beings, creatures, or events.",
-  "Body Swap":"Characters switch bodies, leading to humorous or insightful situations.",
-  "The Prophecy":"The story revolves around a prophecy or prediction that shapes the characters' actions and fate.",
-  "Seeking Home":"The protagonist embarks on a journey to find a place where they belong.",
-  "Framed for a Crime":"The protagonist is wrongly accused of a crime, leading to a quest for justice.",
-  "Wandering Hero":"A heroic character roams from place to place, helping others and righting wrongs.",
-  "The Masquerade":"Characters conceal their true identities or intentions behind masks or deception.",
-  "Time Loop":"Characters are trapped in a repeating time cycle, reliving events until a resolution is reached.",
-  "Love at First Sight":"Characters fall deeply in love immediately upon meeting each other.",
-  "Human vs Nature":"Characters struggle against natural disasters, animals, or environmental challenges.",
-  "Heir to the Throne":"A character must step up and take on a significant responsibility or leadership role.",
-  "Corrupting Influence":"Characters are influenced or manipulated by a malevolent force or individual.",
-  "The Big Game":"The story centers around a high-stakes competition or tournament.",
-  "Cursed Object":"A cursed item brings misfortune or danger to those who possess it.",
-  "Mistaken Identity":"Characters are mistaken for someone else, leading to humorous or dramatic situations.",
-  "Apocalypse Survival":"Characters navigate and survive in a post-apocalyptic world.",
-  "Immortality Quest":"Characters seek immortality or eternal life, facing challenges and consequences.",
-  "Sworn Enemies":"Bitter enemies must join forces to face a common threat.",
-  "Impossible Love":"Characters from different species or existences fall in love, defying the odds.",
-  "Revenge of the Underdog":"The underdog protagonist seeks revenge against those who have oppressed them.",
-  "The Artifact":"Characters quest to find or protect a powerful, magical, or ancient artifact.",
-  "Betrayal of Trust":"A character experiences betrayal from someone close, leading to emotional turmoil.",
-  "Man vs Machine":"The conflict between humanity and advanced technology or artificial intelligence.",
-  "Amnesia":"The protagonist has lost their memory and must piece together their past.",
-  "Forbidden Power":"Characters grapple with the responsibility of possessing a dangerous power.",
-  "Madness and Sanity":"Explores themes of madness, psychological struggles, and the thin line between sanity and insanity.",
-  "Race Against Time":"Characters must complete a task before a crucial deadline or impending disaster.",
-  "The Last of Their Kind":"The protagonist is the sole survivor or last representative of their species or group.",
-  "The Secret Society":"Characters become involved with a secretive organization with hidden agendas.",
-  "Forbidden Journey":"Characters venture into a forbidden or dangerous place against all warnings.",
-  "Parental Sacrifice":"Parents make sacrifices for the sake of their children or loved ones.",
-  "The MacGuffin":"A mysterious object or goal drives the plot, even if its true nature is irrelevant.",
-  "Crime and Punishment":"Explores the consequences of criminal actions and the pursuit of justice.",
-  "Parallel Lives":"The narrative follows the interconnected lives of multiple characters.",
-  "The Fall from Grace":"The protagonist experiences a dramatic downfall from a position of power or prestige.",
-  "The False Prophecy":"Characters discover that a prophecy they believed in was a deception or misinterpretation.",
-  "Hidden Heir":"The protagonist discovers their royal or significant lineage, leading to a change in status.",
-  "Cursed Bloodline":"Characters grapple with a cursed family, facing generational consequences.",
-  "Generation Gap":"Highlights the conflict and misunderstandings between different generations.",
-  "Navigating the Afterlife":"Characters journey through the afterlife, facing challenges and exploring existence.",
-  "Obsession":"A character becomes consumed by an obsession, leading to their downfall or transformation.",
-  "The Long Return Home":"Characters face a challenging journey back to their home after a long absence.",
-  "Twist of Fate":"The story takes unexpected turns due to chance or fate, altering the characters' paths.",
-  "The Dark Past":"A character's dark or mysterious past comes back to haunt them.",
-  "The Heirloom":"A significant family heirloom holds secrets or powers that affect the protagonist's life.",
-  "The Final Stand":"Characters face a climactic, last-ditch battle against overwhelming odds.",
-  "The Perfect Crime":"A character plans and executes a seemingly flawless crime.",
-  "The Sacrificial Hero":"The protagonist makes a heroic sacrifice to save others or the world.",
-  "The Lost Civilization":"Characters discover and explore an ancient, advanced, or lost civilization.",
-  "The Hidden Enemy":"Characters must uncover a hidden traitor or enemy within their ranks.",
-  "The Time Paradox":"Characters encounter time loops, alternate timelines, or paradoxes that challenge reality.",
-  "The Orphan Seeking Kin":"Driven by a desire to find their true origins or family; journey intertwines with larger events.",
-  "The Puppet Master":"Characters are controlled or manipulated by a powerful, unseen force.",
-  "Framed for Betrayal":"The protagonist is set up for a betrayal they did not commit, leading to a quest for vindication.",
-  "The Broken Peacemaker":"Strives for peace but has personal traumas or conflicts that they struggle with.",
-  "The Tormented Artist":"Creates profound art but is plagued by personal demons or societal misunderstandings.",
-  "The Reluctant Leader":"Thrust into leadership despite resisting it; grows into the role through trial and sacrifice.",
-  "Mentor's Redemption":"The mentor figure seeks redemption or reconciliation for past mistakes or failures.",
-  "The Tinkerer at the Crossroads":"Always inventing or tweaking; their creations might bring about significant change or disaster.",
-  "The Scheming Villain with Principles":"Pursues villainous goals but operates within a strict personal code they will not break.",
-  "The Last Defender":"Stands alone as the final protector of something precious or sacred.",
-};
 
 function PlotTool({data}) {
   const [worldId, setWorldId] = useState('');
