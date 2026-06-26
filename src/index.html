@@ -920,7 +920,18 @@ const now = () => new Date().toISOString();
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-const initData = () => ({ worlds:[], characters:[], lorebooks:[], collections:[], gallery:[], schedule:[], notes:'', personas:[], templates:[], release_cycle:[], schedule_notes:{}, lorebook_templates:[], map_positions:{}, settings:{} });
+const initData = () => ({ worlds:[], characters:[], lorebooks:[], collections:[], gallery:[], schedule:[], notes:'', personas:[], templates:[], release_cycle:[], schedule_notes:{}, lorebook_templates:[], map_positions:{}, world_order:[], settings:{} });
+
+function sortedWorlds(data) {
+  const order = data.world_order || [];
+  return [...(data.worlds||[])].sort((a,b) => {
+    const ai = order.indexOf(a.id), bi = order.indexOf(b.id);
+    if(ai>=0&&bi>=0) return ai-bi;
+    if(ai>=0) return -1;
+    if(bi>=0) return 1;
+    return (a.name||'').localeCompare(b.name||'');
+  });
+}
 
 function App() {
   const [data, setData] = useState(initData);
@@ -928,6 +939,8 @@ function App() {
   const [dataPath, setDataPath] = useState('');
   const [page, setPage] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const swFromRef=React.useRef(null);
+  const swToRef=React.useRef(null);
   const [selectedWorld, setSelectedWorld] = useState(null);
   const [selectedChar, setSelectedChar] = useState(null);
   const [selectedColl, setSelectedColl] = useState(null);
@@ -946,7 +959,6 @@ function App() {
   const [rightTab, setRightTab] = useState('notes');
   const [rightPanel, setRightPanel] = useState(false);
   const [newTemplate, setNewTemplate] = useState(false);
-  const [ctxMenu, setCtxMenu] = useState(null);
   const contentRef = React.useRef(null);
   const [dataLoaded, setDataLoaded] = useState(false);
   const saveTimer = useRef();
@@ -1401,20 +1413,11 @@ function App() {
   const worldGallery=selectedWorld?data.gallery.filter(g=>g.world_id===selectedWorld.id):[];
 
   return (
-    <div className="app" onClick={()=>setCtxMenu(null)}>
+    <div className="app">
       {lightboxSrc&&<LightboxModal src={lightboxSrc} onClose={()=>setLightboxSrc(null)}/>}
         {lastgoodWarning&&<div style={{position:'fixed',top:0,left:0,right:0,background:'var(--amber)',color:'#000',padding:'8px 16px',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',justifyContent:'space-between',zIndex:9999}}>
         <span><i className="ti ti-alert-triangle" style={{marginRight:6}}></i>Data file was corrupted on startup — auto-recovered from last good backup. Verify your data and create a fresh backup zip.</span>
         <button style={{background:'transparent',border:'1px solid rgba(0,0,0,0.3)',borderRadius:4,padding:'3px 10px',cursor:'pointer',fontWeight:600,fontSize:12,marginLeft:16,flexShrink:0}} onClick={()=>setLastgoodWarning(false)}>Dismiss</button>
-      </div>}
-      {ctxMenu&&<div className="ctx-menu" style={{top:ctxMenu.y,left:ctxMenu.x}} onClick={e=>e.stopPropagation()}>
-        <div className="ctx-item" onClick={()=>{update(d=>{const w=d.worlds.find(x=>x.id===ctxMenu.world.id);if(w)w.pinned=!w.pinned;});setCtxMenu(null);}}>
-          <i className={`ti ${ctxMenu.world.pinned?'ti-pin-off':'ti-pin'}`}></i>{ctxMenu.world.pinned?'Unpin from top':'Pin to top'}
-        </div>
-        <hr className="ctx-divider"/>
-        <div className="ctx-item" onClick={()=>{setSelectedWorld(ctxMenu.world);setWorldTab('info');setPage('world');setCtxMenu(null);}}>
-          <i className="ti ti-settings"></i>World Info
-        </div>
       </div>}
       
       <div className={`sidebar ${sidebarOpen?'':'collapsed'}`}>
@@ -1433,13 +1436,17 @@ function App() {
           {data.worlds.length>0&&<>
             <hr className="divider" style={{margin:'8px 0'}}/>
             <div className="nav-section">Worlds</div>
-            {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=>(
-              <div key={w.id} className={`nav-item ${selectedWorld?.id===w.id?'active':''}`}
+            {sortedWorlds(data).map((w,swi)=>(
+              <div key={w.id} data-sw-idx={swi} className={`nav-item ${selectedWorld?.id===w.id?'active':''}`}
                 onClick={()=>{setSelectedWorld(w);setWorldTab('characters');setPage('world');}}
-                onContextMenu={e=>{e.preventDefault();setCtxMenu({x:e.clientX,y:e.clientY,world:w});}}>
+              >
+                <i className="ti ti-grip-vertical"
+                  onPointerDown={e=>{e.preventDefault();e.target.setPointerCapture(e.pointerId);swFromRef.current=swi;swToRef.current=swi;}}
+                  onPointerMove={e=>{if(swFromRef.current===null)return;const el=document.elementFromPoint(e.clientX,e.clientY);const it=el&&el.closest?el.closest('[data-sw-idx]'):null;if(it)swToRef.current=parseInt(it.getAttribute('data-sw-idx'));}}
+                  onPointerUp={e=>{const from=swFromRef.current,to=swToRef.current;swFromRef.current=null;swToRef.current=null;if(from!==null&&to!==null&&from!==to){update(d=>{const order=sortedWorlds(d).map(x=>x.id);const[it2]=order.splice(from,1);order.splice(to,0,it2);d.world_order=order;});}}}
+                  style={{fontSize:13,color:'var(--text3)',opacity:0.4,cursor:'grab',flexShrink:0,touchAction:'none'}}></i>
                 <span style={{width:20,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,lineHeight:1}}>{w.emoji ? w.emoji : <i className="ti ti-planet" style={{fontSize:17}}></i>}</span>
                 {sidebarOpen&&<span style={{overflow:'hidden',textOverflow:'ellipsis',flex:1}}>{w.name}</span>}
-                {sidebarOpen&&w.pinned&&<i className="ti ti-pin-filled" style={{fontSize:11,color:'var(--accent)',opacity:0.6,flexShrink:0}}></i>}
               </div>
             ))}
           </>}
@@ -3916,7 +3923,7 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
                 <select style={{width:'100%',marginTop:8,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none'}}
                   value="" onChange={e=>{const wid=e.target.value;if(wid&&!cycle.includes(wid))update(d=>{if(!d.release_cycle)d.release_cycle=[];d.release_cycle.push(wid);});}}>
                   <option value="">+ Add world to cycle…</option>
-                  {data.worlds.filter(w=>!cycle.includes(w.id)).sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
+                  {sortedWorlds(data).filter(w=>!cycle.includes(w.id)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
                 </select>
               </div>
             )}
@@ -3932,13 +3939,12 @@ function WorldsPage({data,setSelectedWorld,setModal}) {
     <div className="empty"><i className="ti ti-planet"></i><h3>No worlds yet</h3><p>Create your first world to start organizing everything.</p><br/><button className="btn primary" onClick={()=>setModal({type:'new-world'})} style={{margin:'0 auto'}}><i className="ti ti-plus"></i>New World</button></div>
   ):(
     <div className="worlds-grid">
-      {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=>{
+      {sortedWorlds(data).map(w=>{
         const chars=data.characters.filter(c=>c.world_id===w.id).length;
         const lores=data.lorebooks.filter(l=>l.world_id===w.id).length;
         const banner=w.image||data.collections.find(c=>c.world_id===w.id&&c.image_data)?.image_data;
-        return <div key={w.id} className="world-card" onClick={()=>setSelectedWorld(w)} onContextMenu={e=>{e.preventDefault();setCtxMenu({x:e.clientX,y:e.clientY,world:w});}}>
+        return <div key={w.id} className="world-card" onClick={()=>setSelectedWorld(w)}>
           <div className="world-banner">{banner?<img src={banner} alt={w.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<i className="ti ti-planet"></i>}
-            {w.pinned&&<div style={{position:'absolute',top:6,right:6,background:'rgba(0,0,0,0.5)',borderRadius:4,padding:'2px 5px',fontSize:11,color:'var(--accent)',display:'flex',alignItems:'center',gap:3}}><i className="ti ti-pin-filled" style={{fontSize:11}}></i></div>}
           </div>
           <div className="world-card-body"><h3>{w.name}</h3><p>{w.short_description||'No description.'}</p></div>
           <div className="world-card-footer">
@@ -4508,7 +4514,7 @@ function LoreSettingsTab({lore, updLore, data, onBack, update, setModal}) {
         <label>World</label>
         <select value={lore.world_id||''} onChange={e=>updLore(l=>{l.world_id=e.target.value||null;})}>
           <option value="">— Standalone —</option>
-          {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
+          {sortedWorlds(data).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
         </select>
       </div>
       <div className="field-row">
@@ -4714,6 +4720,20 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
   const [tab,setTab]=useState(initialTab||'identity');
   const [showPortraitPicker,setShowPortraitPicker]=useState(false);
   const scenarioDragIdx=useRef(null);
+
+
+  // Migrate pinned worlds -> world_order on first load
+  React.useEffect(()=>{
+    if(!dataLoaded) return;
+    if((data.world_order||[]).length===0 && data.worlds.length>0) {
+      const sorted=[...data.worlds].sort((a,b)=>{
+        if(a.pinned&&!b.pinned) return -1;
+        if(!a.pinned&&b.pinned) return 1;
+        return (a.name||'').localeCompare(b.name||'');
+      });
+      update(d=>{d.world_order=sorted.map(w=>w.id);});
+    }
+  },[dataLoaded]);
   const scenarioDragOverIdx=useRef(null);
   const portraitDragIdx=useRef(null);
   const portraitDragOverIdx=useRef(null);
@@ -4787,7 +4807,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                 <div className="field-block"><label>Display Name</label><input value={charData.display_name||''} onChange={e=>updChar(c=>c.display_name=e.target.value)}/></div>
               </div>
               <div className="field-block"><label>Short Description <span style={{color:(charData.short_description||'').length>140?'var(--red)':'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>{(charData.short_description||'').length}/140</span></label><textarea value={charData.short_description||''} onChange={e=>{if(e.target.value.length<=140)updChar(c=>c.short_description=e.target.value);}} style={{minHeight:70}}/></div>
-              <div className="field-block"><label>World</label><select value={charData.world_id||''} onChange={e=>updChar(c=>c.world_id=e.target.value)}><option value="">— Select world —</option>{[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}</select></div>
+              <div className="field-block"><label>World</label><select value={charData.world_id||''} onChange={e=>updChar(c=>c.world_id=e.target.value)}><option value="">— Select world —</option>{sortedWorlds(data).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}</select></div>
               <div className="field-row">
                 <div className="field-block"><label>Tags <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— click to search, type to add custom</span></label><TagSelector value={charData.tags||[]} onChange={v=>updChar(c=>c.tags=v)} max={25} worldChars={data.characters.filter(c=>c.world_id===charData.world_id&&c.id!==charData.id)}/></div>
                 <div className="field-block"><label>Fandom Tags <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0}}>{(charData.fandom_tags||[]).length}/3</span></label><TagInput value={charData.fandom_tags||[]} onChange={v=>updChar(c=>c.fandom_tags=v.slice(0,3))} max={3}/></div>
@@ -5356,7 +5376,7 @@ function CollSettingsTab({col,setCol,data,world,update,openChar,setModal,onBack}
         <label>World</label>
         <select value={col.world_id||''} onChange={e=>setCol(c=>{c.world_id=e.target.value||null;})}>
           <option value="">— Standalone —</option>
-          {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
+          {sortedWorlds(data).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
         </select>
       </div>
       <div className="field-row">
@@ -5417,7 +5437,7 @@ function CollEditPanel({coll,data,update,setSelectedColl,world,exportColl}) {
         <label>World</label>
         <select value={coll.world_id||""} onChange={e=>{const v=e.target.value||null;update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c)c.world_id=v;});setSelectedColl(sc=>({...sc,world_id:v}));}}>
           <option value="">No World (standalone)</option>
-          {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+" ":""}{w.name}</option>)}
+          {sortedWorlds(data).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+" ":""}{w.name}</option>)}
         </select>
       </div>
       <div className="field-block" style={{marginBottom:16}}>
@@ -6025,7 +6045,7 @@ function BackupRestorePanel({data, update}) {
         <div>
           <div style={{fontSize:12,color:'var(--text3)',marginBottom:8}}>Per-world export — one world and all its content</div>
           <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
-            {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=>(
+            {sortedWorlds(data).map(w=>(
               <button key={w.id} className="btn" style={{fontSize:11}} onClick={()=>worldBackup(w)} disabled={status==='working'}>
                 {w.emoji?w.emoji+' ':''}{w.name}
               </button>
@@ -6667,7 +6687,7 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
     setImporting(false);
   };
 
-  const sortedWorlds=[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
+  const sortedWorlds=sortedWorlds(data);
   const WorldSelect = ({id}) => (
     <select value={assignments[id]||''} onChange={e=>setA(id,e.target.value)} style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none',flexShrink:0}}>
       <option value="">— assign world —</option>
@@ -6697,7 +6717,7 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
               <select value={selectedWorldId} onChange={e=>setSelectedWorldId(e.target.value)}
                 style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none'}}>
                 <option value="">Select a world…</option>
-                {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=>(
+                {sortedWorlds(data).map(w=>(
                   <option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>
                 ))}
               </select>
@@ -7022,7 +7042,7 @@ function TemplateEditor({template,data,update,onBack}) {
             <label>World <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— leave empty for global</span></label>
             <select value={worldId} onChange={e=>setWorldId(e.target.value)}>
               <option value="">Global (all worlds)</option>
-              {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
+              {sortedWorlds(data).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
             </select>
           </div>
         </div>
@@ -7565,7 +7585,7 @@ function WorldSelectWithCreate({data,worldId,setWorldId,update}) {
       <label>World</label>
       <select value={creating?'__new__':worldId} onChange={e=>setWorldId(e.target.value)}>
         <option value="">— Select —</option>
-        {[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
+        {sortedWorlds(data).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
         <option value="__new__">＋ Create new world…</option>
       </select>
       {creating&&<div style={{display:'flex',gap:8,marginTop:8}}>
@@ -7656,7 +7676,7 @@ function Modal({modal,setModal,data,update,assignLore,assignChar,assignColl,upda
 
   if(modal.type==='new-char') return <div className="modal-bg"><div className="modal"><h2>New Character</h2>
     <div className="form-group"><label>Name</label><input autoFocus value={form.name||''} onChange={e=>f('name',e.target.value)} placeholder="Character name" onKeyDown={e=>e.key==='Enter'&&form.name?.trim()&&document.getElementById('create-char-btn').click()}/></div>
-    <div className="form-group"><label>World</label><select value={form.wid||modal.worldId||''} onChange={e=>f('wid',e.target.value)}><option value="">— Select world —</option><option value="__none__">No World (standalone)</option>{[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}</select></div>
+    <div className="form-group"><label>World</label><select value={form.wid||modal.worldId||''} onChange={e=>f('wid',e.target.value)}><option value="">— Select world —</option><option value="__none__">No World (standalone)</option>{sortedWorlds(data).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}</select></div>
     {(()=>{
       const wid=form.wid||modal.worldId||'';
       const globalT=(data.templates||[]).filter(t=>!t.world_id);
@@ -7713,7 +7733,7 @@ function Modal({modal,setModal,data,update,assignLore,assignChar,assignColl,upda
       setModal(null);
     }}>Create</button></div></div></div>;
 
-  if(modal.type==='new-lore') return <div className="modal-bg"><div className="modal"><h2>New Lorebook</h2><div className="form-group"><label>Name</label><input autoFocus value={form.name||''} onChange={e=>f('name',e.target.value)} placeholder="Lorebook name"/></div><div className="form-group"><label>Short Description</label><textarea value={form.desc||''} onChange={e=>f('desc',e.target.value)} placeholder="What does this lorebook cover?"/></div><div className="form-group"><label>World</label><select value={form.wid!==undefined?form.wid:(modal.worldId||'')} onChange={e=>f('wid',e.target.value)}><option value="">No World (standalone)</option>{[...data.worlds].sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}</select></div><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={!form.name?.trim()} onClick={()=>{const wid=form.wid!==undefined?form.wid:(modal.worldId||'');const fname=(form.name.trim().replace(/[^a-zA-Z0-9_-]/g,'_'))+'.json';update(d=>d.lorebooks.push({id:uuid(),world_id:wid||null,name:form.name.trim(),short_description:form.desc||'',content:[],tags:[],fandom_tags:[],nsfw:false,very_nsfw:false,image_id:null,collaboration_type:'private',definition_protection:'copy_protection',has_been_public:false,posted_at:now(),updated_at:now(),hide_on_owner_profile:false,selected_chapter_index:0,access_level:'private',lorebook_filename:fname}));window.lorekeeper.saveLorebookJson(fname,{name:form.name.trim(),short_description:form.desc||'',content:[],tags:[],fandom_tags:[],nsfw:false,very_nsfw:false,image_id:null,collaboration_type:'private',definition_protection:'copy_protection',has_been_public:false,posted_at:now(),updated_at:now(),hide_on_owner_profile:false,access_level:'private'});setModal(null);}}>Create</button></div></div></div>;
+  if(modal.type==='new-lore') return <div className="modal-bg"><div className="modal"><h2>New Lorebook</h2><div className="form-group"><label>Name</label><input autoFocus value={form.name||''} onChange={e=>f('name',e.target.value)} placeholder="Lorebook name"/></div><div className="form-group"><label>Short Description</label><textarea value={form.desc||''} onChange={e=>f('desc',e.target.value)} placeholder="What does this lorebook cover?"/></div><div className="form-group"><label>World</label><select value={form.wid!==undefined?form.wid:(modal.worldId||'')} onChange={e=>f('wid',e.target.value)}><option value="">No World (standalone)</option>{sortedWorlds(data).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}</select></div><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={!form.name?.trim()} onClick={()=>{const wid=form.wid!==undefined?form.wid:(modal.worldId||'');const fname=(form.name.trim().replace(/[^a-zA-Z0-9_-]/g,'_'))+'.json';update(d=>d.lorebooks.push({id:uuid(),world_id:wid||null,name:form.name.trim(),short_description:form.desc||'',content:[],tags:[],fandom_tags:[],nsfw:false,very_nsfw:false,image_id:null,collaboration_type:'private',definition_protection:'copy_protection',has_been_public:false,posted_at:now(),updated_at:now(),hide_on_owner_profile:false,selected_chapter_index:0,access_level:'private',lorebook_filename:fname}));window.lorekeeper.saveLorebookJson(fname,{name:form.name.trim(),short_description:form.desc||'',content:[],tags:[],fandom_tags:[],nsfw:false,very_nsfw:false,image_id:null,collaboration_type:'private',definition_protection:'copy_protection',has_been_public:false,posted_at:now(),updated_at:now(),hide_on_owner_profile:false,access_level:'private'});setModal(null);}}>Create</button></div></div></div>;
 
   if(modal.type==='new-coll') return <div className="modal-bg"><div className="modal"><h2>New Collection</h2><div className="form-group"><label>Name</label><input autoFocus value={form.name||''} onChange={e=>f('name',e.target.value)} placeholder="Collection name"/></div><div className="form-group"><label>Public Definition</label><textarea value={form.def||''} onChange={e=>f('def',e.target.value)} placeholder="Public-facing description"/></div><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={!form.name?.trim()} onClick={()=>{const fname=(form.name.trim().replace(/[^a-zA-Z0-9_-]/g,'_'))+'.json';update(d=>d.collections.push({id:uuid(),world_id:modal.worldId||null,name:form.name.trim(),definition:form.def||'',tags:[],fandom_tags:[],access_level:'private',image:null,image_data:null,companions:[],has_been_public:false,very_nsfw:false,lorebook_display:false,posted_at:now(),updated_at:now(),hide_on_owner_profile:false,collection_filename:fname}));window.lorekeeper.saveCollectionJson(fname,{name:form.name.trim(),definition:form.def||'',tags:[],fandom_tags:[],access_level:'private',image:null,companions:[],has_been_public:false,very_nsfw:false,lorebook_display:false,posted_at:now(),updated_at:now(),hide_on_owner_profile:false});setModal(null);}}>Create</button></div></div></div>;
 
