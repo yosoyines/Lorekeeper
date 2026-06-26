@@ -528,9 +528,9 @@ ipcMain.handle('export-backup', async (event, { worldId }) => {
 
     const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
     let exportData = data;
+    const world = worldId ? data.worlds.find(w => w.id === worldId) : null;
 
     if (worldId) {
-      const world = data.worlds.find(w => w.id === worldId);
       const chars = data.characters.filter(c => c.world_id === worldId);
       const lores = data.lorebooks.filter(l => l.world_id === worldId);
       const colls = data.collections.filter(c => c.world_id === worldId);

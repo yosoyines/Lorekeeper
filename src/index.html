@@ -1120,6 +1120,35 @@ function App() {
     setModal(null);
   };
 
+  const deleteWorld = (world) => {
+    const wid = world.id;
+    update(d => {
+      d.worlds = d.worlds.filter(x => x.id !== wid);
+      d.characters = d.characters.filter(c => c.world_id !== wid);
+      d.lorebooks = d.lorebooks.filter(l => l.world_id !== wid);
+      d.collections = d.collections.filter(c => c.world_id !== wid);
+      d.lorebook_templates = (d.lorebook_templates||[]).filter(t => t.world_id !== wid);
+      d.gallery = (d.gallery||[]).filter(g => g.world_id !== wid);
+    });
+    setSelectedWorld(null);
+    setPage('worlds');
+    setModal(null);
+  };
+
+  const deleteLore = (lore) => {
+    update(d=>{d.lorebooks=d.lorebooks.filter(l=>l.id!==lore.id);});
+    setSelectedLore(null);
+    setPage(selectedWorld?'world':'lorebooks');
+    setModal(null);
+  };
+
+  const deleteColl = (coll) => {
+    update(d=>{d.collections=d.collections.filter(c=>c.id!==coll.id);});
+    setSelectedColl(null);
+    setPage(selectedWorld?'world':'collections');
+    setModal(null);
+  };
+
   const assignColl = (worldId) => {
     const obj = modal.obj;
     // auto-link characters whose platform id matches companions list
@@ -1478,8 +1507,8 @@ function App() {
             {page==='collections'&&<AllCollectionsPage data={data} update={update} openColl={openColl} exportColl={exportColl} />}
             {page==='settings'&&<SettingsPage data={data} update={update} dataPath={dataPath}/>}
             {page==='help'&&<HelpPage/>}
-            {page==='lore'&&selectedLore&&<LorePage lorebook={selectedLore} data={data} update={update} exportLore={exportLore} initialTab={loreInitialTab} importJSON={importJSON} onBack={()=>{setPage(selectedWorld?'world':'lorebooks');setSelectedLore(null);setLoreInitialTab(null);}} />}
-            {page==='collection'&&selectedColl&&<CollPage coll={selectedColl} data={data} update={update} exportColl={exportColl} initialTab={collInitialTab} importJSON={importJSON} openChar={openChar} onBack={()=>{setPage(selectedWorld?'world':'collections');setSelectedColl(null);setCollInitialTab(null);}} />}
+            {page==='lore'&&selectedLore&&<LorePage lorebook={selectedLore} data={data} update={update} exportLore={exportLore} initialTab={loreInitialTab} importJSON={importJSON} setModal={setModal} onBack={()=>{setPage(selectedWorld?'world':'lorebooks');setSelectedLore(null);setLoreInitialTab(null);}} />}
+            {page==='collection'&&selectedColl&&<CollPage coll={selectedColl} data={data} update={update} exportColl={exportColl} initialTab={collInitialTab} importJSON={importJSON} openChar={openChar} setModal={setModal} onBack={()=>{setPage(selectedWorld?'world':'collections');setSelectedColl(null);setCollInitialTab(null);}} />}
             {page==='char'&&selectedChar&&<CharDetailPage char={selectedChar} data={data} update={update} initialTab={charInitialTab} exportChar={exportChar} importJSON={importJSON} setModal={setModal} setLightboxSrc={setLightboxSrc} onBack={()=>{setCharInitialTab(null);setPage(selectedWorld?'world':'characters');}} />}
             {page==='batch'&&<BatchImportPage data={data} update={update} importJSON={importJSON} exportAll={exportAll} />}
             {page==='templates'&&<TemplatesPage data={data} update={update} newTemplate={newTemplate} clearNew={()=>setNewTemplate(false)} />}
@@ -1490,7 +1519,7 @@ function App() {
         </div>
       </div>
 
-      {modal&&<Modal modal={modal} setModal={setModal} data={data} update={update} assignLore={assignLore} assignChar={assignChar} assignColl={assignColl} updateCharFromJSON={updateCharFromJSON} updateLoreFromJSON={updateLoreFromJSON} updateCollFromJSON={updateCollFromJSON} deleteChar={deleteChar} selectedWorld={selectedWorld} />}
+      {modal&&<Modal modal={modal} setModal={setModal} data={data} update={update} assignLore={assignLore} assignChar={assignChar} assignColl={assignColl} updateCharFromJSON={updateCharFromJSON} updateLoreFromJSON={updateLoreFromJSON} updateCollFromJSON={updateCollFromJSON} deleteChar={deleteChar} deleteWorld={deleteWorld} deleteLore={deleteLore} deleteColl={deleteColl} selectedWorld={selectedWorld} />}
     </div>
   );
 }
@@ -4056,7 +4085,7 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
             <textarea value={world.notes||''} onChange={e=>{const val=e.target.value;update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.notes=val;});saveWorldNotesBackup(val);}} style={{minHeight:120}} placeholder="Ideas, plot threads, reminders…"/>
           </div>
           <div className="delete-zone">
-            <button className="btn danger" onClick={()=>{update(d=>{d.worlds=d.worlds.filter(x=>x.id!==world.id);d.characters=d.characters.filter(c=>c.world_id!==world.id);d.lorebooks=d.lorebooks.filter(l=>l.world_id!==world.id);});setPage('worlds');setSelectedWorld(null);}}><i className="ti ti-trash"></i>Delete World</button>
+            <button className="btn danger" onClick={()=>setModal({type:'confirm-delete-world',world})}><i className="ti ti-trash"></i>Delete World</button>
           </div>
         </div>
       )}
@@ -4165,7 +4194,7 @@ function LoreboookEditor({lorebook,update,exportLore}) {
             </select>
           </div>
           <button className="btn" style={{width:'100%',justifyContent:'center',fontSize:12}} onClick={()=>exportLore(lorebook)}><i className="ti ti-download"></i>Export</button>
-          <button className="btn danger" style={{width:'100%',justifyContent:'center',fontSize:12}} onClick={()=>{if(window.confirm(`Delete "${lorebook.name}"? This cannot be undone.`))update(d=>{d.lorebooks=d.lorebooks.filter(x=>x.id!==lorebook.id);});}}><i className="ti ti-trash"></i>Delete</button>
+          <button className="btn danger" style={{width:'100%',justifyContent:'center',fontSize:12}} onClick={()=>setModal({type:'confirm-delete-lore',lore:lorebook})}><i className="ti ti-trash"></i>Delete</button>
         </div>
       </div>
       <div className="lore-editor">
@@ -4345,7 +4374,7 @@ function CharCard({char,onClick}) {
   );
 }
 
-function LorePage({lorebook,data,update,exportLore,initialTab,importJSON,onBack}) {
+function LorePage({lorebook,data,update,exportLore,initialTab,importJSON,setModal,onBack}) {
   const [loreTab, setLoreTab] = useState(initialTab||'chapters');
   const [loreMdPreview, setLoreMdPreview] = useState(false);
   const lore = (data.lorebooks.find(x=>x.id===lorebook.id))||lorebook;
@@ -4413,7 +4442,7 @@ function LorePage({lorebook,data,update,exportLore,initialTab,importJSON,onBack}
             {tabs.map(([t,l])=><div key={t} className={"sub-nav-item "+(loreTab===t?'active':'')} onClick={()=>setLoreTab(t)} style={{fontSize:12,padding:'5px 10px'}}>{l}</div>)}
           </div>
           {loreTab==='chapters'&&<LoreChaptersTab lore={lore} updLore={updLore}/>}
-          {loreTab==='settings'&&<LoreSettingsTab lore={lore} updLore={updLore} data={data} onBack={onBack} update={update}/>}
+          {loreTab==='settings'&&<LoreSettingsTab lore={lore} updLore={updLore} data={data} onBack={onBack} update={update} setModal={setModal}/>}
           {loreTab==='export'&&<LoreExportPanel lorebook={lore} exportLore={exportLore} exportLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];if(lore.short_description){lines.push("");lines.push(lore.short_description);}(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});const safeName=(lore.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n"),folder:"Lorebooks"});}} loreMdPreview={loreMdPreview} setLoreMdPreview={setLoreMdPreview} buildLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});return lines.join("\n");}} importJSON={importJSON} update={update}/>}
         </div>
       </div>
@@ -4464,7 +4493,7 @@ function LoreChaptersTab({lore, updLore}) {
   );
 }
 
-function LoreSettingsTab({lore, updLore, data, onBack, update}) {
+function LoreSettingsTab({lore, updLore, data, onBack, update, setModal}) {
   return (
     <div style={{display:'flex',flexDirection:'column',gap:14,maxWidth:600}}>
       <div className="field-block">
@@ -4516,7 +4545,7 @@ function LoreSettingsTab({lore, updLore, data, onBack, update}) {
         <TagSelector value={lore.tags||[]} onChange={v=>updLore(l=>{l.tags=v;})} max={25}/>
       </div>
       <div style={{paddingTop:8,borderTop:'1px solid var(--border)'}}>
-        <button className="btn danger" onClick={()=>{if(window.confirm("Delete "+lore.name+"? This cannot be undone.")){update(d=>{d.lorebooks=d.lorebooks.filter(x=>x.id!==lore.id);});if(onBack)onBack();}}}><i className="ti ti-trash"></i>Delete Lorebook</button>
+        <button className="btn danger" onClick={()=>setModal({type:'confirm-delete-lore',lore})}><i className="ti ti-trash"></i>Delete Lorebook</button>
       </div>
     </div>
   );
@@ -4632,6 +4661,42 @@ function CharactersPage({data,setSelectedChar}) {
     </div>
   );
 }
+
+const CS = {
+  pickerThumb:{cursor:'pointer',borderRadius:4,overflow:'hidden',border:'2px solid var(--border)',width:56,height:56,flexShrink:0},
+  pickerImg:{width:'100%',height:'100%',objectFit:'cover'},
+  profilePicBlock:{padding:'10px 12px'},
+  profilePicRow:{display:'flex',gap:6,marginTop:4},
+  uuidInp:{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',fontFamily:'monospace',minWidth:0},
+  uuidInpSm:{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'3px 6px',borderRadius:'var(--r)',fontSize:9,outline:'none',fontFamily:'monospace',minWidth:0},
+  uuidLbl:{fontSize:9,color:'var(--text3)',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.05em'},
+  copyBtnSm:{padding:'4px 6px',fontSize:10,flexShrink:0},
+  copyBtnTiny:{padding:'3px 5px',fontSize:10,flexShrink:0},
+  gripIcon:{color:'var(--text3)',fontSize:16,cursor:'grab',flexShrink:0},
+  gripIconWhite:{color:'#fff',fontSize:13,opacity:0.8},
+  scenarioTitleInp:{background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none',flex:1},
+  addPortraitBtn:{aspectRatio:'3/4',width:'100%',flexDirection:'column',gap:6,justifyContent:'center',border:'1.5px dashed var(--border2)'},
+  portraitNameInp:{width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none'},
+  portraitDescInp:{width:'100%',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',marginTop:4},
+  loreImg:{width:32,height:32,borderRadius:4,objectFit:'cover',flexShrink:0},
+  loreBookIcon:{fontSize:18,flexShrink:0},
+  loreCheckIcon:{color:'var(--accent)',fontSize:16,flexShrink:0},
+  pillWorldSpan:{color:'var(--text3)',fontSize:11},
+  pillBookIcon:{fontSize:13},
+  dateInp:{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none',colorScheme:'dark'},
+  savesBanner:{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',fontSize:12},
+  savesName:{color:'var(--text)',fontWeight:500},
+  savesMeta:{color:'var(--text3)',marginLeft:'auto',fontSize:11},
+  helpBtn:{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:13,padding:'0 2px',lineHeight:1},
+  helpBox:{padding:'10px 12px',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',fontSize:12,color:'var(--text3)',lineHeight:1.7,marginBottom:10},
+  loreTextarea:{width:'100%',minHeight:500,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'10px 12px',borderRadius:'var(--r)',fontSize:12,outline:'none',resize:'vertical',fontFamily:'monospace',lineHeight:1.6},
+  templateSelect:{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none',width:'100%'},
+  titleInp:{fontWeight:600,fontFamily:'monospace',fontSize:13},
+  pasteArea:{width:'100%',minHeight:120,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px',borderRadius:'var(--r)',fontSize:11,fontFamily:'monospace',outline:'none',resize:'vertical'},
+  pasteLblRow:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4},
+  errHdr:{fontSize:12,fontWeight:600,color:'var(--red)',marginBottom:4},
+  errItem:{fontSize:11,color:'var(--red)',paddingLeft:8},
+};
 
 function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setModal,setLightboxSrc,onBack}) {
   const updChar=(fn)=>update(d=>{
@@ -5221,7 +5286,7 @@ function LoreExportPanel({lorebook,exportLore,exportLoreMd,loreMdPreview,setLore
   );
 }
 
-function CollPage({coll,data,update,exportColl,initialTab,importJSON,openChar,onBack}) {
+function CollPage({coll,data,update,exportColl,initialTab,importJSON,openChar,setModal,onBack}) {
   const [collTab,setCollTab]=useState(initialTab||'edit');
   const col=(data.collections.find(x=>x.id===coll.id))||coll;
   const world=data.worlds.find(w=>w.id===col.world_id);
@@ -5268,7 +5333,7 @@ function CollPage({coll,data,update,exportColl,initialTab,importJSON,openChar,on
           <div style={{display:'flex',gap:4,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:4,flexWrap:'wrap'}}>
             {tabs.map(([t,l])=><div key={t} className={"sub-nav-item "+(collTab===t?'active':'')} onClick={()=>setCollTab(t)} style={{fontSize:12,padding:'5px 10px'}}>{l}</div>)}
           </div>
-          {collTab==='edit'?<CollSettingsTab col={col} setCol={setCol} data={data} world={world} update={update} openChar={openChar} onBack={onBack}/>:null}
+          {collTab==='edit'?<CollSettingsTab col={col} setCol={setCol} data={data} world={world} update={update} openChar={openChar} setModal={setModal} onBack={onBack}/>:null}
           {collTab==='export'?<CollExportPanel coll={col} data={data} exportColl={exportColl} importJSON={importJSON} update={update}/>:null}
         </div>
       </div>
@@ -5276,7 +5341,7 @@ function CollPage({coll,data,update,exportColl,initialTab,importJSON,openChar,on
   );
 }
 
-function CollSettingsTab({col,setCol,data,world,update,openChar,onBack}) {
+function CollSettingsTab({col,setCol,data,world,update,openChar,setModal,onBack}) {
   return (
     <div style={{display:'flex',flexDirection:'column',gap:14}}>
       <div className="field-block">
@@ -5314,7 +5379,7 @@ function CollSettingsTab({col,setCol,data,world,update,openChar,onBack}) {
       </div>
       <CollectionCharPicker coll={col} data={data} update={update} setSelectedChar={openChar}/>
       <div style={{paddingTop:8,borderTop:'1px solid var(--border)'}}>
-        <button className="btn danger" onClick={()=>{if(window.confirm("Delete "+col.name+"? This cannot be undone.")){update(d=>{d.collections=d.collections.filter(x=>x.id!==col.id);});if(onBack)onBack();}}}><i className="ti ti-trash"></i>Delete Collection</button>
+        <button className="btn danger" onClick={()=>setModal({type:'confirm-delete-coll',coll:col})}><i className="ti ti-trash"></i>Delete Collection</button>
       </div>
     </div>
   );
@@ -5360,7 +5425,7 @@ function CollEditPanel({coll,data,update,setSelectedColl,world,exportColl}) {
         <input value={coll.collection_filename||""} onChange={e=>{const v=e.target.value||null;update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c)c.collection_filename=v;});setSelectedColl(sc=>({...sc,collection_filename:v}));}} placeholder="e.g. Guideverse.json"/>
         {coll.collection_filename&&<div style={{fontSize:11,color:"var(--text3)",marginTop:4}}>{"I:\\Lorekeeper\\Collections\\"}{coll.collection_filename}</div>}
       </div>
-      <button className="btn danger" style={{fontSize:12,marginBottom:16}} onClick={()=>{if(window.confirm("Delete "+coll.name+"? This cannot be undone.")){update(d=>{d.collections=d.collections.filter(x=>x.id!==coll.id);});setSelectedColl(null);}}}><i className="ti ti-trash"></i>Delete</button>
+      <button className="btn danger" style={{fontSize:12,marginBottom:16}} onClick={()=>setModal({type:'confirm-delete-coll',coll})}><i className="ti ti-trash"></i>Delete</button>
       <CollectionCharPicker coll={coll} data={data} update={update} setSelectedChar={()=>{}}/>
     </div>
   );
@@ -6207,6 +6272,156 @@ function BatchImportHelp() {
   </div>;
 }
 
+
+// ── Backup merge helpers ─────────────────────────────────────────────────────
+const MERGE_TYPES = ['worlds','characters','lorebooks','collections','personas','templates','lorebook_templates','gallery'];
+const MERGE_TYPE_LABELS = {worlds:'World',characters:'Character',lorebooks:'Lorebook',collections:'Collection',personas:'Persona',templates:'Template',lorebook_templates:'Lorebook Template',gallery:'Gallery image'};
+
+function planMerge(local, backup) {
+  const toAdd=[], toUpdate=[], conflicts=[];
+  for(const type of MERGE_TYPES) {
+    const bItems = backup[type]||[], lItems = local[type]||[];
+    for(const bItem of bItems) {
+      const lItem = lItems.find(x=>x.id===bItem.id);
+      if(!lItem) {
+        toAdd.push({type,item:bItem});
+      } else {
+        const bms=parseTimestamp(bItem.updated_at)||0, lms=parseTimestamp(lItem.updated_at)||0;
+        if(bms>lms) toUpdate.push({type,item:bItem,localItem:lItem});
+        else if(bms===lms||!bms||!lms) conflicts.push({type,item:bItem,localItem:lItem});
+        // else local is newer — skip
+      }
+    }
+  }
+  return {toAdd,toUpdate,conflicts};
+}
+
+function applyMerge(local, backup, plan, resolutions) {
+  const merged = structuredClone(local);
+  // Content: add new items
+  for(const {type,item} of plan.toAdd) {
+    if(!merged[type]) merged[type]=[];
+    merged[type].push(item);
+  }
+  // Content: update where backup is newer
+  for(const {type,item} of plan.toUpdate) {
+    const idx = merged[type].findIndex(x=>x.id===item.id);
+    if(idx>=0) merged[type][idx]=item;
+  }
+  // Content: conflicts — user chose per-item (default: keep local)
+  for(const {type,item} of plan.conflicts) {
+    if((resolutions[item.id]||'local')==='backup') {
+      const idx = merged[type].findIndex(x=>x.id===item.id);
+      if(idx>=0) merged[type][idx]=item;
+    }
+  }
+  // schedule_notes: merge by date key; local takes priority on same date
+  if(backup.schedule_notes||local.schedule_notes) {
+    merged.schedule_notes = Object.assign({},backup.schedule_notes||{},local.schedule_notes||{});
+  }
+  // map_positions: merge by worldId/charId; local takes priority
+  const bPos=backup.map_positions||{}, lPos=local.map_positions||{};
+  const mPos=structuredClone(bPos);
+  for(const wid of Object.keys(lPos)) {
+    mPos[wid]=Object.assign({},mPos[wid]||{},lPos[wid]);
+  }
+  merged.map_positions=mPos;
+  // release_cycle: keep local order, append new world IDs from backup at end
+  const lCyc=local.release_cycle||[], bCyc=backup.release_cycle||[];
+  merged.release_cycle=[...lCyc,...bCyc.filter(id=>!lCyc.includes(id))];
+  // notes: Option 2 — empty->take backup; both->append; backup empty->keep local
+  const ln=(local.notes||'').trim(), bn=(backup.notes||'').trim();
+  if(!ln&&bn) merged.notes=bn;
+  else if(ln&&bn&&ln!==bn) {
+    const today=new Date().toISOString().split('T')[0];
+    merged.notes=ln+'\n\n--- Merged from backup '+today+' ---\n\n'+bn;
+  }
+  // settings: never touch — stays as local
+  return merged;
+}
+
+function MergePreviewModal({plan, onConfirm, onCancel}) {
+  const [res,setRes]=React.useState({});
+  const setR=(id,val)=>setRes(r=>({...r,[id]:val}));
+  const getR=(id)=>res[id]||'local';
+
+  // All styles pre-defined (Babel rule: no style={{}} inside && or ternary)
+  const overlayStyle={position:'fixed',inset:0,background:'rgba(0,0,0,0.72)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:20};
+  const modalStyle={background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:24,maxWidth:580,width:'100%',maxHeight:'80vh',overflow:'auto'};
+  const summaryStyle={background:'var(--bg3)',borderRadius:'var(--r)',padding:'10px 14px',marginBottom:12,fontSize:12,color:'var(--text3)'};
+  const sectionHdrStyle={fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6,marginTop:14};
+  const rowStyle={display:'flex',alignItems:'center',gap:8,marginBottom:4,padding:'4px 0'};
+  const typeStyle={fontSize:10,color:'var(--text3)',minWidth:115,flexShrink:0};
+  const nameStyle={flex:1,fontSize:13,color:'var(--text)'};
+  const btnSmStyle={fontSize:11,padding:'2px 8px'};
+  const footerStyle={display:'flex',justifyContent:'flex-end',gap:8,marginTop:16,paddingTop:12,borderTop:'1px solid var(--border)'};
+  const emptyStyle={textAlign:'center',color:'var(--text3)',fontSize:13,padding:'20px 0'};
+  const addCountStyle={color:'var(--green)'};
+  const updCountStyle={color:'var(--accent)'};
+  const conflictCountStyle={color:plan.conflicts.length?'var(--amber)':'var(--text3)'};
+
+  const total=plan.toAdd.length+plan.toUpdate.length+plan.conflicts.length;
+
+  return (
+    <div style={overlayStyle} onClick={onCancel}>
+      <div style={modalStyle} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:15,fontWeight:600,marginBottom:12}}>Import from backup — preview</div>
+        <div style={summaryStyle}>
+          <span style={addCountStyle}>{plan.toAdd.length} to add</span>
+          {' \u00b7 '}
+          <span style={updCountStyle}>{plan.toUpdate.length} to update</span>
+          {' \u00b7 '}
+          <span style={conflictCountStyle}>{plan.conflicts.length} conflict{plan.conflicts.length!==1?'s':''}</span>
+          {' \u00b7 '}
+          <span>workspace fields merged silently</span>
+        </div>
+        {plan.toAdd.length>0&&(
+          <div>
+            <div style={sectionHdrStyle}>Adding ({plan.toAdd.length})</div>
+            {plan.toAdd.map(({type,item})=>(
+              <div key={item.id} style={rowStyle}>
+                <span style={typeStyle}>{MERGE_TYPE_LABELS[type]||type}</span>
+                <span style={nameStyle}>{item.name||item.id}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {plan.toUpdate.length>0&&(
+          <div>
+            <div style={sectionHdrStyle}>Updating — backup is newer ({plan.toUpdate.length})</div>
+            {plan.toUpdate.map(({type,item})=>(
+              <div key={item.id} style={rowStyle}>
+                <span style={typeStyle}>{MERGE_TYPE_LABELS[type]||type}</span>
+                <span style={nameStyle}>{item.name||item.id}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {plan.conflicts.length>0&&(
+          <div>
+            <div style={sectionHdrStyle}>Conflicts \u2014 choose per item ({plan.conflicts.length})</div>
+            {plan.conflicts.map(({type,item})=>(
+              <div key={item.id} style={rowStyle}>
+                <span style={typeStyle}>{MERGE_TYPE_LABELS[type]||type}</span>
+                <span style={nameStyle}>{item.name||item.id}</span>
+                <button className={'btn'+(getR(item.id)==='local'?' primary':'')} style={btnSmStyle} onClick={()=>setR(item.id,'local')}>Keep local</button>
+                <button className={'btn'+(getR(item.id)==='backup'?' primary':'')} style={btnSmStyle} onClick={()=>setR(item.id,'backup')}>Take backup</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {total===0&&<div style={emptyStyle}>Nothing to merge \u2014 backup content matches local data.</div>}
+        <div style={footerStyle}>
+          <button className="btn" onClick={onCancel}>Cancel</button>
+          <button className="btn primary" onClick={()=>onConfirm(res)} disabled={total===0}>
+            <i className="ti ti-file-import"></i>Confirm merge ({total} item{total!==1?'s':''})
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BatchImportPage({data,update,importJSON,exportAll}) {
   const [companions,setCompanions]=useState([]);
   const [lorebooks,setLorebooks]=useState([]);
@@ -6221,6 +6436,7 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
   // Backup/Restore state (inlined from old BackupRestorePanel)
   const [selectedWorldId,setSelectedWorldId]=useState('');
   const [bkStatus,setBkStatus]=useState(null);
+  const [mergePlan,setMergePlan]=React.useState(null);
   const [bkMsg,setBkMsg]=useState('');
   const [bkLg,setBkLg]=React.useState(null);
   React.useEffect(()=>{window.lorekeeper.getLastgoodInfo().then(i=>setBkLg(i)).catch(()=>{});},[]);
@@ -6267,6 +6483,24 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
     const res=await window.lorekeeper.restoreLastgood();
     if(res.success){update(()=>res.data);setBkStatus('ok');setBkMsg('✓ Restored from lastgood ('+Math.round(res.size/1024)+' KB). Restart recommended.');}
     else{setBkStatus('err');setBkMsg('Error: '+res.error);}
+  };
+
+  const bkMerge=async()=>{
+    setBkStatus('working');setBkMsg('Reading backup\u2026');
+    const res=await window.lorekeeper.restoreBackup();
+    if(res.cancelled){setBkStatus(null);return;}
+    if(!res.success){setBkStatus('err');setBkMsg('Error: '+res.error);return;}
+    setBkStatus(null);setBkMsg('');
+    setMergePlan({plan:planMerge(data,res.data),backupData:res.data});
+  };
+
+  const confirmMerge=(resolutions)=>{
+    const {plan,backupData}=mergePlan;
+    const merged=applyMerge(data,backupData,plan,resolutions);
+    update(d=>{Object.assign(d,merged);});
+    setMergePlan(null);
+    const n=plan.toAdd.length+plan.toUpdate.length+plan.conflicts.filter(c=>(resolutions[c.item.id]||'local')==='backup').length;
+    setBkStatus('ok');setBkMsg('\u2713 Merge complete \u2014 '+n+' item'+(n!==1?'s':'')+' imported.');
   };
 
   const scan=async()=>{
@@ -6483,11 +6717,9 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
             <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>Restore</span>
           </div>
           <div>
-            <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.6,marginBottom:8}}>
-              From a backup zip. <span style={{color:'var(--text2)',fontWeight:600}}>Full backup replaces all data.</span> Per-world backup merges into existing data.
-            </div>
-            <button className="btn danger" style={{justifyContent:'center',width:'100%'}} onClick={bkRestore} disabled={bkStatus==='working'}>
-              <i className="ti ti-restore"></i>Restore from backup zip…
+            <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.6,marginBottom:8}}>Merge content from a backup into existing data — nothing is deleted. Reviews changes before applying.</div>
+            <button className="btn" style={{justifyContent:'center',width:'100%'}} onClick={bkMerge} disabled={bkStatus==='working'}>
+              <i className="ti ti-file-import"></i>Import &amp; merge from backup…
             </button>
           </div>
           <div style={{borderTop:'1px solid var(--border)',paddingTop:12}}>
@@ -6534,6 +6766,7 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
 
       <ImageMigrationPanel data={data} update={update}/>
       <NotesBackupPanel data={data}/>
+      {mergePlan&&<MergePreviewModal plan={mergePlan.plan} onConfirm={confirmMerge} onCancel={()=>setMergePlan(null)}/>}
     </div>
   );
 
@@ -7343,7 +7576,7 @@ function WorldSelectWithCreate({data,worldId,setWorldId,update}) {
   );
 }
 
-function Modal({modal,setModal,data,update,assignLore,assignChar,assignColl,updateCharFromJSON,updateLoreFromJSON,updateCollFromJSON,deleteChar,selectedWorld}) {
+function Modal({modal,setModal,data,update,assignLore,assignChar,assignColl,updateCharFromJSON,updateLoreFromJSON,updateCollFromJSON,deleteChar,deleteWorld,deleteLore,deleteColl,selectedWorld}) {
   const [form,setForm]=useState({});
   const defaultWorld = modal.worldId || selectedWorld?.id || '';
   const [worldId,setWorldId]=useState(defaultWorld);
@@ -7388,6 +7621,34 @@ function Modal({modal,setModal,data,update,assignLore,assignChar,assignColl,upda
   if(modal.type==='assign-char') return <div className="modal-bg"><div className="modal"><h2>Assign Character to World</h2><p style={{fontSize:13,color:'var(--text3)',marginBottom:16}}>"{modal.obj.name}"</p><WorldSelectWithCreate data={data} worldId={worldId} setWorldId={setWorldId} update={update}/><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={!worldId||worldId==='__new__'} onClick={()=>assignChar(worldId)}>Import</button></div></div></div>;
 
   if(modal.type==='new-persona') return <div className="modal-bg"><div className="modal"><h2>New Persona</h2><div className="form-group"><label>Name</label><input autoFocus value={form.name||''} onChange={e=>f('name',e.target.value)} placeholder="Persona name"/></div><div className="form-group"><label>Pronouns</label><input value={form.pronouns||''} onChange={e=>f('pronouns',e.target.value)} placeholder="they/them, she/her…"/></div><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={!form.name?.trim()} onClick={()=>{update(d=>{if(!d.personas)d.personas=[];d.personas.push({id:uuid(),name:form.name.trim(),pronouns:form.pronouns||'',description:'',image:null,linked_lorebook:null,created_at:now()});});setModal(null);}}>Create</button></div></div></div>;
+
+  if(modal.type==='confirm-delete-world') return (<div className="modal-bg"><div className="modal">
+    <h2>Delete world?</h2>
+    <p style={{fontSize:13,color:'var(--text3)',marginBottom:8}}>This will permanently delete <strong style={{color:'var(--text)'}}>{modal.world.name}</strong> and <strong style={{color:'var(--red)'}}>all its characters, lorebooks, collections, templates and gallery images</strong>.</p>
+    <p style={{fontSize:12,color:'var(--text3)',marginBottom:20}}>This cannot be undone.</p>
+    <div className="modal-footer">
+      <button className="btn" onClick={()=>setModal(null)}>Cancel</button>
+      <button className="btn danger" onClick={()=>deleteWorld(modal.world)}>Delete everything</button>
+    </div>
+  </div></div>);
+
+  if(modal.type==='confirm-delete-lore') return (<div className="modal-bg"><div className="modal">
+    <h2>Delete lorebook?</h2>
+    <p style={{fontSize:13,color:'var(--text3)',marginBottom:20}}>This will permanently delete <strong style={{color:'var(--text)'}}>{modal.lore.name}</strong>. This cannot be undone.</p>
+    <div className="modal-footer">
+      <button className="btn" onClick={()=>setModal(null)}>Cancel</button>
+      <button className="btn danger" onClick={()=>deleteLore(modal.lore)}>Delete</button>
+    </div>
+  </div></div>);
+
+  if(modal.type==='confirm-delete-coll') return (<div className="modal-bg"><div className="modal">
+    <h2>Delete collection?</h2>
+    <p style={{fontSize:13,color:'var(--text3)',marginBottom:20}}>This will permanently delete <strong style={{color:'var(--text)'}}>{modal.coll.name}</strong>. This cannot be undone.</p>
+    <div className="modal-footer">
+      <button className="btn" onClick={()=>setModal(null)}>Cancel</button>
+      <button className="btn danger" onClick={()=>deleteColl(modal.coll)}>Delete</button>
+    </div>
+  </div></div>);
 
   if(modal.type==='confirm-delete-persona') return <div className="modal-bg"><div className="modal"><h2>Delete persona?</h2><p style={{fontSize:13,color:'var(--text3)',marginBottom:20}}>This will permanently delete <strong style={{color:'var(--text)'}}>{modal.persona.name}</strong>. This cannot be undone.</p><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn danger" onClick={()=>{update(d=>{d.personas=(d.personas||[]).filter(p=>p.id!==modal.persona.id);});modal.onBack&&modal.onBack();setModal(null);}}>Delete</button></div></div></div>;
 
