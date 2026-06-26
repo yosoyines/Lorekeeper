@@ -1,5 +1,12 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 24, 2026 (session 28 — wrapped up)**
+**Last updated: June 24, 2026 (session 28)**
+
+---
+
+## Working Files (current as of session 28)
+- Project files at `/mnt/project/` are **no longer synced** — Ine is testing import/export on the test environment (`I:\Test`) before updating live Lorekeeper. Working files live at `/home/claude/` in the chat session.
+- The spec IS updated by Ine each session (committed to GitHub). Source files (`index.html`, `main.js`, `preload.js`) are only updated once a stable version is cleared.
+- Test environment: `DATA_DIR = I:\Test` in `main.js`. Hint text (`charFolderHint`, `loreHint`) still shows `I:\Lorekeeper` — cosmetically wrong, functionally harmless.
 
 ---
 
@@ -592,21 +599,41 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 
 ~~2. UI consistency check~~ ✓ **done session 28** — all pages verified, scenario drag cursor fixed
 
-### 3. Design backup/restore flows (before building or writing help)
-The current full-restore-as-replace behavior is fine for solo use but is a footgun for general users (see Standalone section for full design notes). Before writing the help page, the backup/restore UX needs to be finalised so the help is written against correct behavior.
+~~3. Design backup/restore flows~~ ✓ **decided session 28** — see merge strategy below
 
-**Design questions to answer in next session:**
-- Where does "Import from backup" (merge) live — Import/Export page alongside Restore, or separate flow?
-- Conflict resolution: when local and backup have the same character with different `updated_at`, does newer always win or does user choose?
-- Items only in backup (not local) — added or skipped?
-- Items only local (not in backup) — preserved or removed?
-- Do worlds merge too, or only the content inside them?
+### 4. Build "Import from backup" (Option C)
 
-### 4. Build backup/restore Option C
-Once design is settled: add "Import from backup" merge path. Merges worlds/characters/lorebooks/collections/personas/templates by `id`. Skips notes, map positions, settings, release cycle, schedule notes (non-mergeable). Keep current Restore as-is.
+Full merge strategy decided session 28:
+
+**Content — merge by `id`, newer `updated_at` wins on conflict:**
+`worlds`, `characters`, `lorebooks`, `collections`, `personas`, `templates`, `lorebook_templates`, `gallery`
+
+**Structured workspace — merge by key:**
+- `schedule_notes` — merge by date key; if same date exists in both, keep local
+- `map_positions` — merge by `world_id` / `char_id`; follows the character merge naturally
+- `release_cycle` — keep local order intact; append any world IDs from backup that aren't in local list (at the end)
+
+**Text workspace:**
+- `notes` — Option 2: if local is empty → take backup entirely; if both have content → append backup below a `--- Merged from backup [date] ---` separator; if backup is empty → keep local unchanged
+
+**Skip entirely:**
+- `settings` — personal preference (theme, font size, colorblind mode); never merge
+- `schedule` — dead field; never written, never read
+
+**Conflict resolution — same `id`, `updated_at` identical or missing:**
+Show a choice: **Keep local** (default, safer) or **Take backup**. "Keep both" explicitly rejected — creates noise for minimal benefit.
+
+**Items only in backup (not in local):** added.
+**Items only in local (not in backup):** preserved — merge never removes.
+
+**Open UI design questions (answer before building):**
+- Where does "Import from backup" live? On the Import/Export page alongside Restore as a third option in the Restore card, or as a new fourth card?
+- Does the merge show a preview/summary before committing (what will be added/updated/skipped) or does it just run?
+- How granular is conflict resolution — one choice for all conflicts, or per-item?
+- What does the UI say about `schedule_notes` and `map_positions` — are those mentioned explicitly or silently handled?
 
 ### 5. Help page update
-Written last — against the final stable UI and final backup/restore behavior. Sections to add/update: all four image tools, Import/Export page reorganisation, colorblind mode, character tab changes, backup/restore flows, import/export test flow.
+Written last — against the final stable UI and final "Import from backup" behavior. Sections to add/update: all four image tools (Format Converter, Paste & Save, Crop, Image Prompt Generator), Import/Export page reorganisation (3-card layout), colorblind mode, character tab changes (Example Dialogue → Formatting, Export → Settings), backup/restore flows including the new merge path.
 
 ### 6. Standalone / Public Version
 Configurable data path, strip Saucepan-specific fields, packaged `.exe`, optional rename/theming, README.md.
@@ -615,7 +642,7 @@ Configurable data path, strip Saucepan-specific fields, packaged `.exe`, optiona
 
 Current behavior: full backup restore is a **total replace** (wipes everything, loads backup). This is safe for a solo user who knows their workflow, but for general users it's a footgun — someone takes a backup, creates new content, then restores and loses everything made since.
 
-**Option C (recommended for standalone):** Add a separate "Import from backup" feature distinct from Restore. Explicitly merges content (worlds, characters, lorebooks, collections, personas, templates) by `id`, with `updated_at` as tiebreaker. Explicitly skips workspace state (notes, map positions, settings, release cycle, schedule notes) since those don't merge cleanly. User sees upfront what gets merged and what doesn't.
+**Option C (decided session 28 — build before standalone):** "Import from backup" — a third path on the Import/Export page distinct from full Restore. Full merge strategy documented in What's Next section 4. In brief: content fields (worlds/characters/lorebooks/etc.) merge by `id` with `updated_at` as tiebreaker; `schedule_notes` merges by date key; `map_positions` and `release_cycle` merge intelligently; `notes` uses a safe append strategy; `settings` always stays local. Conflicts where `updated_at` is identical/missing prompt the user to choose Keep Local or Take Backup. Merge never deletes local-only items.
 
 **Option D (long-term architectural direction):** Split `lorekeeper-data.json` into content file (mergeable) + workspace files (non-mergeable, stored separately — e.g. `settings.json`, `Notes/world_id.md`, `Maps/world_id.json`). Full restore then only touches content by definition. Already partially done — per-world `.md` notes are already external. Real cost: every IPC read/write touches multiple files, data safety system needs rethinking, backup ZIPs get more complex, existing installs need migration. Worth doing properly rather than rushing.
 
@@ -761,11 +788,13 @@ This has happened multiple times this project: a chat session's fixes only exist
 | 23 | Jun 24 | **Portrait multi-add; image display from top; view full image lightbox; export relPath fix; Babel 500KB fix; lorebook world ordering.** `import-images` IPC now accepts `{ defaultPath }` opts — file dialog opens directly in the character's `Companions\Name\` folder. Each selected image is copied to the companion folder via `copyImageToFolder` and stored as `relPath` (not base64 in JSON), keeping the data file lean. `object-position: top` added to all portrait/card image CSS rules (`.char-portrait img`, `.char-portrait-lg img`, `.gallery-item img`, portrait grid inline styles) so heads are no longer cropped. `LightboxModal` component added: `position: fixed` overlay, `ResolvedImg` (handles relPath via IPC like all other app images), Escape key close, × button. Rendered at App-component level (not inside CharDetailPage/WorldDetailPage) to avoid stacking-context clipping. `setLightboxSrc` threaded down as a prop to `CharDetailPage` (zoom button in portrait card control row) and `WorldDetailPage` (`onViewFull` prop on `GalleryItem`). `ImgFromPath` accepts `onClick` prop. `exportChar` now strips `relPath` from portrait objects (was only stripping `data`; `relPath` is app-local and must not reach Saucepan). **Babel 500KB fix:** file was 508KB, causing the "code generator has deoptimised the styling" error that silently broke click handlers app-wide; fixed by extracting 6 pure-data arrays (LITERARY_ARCHETYPES, NATIONALITIES, MBTI_TYPES, JUNGIAN_ARCHETYPES, ATTACHMENT_STYLES, GLOBAL_PLOT_ARCHETYPES — no JSX, no hooks) into a `<script type="text/javascript">` block before the Babel block; Babel script reduced 508 → 482KB. **Linked lorebooks world ordering:** character's own world now appears first in the lorebook picker, then other worlds alphabetically, "No World" last; world emoji shown in section headers. Pill labels unchanged (lorebook name · world name). |
 | 24 | Jun 24 | **Plot archetype fix; relationship map world-switch + position persistence; colorblind mode.** Plot archetype tool: `lastRoll` state tracks which roll button was last clicked; `primary` class applied only to that button instead of always highlighting Roll (any). Relationship map: (1) world-switch bug — `initialWorld` prop was ignored after mount; added `useEffect` to sync it to `worldId` so switching worlds in the sidebar now updates the map immediately. (2) position persistence — `posRef` mirrors positions state (avoids stale closure); `onSvgMouseUp` writes `data.map_positions[worldId]` with all current positions; init `useEffect` loads saved positions first, falling back to auto-grid only for new characters; `map_positions:{}` added to `initData()`. Colorblind mode: Settings → Appearance replaces ComingSoon placeholder with three-button picker (Off / Red-Green / Blue-Yellow); App-level `useEffect` adds/removes `html.cb-rg` or `html.cb-by` CSS class; Red-Green overrides `--red:#fb923c` and `--green:#60a5fa`; Blue-Yellow overrides `--amber:#f87171`, `--teal:#e879a9`, `--green:#60a5fa`; help page note updated. |
 
----
-
-## What's Built
-Full feature list — see sections above for details on each. Chronological build order is in the Session Log table above.
 | 25 | Jun 24 | **Import/Export page reorganisation; character tab reduction.** Import/Export page ("Batch Import") rebuilt into three side-by-side cards — **Backup** (export full ZIP + per-world dropdown+button, replacing individual per-world buttons that would overflow with many worlds), **Restore** (from backup ZIP with explicit note that full backup replaces all / world backup merges; from last-good auto-save), **Import** (single item JSON + batch scan + how-it-works). Duplicate "Backup everything" button removed (was identical to "Export full backup"). All action buttons now use standard `btn` style (no `primary` colouring). Backup/restore state inlined from old `BackupRestorePanel` component which is no longer rendered. Character detail page tab count reduced from 13 to 11: **Example Dialogue** tab removed — textarea moved into Formatting tab below Advanced Prompt. **Export** tab removed — `CharExportTab` (Update from JSON / Export JSON / Export Markdown) moved into Settings tab above Delete Character button. |
 | 26 | Jun 24 | **Image tools (Format Converter, Paste & Save, Crop); data array recovery; Babel size management.** Added three image tools to the right panel Tools section. Format Converter: load any image → select output format (JPEG/PNG/WebP) + quality slider → convert via canvas `toBlob()` → save via new `save-image` IPC (binary save with dialog). Paste & Save: paste from clipboard via `paste-image` IPC (`clipboard.readImage()` in main process) or drag-and-drop → preview with dimensions → set filename → save as PNG. Crop: interactive canvas crop with corner handles, aspect ratio presets (1:1/3:4/16:9/4:1/Free), rule-of-thirds grid; `applyCrop` loads a fresh clean `Image()` from stored `imgSrc` base64 to avoid drawing the overlay; all style objects inside `&&` conditionals pre-defined as variables (Babel deoptimisation fix). Added `save-image` IPC to main.js + `saveImage` to preload.js; added `clipboard` to electron imports + `paste-image` IPC. Data array recovery: extraction script bug caused 9 arrays (SAUCEPAN_TAGS 61KB, PLOT_DESCRIPTIONS, WESTERN_SIGNS, CHINESE_SIGNS, HOCKEY_POSITIONS, SWIM_EVENTS, MACROS, NAMES_MASC, NAMES_FEM) to be removed from Babel but silently fail to append to the plain JS block — recovered from test environment file. Fixed two comment+const merge bugs (HOCKEY_HANDEDNESS, SWIM_ROLES) left by extraction. Plain JS block now 110KB (15 arrays total); Babel block 425KB. |
 | 27 | Jun 24 | **Image Prompt Generator; map generator cancelled.** Added `ImagePromptTool` to right panel Tools section (Img Prompt pill). Receives `currentChar` prop threaded from App → RightPanel → ToolsPanel → tool. Shows current character name/description auto-populated; art style dropdown (10 options); mood/lighting dropdown (8 options); optional extra notes textarea. Calls `claude-sonnet-4-6` via Anthropic API; builds prompt as `parts.join(nl)` array to avoid multiline JS string literals (Babel restriction). Copy button with 2-second confirmation flash. Map generator removed from What's Next → Won't do (design too open-ended). |
 | 28 | Jun 24 | **CharDetailPage inline style cleanup.** All 49 Babel-risky inline styles (inside `&&`/ternary JSX) eliminated from CharDetailPage, LorebookEntryTab, and LoreItemRestoreCard. Added 57 CSS utility classes (`.cd-col12`, `.cd-portrait-card`, `.cd-lorebook-row.linked`, `.cd-flag-label`, `.cd-restore-drop`, etc.) to the style block. Added `CS` pre-defined style object (32 entries) before CharDetailPage for complex one-off styles. Tab bar, portrait grid, lorebook linked state, flags checkboxes, scenario drag handles, settings/schedule tab wrappers, banner preview, gallery picker — all now use CSS classes. LorebookEntryTab and LoreItemRestoreCard cleaned to use `CS.*` references and new classes. 117 remaining inline styles in component are in always-rendered JSX (no Babel risk). Babel: 430KB. |
+
+---
+
+## What's Built
+Full feature list — see sections above for details on each. Chronological build order is in the Session Log table above.
+
