@@ -1,5 +1,5 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 26, 2026 (session 29)**
+**Last updated: June 26, 2026 (session 30)**
 
 ---
 
@@ -366,6 +366,19 @@ See Data Safety Architecture section — independent `.md` backup per world plus
 
 ---
 
+## Export Filename Convention
+All exports follow `{name}-{type}.{ext}` — consistent across all content types:
+- Character JSON: `{name}-character.json`
+- Character MD: `{name}-character.md`
+- Lorebook JSON: `{name}-lorebook.json`
+- Lorebook MD: `{name}-lorebook.md`
+- Collection JSON: `{name}-collection.json`
+- Collection MD: `{name}-collection.md`
+- Persona MD: `{name}-persona.md`
+- Full backup ZIP: `lorekeeper-backup-{date}.zip`
+- World backup ZIP: `lorekeeper-world-{date}.zip`
+- Platform export ZIP: `{worldName}-platform-export-{date}.zip`
+
 ## Platform Export Requirements
 All three export paths — `exportChar`/`exportLore`/`exportColl` (single-item Export JSON buttons) and `exportWorldPlatformZip` (world topbar Export ZIP) — must stay in sync with each other. They duplicate the same stripping/field-mapping logic rather than sharing one function, so a fix applied to one must be applied to both; this has been a repeated source of bugs (see session 18).
 
@@ -623,10 +636,9 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 
 ~~3. Design backup/restore flows~~ ✓ **decided session 28**
 
-~~4. Build "Import from backup" (Option C)~~ ✓ **built + tested session 29** — see Import/Export section for full merge strategy
+~~4. Build "Import from backup" (Option C)~~ ✓ **built + tested session 29**
 
-### 5. Help page update
-Written last — against the final stable UI and final "Import from backup" behavior. Sections to add/update: all four image tools (Format Converter, Paste & Save, Crop, Image Prompt Generator), Import/Export page reorganisation (3-card layout), colorblind mode, character tab changes (Example Dialogue → Formatting, Export → Settings), backup/restore flows including the new merge path.
+~~5. Help page update~~ ✓ **done session 30** — all sections updated (11 tabs, image tools, Import/Export, Data Safety, drag-to-reorder tip, GitHub backup removed)
 
 ### 6. Standalone / Public Version
 Configurable data path, strip Saucepan-specific fields, packaged `.exe`, optional rename/theming, README.md.
@@ -783,4 +795,5 @@ This has happened multiple times this project: a chat session's fixes only exist
 | 27 | Jun 24 | **Image Prompt Generator; map generator cancelled.** Added `ImagePromptTool` to right panel Tools section (Img Prompt pill). Receives `currentChar` prop threaded from App → RightPanel → ToolsPanel → tool. Shows current character name/description auto-populated; art style dropdown (10 options); mood/lighting dropdown (8 options); optional extra notes textarea. Calls `claude-sonnet-4-6` via Anthropic API; builds prompt as `parts.join(nl)` array to avoid multiline JS string literals (Babel restriction). Copy button with 2-second confirmation flash. Map generator removed from What's Next → Won't do (design too open-ended). |
 | 28 | Jun 24 | **CharDetailPage inline style cleanup.** All 49 Babel-risky inline styles (inside `&&`/ternary JSX) eliminated from CharDetailPage, LorebookEntryTab, and LoreItemRestoreCard. Added 57 CSS utility classes (`.cd-col12`, `.cd-portrait-card`, `.cd-lorebook-row.linked`, `.cd-flag-label`, `.cd-restore-drop`, etc.) to the style block. Added `CS` pre-defined style object (32 entries) before CharDetailPage for complex one-off styles. Tab bar, portrait grid, lorebook linked state, flags checkboxes, scenario drag handles, settings/schedule tab wrappers, banner preview, gallery picker — all now use CSS classes. LorebookEntryTab and LoreItemRestoreCard cleaned to use `CS.*` references and new classes. 117 remaining inline styles in component are in always-rendered JSX (no Babel risk). Babel: 430KB. |
 | 29 | Jun 26 | **Import from backup (merge); delete confirmations; CS object restore; bug fixes.** Built `planMerge` + `applyMerge` + `MergePreviewModal` — the full "Import & merge from backup" flow on the Import/Export page. Preview modal shows adds/updates/conflicts before committing; per-item Keep Local / Take Backup for conflicts; workspace fields merged silently. Removed destructive "Restore from backup zip" — merge is now the primary restore path; lastgood restore remains for emergencies. Fixed `bt.getTime is not a function` in `planMerge` (`parseTimestamp` returns a number, not a Date). Fixed `world is not defined` in `main.js` `exportBackup` — `const world` was block-scoped to first `if(worldId)` block but referenced in second; hoisted to module-level `let`. Delete world confirmation modal added — warning covers all cascading deletes (characters, lorebooks, collections, lorebook_templates, gallery); `deleteWorld` helper defined in App scope and passed as prop to Modal component (direct inline callback in JSX caused Babel syntax error). CS style object was missing from the file (lost during data array recovery session) — restored before CharDetailPage. Delete lorebook and delete collection converted from `window.confirm` to app modal — `deleteLore` and `deleteColl` helpers added to App; `setModal` threaded through LorePage → LoreSettingsTab and CollPage → CollSettingsTab. Test environment icon generated (lime green book with T badge) as SVG + PNG 512/256 + ICO. Babel: 444KB. |
+| 30 | Jun 26 | **World order drag-to-reorder; help page update; export filename standardisation; bug fixes.** Removed right-click context menu (Pin to top) from sidebar worlds. Added `world_order: []` to initData; `sortedWorlds(data)` module-level helper replaces all 12 pinned sorts throughout app. Migration effect on first load: builds `world_order` from pinned-first → alpha. Sidebar world drag-to-reorder implemented with `setPointerCapture` on grip icon — multiple approaches tried (HTML5 DnD does not work in sidebar container); final approach: `onPointerDown`/`onPointerMove`/`onPointerUp` with `elementFromPoint` + `data-sw-idx` attributes. Bug: refs and migration effect were placed inside `CharDetailPage` instead of `App` (wrong anchor — `scenarioDragIdx` lives in CharDetailPage); fixed by moving to App. Bug: `const sortedWorlds=sortedWorlds(data)` self-reference in BatchImportPage from general replacement; fixed to `swWorlds`. Help page updated: 11-tab character section, image tools section added, Import/Export section updated for 3-card layout and merge flow, Backup & Restore → Data Safety, GitHub backup section removed, drag-to-reorder tip in Worlds section. Export filename standardisation: all exports now follow `{name}-{type}.{ext}` — character.json/.md, lorebook.json/.md, collection.json/.md, persona.md. Removed -companion, -sheet, -backup suffixes. Babel: 446KB. |
 

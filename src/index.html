@@ -1000,6 +1000,19 @@ function App() {
     if(dataLoaded) document.body.classList.add('app-ready');
   }, [dataLoaded]);
 
+  // Migrate pinned worlds -> world_order on first load
+  React.useEffect(()=>{
+    if(!dataLoaded) return;
+    if((data.world_order||[]).length===0 && data.worlds.length>0) {
+      const sorted=[...data.worlds].sort((a,b)=>{
+        if(a.pinned&&!b.pinned) return -1;
+        if(!a.pinned&&b.pinned) return 1;
+        return (a.name||'').localeCompare(b.name||'');
+      });
+      update(d=>{d.world_order=sorted.map(w=>w.id);});
+    }
+  },[dataLoaded]);
+
   // Autosave to disk on every change — NEVER fires until the initial load has completed,
   // otherwise the default empty initData could overwrite the real file on disk (race condition
   // that caused real data loss once; see Performance/Safety notes in the spec).
@@ -1050,7 +1063,7 @@ function App() {
       const json = JSON.parse(content);
       if(json.worlds !== undefined) { setData(json); return; }
       if(json.content && Array.isArray(json.content)) {
-        const existing = json.id ? data.lorebooks.find(l=>l.id===json.id) : null;
+        const existing = (json.id ? data.lorebooks.find(l=>l.id===json.id) : null) || selectedLore;
         if(existing) { setModal({type:'confirm-update-lore', obj:json, existing}); }
         else { setModal({type:'assign-lore', obj:json}); }
       } else if(json.companions !== undefined && json.description !== undefined) {
@@ -1115,9 +1128,10 @@ function App() {
     setModal(null);
   };
 
-  const updateLoreFromJSON = (obj) => {
+  const updateLoreFromJSON = (obj, hint) => {
     update(d => {
-      const idx = d.lorebooks.findIndex(l=>l.id===obj.id);
+      const targetId = (hint?.id && d.lorebooks.find(l=>l.id===hint.id)) ? hint.id : obj.id;
+      const idx = d.lorebooks.findIndex(l=>l.id===targetId);
       if(idx===-1) return;
       const existing = d.lorebooks[idx];
       d.lorebooks[idx] = { ...existing, name:obj.name||existing.name, short_description:obj.short_description||existing.short_description, content:obj.content||existing.content, tags:obj.tags||existing.tags, fandom_tags:obj.fandom_tags||existing.fandom_tags, nsfw:obj.nsfw!==undefined?obj.nsfw:existing.nsfw, very_nsfw:obj.very_nsfw!==undefined?obj.very_nsfw:existing.very_nsfw, updated_at:now() };
@@ -1237,7 +1251,7 @@ function App() {
       if(!p.image?.id) warnings.push(`portrait ${i+1} (${p.name||'unnamed'}): image UUID not set — site will reject import`);
     });
     if(warnings.length>0){const proceed=window.confirm(`Export warnings for ${c.name}:\n\n${warnings.map(w=>'• '+w).join('\n')}\n\nExport anyway?`);if(!proceed)return;}
-    window.lorekeeper.exportFile({ defaultName:`${c.name}-companion.json`, content:JSON.stringify(safe,null,2), folder:"Companions" });
+    window.lorekeeper.exportFile({ defaultName:`${c.name}-character.json`, content:JSON.stringify(safe,null,2), folder:"Companions" });
     update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch)ch.site_last_synced_at=new Date().toISOString();});
   };
   const exportLore = (l) => {
@@ -1276,7 +1290,7 @@ function App() {
         if(!p.image||!p.image.id) warnings.push(c.name + ": portrait " + (i+1) + " (" + (p.name||'unnamed') + ") missing image UUID");
       });
       const safeName = (c.name||"character").replace(/[^a-zA-Z0-9_-]/g, "_");
-      files.push({name: "Companions/" + safeName + "-companion.json", content: JSON.stringify(safe, null, 2)});
+      files.push({name: "Companions/" + safeName + "-character.json", content: JSON.stringify(safe, null, 2)});
     });
     wLores.forEach(l => {
       const {world_id,lorebook_filename,image_data,image_relpath,site_last_synced_at,collaboration_type,status,...rest} = l;
@@ -1497,7 +1511,7 @@ function App() {
             {page==='world'&&selectedWorld&&<button className="btn" onClick={()=>exportWorldPlatformZip(selectedWorld)} title="Export all posted characters + public lorebooks + public collections as a ZIP ready for site upload"><i className="ti ti-package-export"></i>Export ZIP</button>}
             {page==='templates'&&<button className="btn primary" onClick={()=>setNewTemplate(true)}><i className="ti ti-plus"></i>New Template</button>}
             {page==='personas'&&!selectedPersona&&<button className="btn primary" onClick={()=>setModal({type:'new-persona'})}><i className="ti ti-plus"></i>New Persona</button>}
-            {page==='personas'&&selectedPersona&&<button className="btn" onClick={()=>{const p=selectedPersona;const lines=["# "+p.name];if(p.pronouns){lines.push("");lines.push("**Pronouns:** "+p.pronouns);}if(p.description){lines.push("");lines.push("## Description");lines.push(p.description);}const lb=data.lorebooks.find(x=>x.id===p.linked_lorebook);if(lb){lines.push("");lines.push("**Linked Lorebook:** "+lb.name);}const safeName=(p.name||"persona").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n"),folder:"Personas"});}}><i className="ti ti-file-text"></i>Export MD</button>}
+            {page==='personas'&&selectedPersona&&<button className="btn" onClick={()=>{const p=selectedPersona;const lines=["# "+p.name];if(p.pronouns){lines.push("");lines.push("**Pronouns:** "+p.pronouns);}if(p.description){lines.push("");lines.push("## Description");lines.push(p.description);}const lb=data.lorebooks.find(x=>x.id===p.linked_lorebook);if(lb){lines.push("");lines.push("**Linked Lorebook:** "+lb.name);}const safeName=(p.name||"persona").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+"-persona.md",content:lines.join("\n"),folder:"Personas"});}}><i className="ti ti-file-text"></i>Export MD</button>}
             {page==='personas'&&selectedPersona&&<button className="btn danger" onClick={()=>setModal({type:'confirm-delete-persona',persona:selectedPersona,onBack:()=>setSelectedPersona(null)})}><i className="ti ti-trash"></i>Delete</button>}
             <div style={{width:1,alignSelf:'stretch',background:'var(--border)',margin:'0 4px'}}></div>
             <button className={`btn ${rightPanel?'primary':''}`} onClick={()=>setRightPanel(p=>!p)} title="Toggle notes panel"><i className={`ti ti-layout-sidebar-right-${rightPanel?'collapse':'expand'}`}></i></button>
@@ -4131,7 +4145,7 @@ function LoreboookEditor({lorebook,update,exportLore}) {
   };
   const exportLoreMd = () => {
     const safeName = (lorebook.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");
-    window.lorekeeper.exportFile({defaultName: safeName + ".md", content: buildLoreMd(), folder:"Lorebooks"});
+    window.lorekeeper.exportFile({defaultName: safeName + "-lorebook.md", content: buildLoreMd(), folder:"Lorebooks"});
   };
   const [loreMdPreview,setLoreMdPreview]=useState(false);
   const loreTabBar = (
@@ -4449,7 +4463,7 @@ function LorePage({lorebook,data,update,exportLore,initialTab,importJSON,setModa
           </div>
           {loreTab==='chapters'&&<LoreChaptersTab lore={lore} updLore={updLore}/>}
           {loreTab==='settings'&&<LoreSettingsTab lore={lore} updLore={updLore} data={data} onBack={onBack} update={update} setModal={setModal}/>}
-          {loreTab==='export'&&<LoreExportPanel lorebook={lore} exportLore={exportLore} exportLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];if(lore.short_description){lines.push("");lines.push(lore.short_description);}(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});const safeName=(lore.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+".md",content:lines.join("\n"),folder:"Lorebooks"});}} loreMdPreview={loreMdPreview} setLoreMdPreview={setLoreMdPreview} buildLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});return lines.join("\n");}} importJSON={importJSON} update={update}/>}
+          {loreTab==='export'&&<LoreExportPanel lorebook={lore} exportLore={exportLore} exportLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];if(lore.short_description){lines.push("");lines.push(lore.short_description);}(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});const safeName=(lore.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+"-lorebook.md",content:lines.join("\n"),folder:"Lorebooks"});}} loreMdPreview={loreMdPreview} setLoreMdPreview={setLoreMdPreview} buildLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});return lines.join("\n");}} importJSON={async()=>{const content=await window.lorekeeper.importFile();if(!content)return;try{const json=JSON.parse(content);setModal({type:'confirm-update-lore',obj:json,existing:lore});}catch{alert('Invalid JSON file.');}}} update={update}/>}
         </div>
       </div>
     </div>
@@ -4720,20 +4734,6 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
   const [tab,setTab]=useState(initialTab||'identity');
   const [showPortraitPicker,setShowPortraitPicker]=useState(false);
   const scenarioDragIdx=useRef(null);
-
-
-  // Migrate pinned worlds -> world_order on first load
-  React.useEffect(()=>{
-    if(!dataLoaded) return;
-    if((data.world_order||[]).length===0 && data.worlds.length>0) {
-      const sorted=[...data.worlds].sort((a,b)=>{
-        if(a.pinned&&!b.pinned) return -1;
-        if(!a.pinned&&b.pinned) return 1;
-        return (a.name||'').localeCompare(b.name||'');
-      });
-      update(d=>{d.world_order=sorted.map(w=>w.id);});
-    }
-  },[dataLoaded]);
   const scenarioDragOverIdx=useRef(null);
   const portraitDragIdx=useRef(null);
   const portraitDragOverIdx=useRef(null);
@@ -5218,7 +5218,7 @@ function LoreItemRestoreCard({lorebook, update}) {
   const handleLoreBackup = () => {
     const {world_id,lorebook_filename,image_data,image_relpath,collaboration_type,status,...rest} = lorebook;
     const safe = {...rest, selected_chapter_index: lorebook.selected_chapter_index||0, collaboration_type: lorebook.access_level === 'public' ? 'public' : 'private'};
-    window.lorekeeper.exportFile({defaultName:(lorebook.name||'lorebook').replace(/[^a-zA-Z0-9_-]/g,'_')+'-backup.json', content:JSON.stringify(safe,null,2), folder:'Lorebooks'});
+    window.lorekeeper.exportFile({defaultName:(lorebook.name||'lorebook').replace(/[^a-zA-Z0-9_-]/g,'_')+'-lorebook.json', content:JSON.stringify(safe,null,2), folder:'Lorebooks'});
   };
 
   const doLoreRestore = () => {
@@ -5489,7 +5489,7 @@ function CollItemRestoreCard({coll, update}) {
   const handleCollBackup = () => {
     const {world_id,collection_filename,image_data,image_relpath,...rest} = coll;
     const safe = {...rest, description: rest.definition||'', lorebooks: coll.lorebooks||[]};
-    window.lorekeeper.exportFile({defaultName:(coll.name||'collection').replace(/[^a-zA-Z0-9_-]/g,'_')+'-backup.json', content:JSON.stringify(safe,null,2), folder:'Collections'});
+    window.lorekeeper.exportFile({defaultName:(coll.name||'collection').replace(/[^a-zA-Z0-9_-]/g,'_')+'-collection.json', content:JSON.stringify(safe,null,2), folder:'Collections'});
   };
 
   const doCollRestore = () => {
@@ -5558,7 +5558,7 @@ function CollExportPanel({coll,data,exportColl,importJSON,update}) {
     if(members.length>0){lines.push(""); lines.push("## Characters"); members.forEach(ch=>lines.push("- "+(ch.display_name||ch.name)));}
     if((coll.tags||[]).length>0){lines.push(""); lines.push("## Tags"); lines.push(coll.tags.join(", "));}
     const safeName = (coll.name||"collection").replace(/[^a-zA-Z0-9_-]/g,"_");
-    window.lorekeeper.exportFile({defaultName: safeName+".md", content: lines.join("\n"), folder:"Collections"});
+    window.lorekeeper.exportFile({defaultName: safeName+"-collection.md", content: lines.join("\n"), folder:"Collections"});
   };
   return (
     <div className="export-panel">
@@ -5608,7 +5608,7 @@ function CharExportTab({charData, data, exportChar, importJSON}) {
   const exportMd = () => {
     const md = buildMd();
     const safeName = (charData.display_name||charData.name||"character").replace(/[^a-zA-Z0-9_-]/g,"_");
-    window.lorekeeper.exportFile({defaultName: safeName + "-sheet.md", content: md, folder:"Companions"});
+    window.lorekeeper.exportFile({defaultName: safeName + "-character.md", content: md, folder:"Companions"});
   };
   const [mdPreview, setMdPreview] = React.useState(false);
   const md = buildMd();
@@ -6687,13 +6687,13 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
     setImporting(false);
   };
 
-  const sortedWorlds=sortedWorlds(data);
+  const swWorlds=sortedWorlds(data);
   const WorldSelect = ({id}) => (
     <select value={assignments[id]||''} onChange={e=>setA(id,e.target.value)} style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none',flexShrink:0}}>
       <option value="">— assign world —</option>
       <option value="__none__">No World (standalone)</option>
       <optgroup label="──────────"></optgroup>
-      {sortedWorlds.map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
+      {swWorlds.map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
     </select>
   );
 
@@ -7352,13 +7352,15 @@ function HelpPage() {
       </HelpSection>
 
       <HelpSection title="Characters" icon="ti-users">
-        <P>Each character has 13 tabs. The most important for export:</P>
-        <P><B>Identity</B> — Name, display name, short description (max 140 chars), world, tags (max 25; content warning tags don't count toward the cap), fandom tags (max 3).</P>
-        <P><B>Character Card</B> — The system prompt / card. Supports markdown. Use the macro reference panel (collapse arrow below the label) for Saucepan macros like {'{{user}}'} and {'{{char}}'}.</P>
-        <P><B>Portraits</B> — Up to 10 portrait slots. Each portrait needs a platform Image ID (UUID from the site) for export. Paste the UUID in the field below each portrait.</P>
-        <P><B>Schedule</B> — Set status (draft / ready / posted), schedule dates, and posted dates.</P>
+        <P>Each character has 11 tabs:</P>
+        <P><B>Identity</B> — Name, display name, short description (max 140 chars), world, tags (max 25; content warning tags don't count), fandom tags (max 3).</P>
+        <P><B>Character Card</B> — The system prompt. Supports markdown. Use the macro reference panel for Saucepan macros like {'{{user}}'} and {'{{char}}'}.</P>
+        <P><B>Formatting</B> — Formatting instructions, advanced prompt, and example dialogue.</P>
+        <P><B>Scenarios</B> — Up to 7500 characters. Drag the grip handle to reorder scenarios.</P>
+        <P><B>Portraits</B> — Up to 10 portrait slots. Each needs a platform Image ID (UUID). Drag to reorder portraits.</P>
+        <P><B>Schedule</B> — Set status (draft / ready / posted), schedule dates, and posted dates. Setting status to Posted auto-stamps today as the posted date.</P>
         <P><B>Lorebook Entry</B> — If a lorebook template is set up for the world, fill in the character's entry and save it directly to the world lorebook.</P>
-        <P><B>Export</B> — Export as platform-ready JSON (stripped of app-only fields) or as a Markdown sheet (name, descriptions, card, advanced prompt, scenarios, tags).</P>
+        <P><B>Settings</B> — Access level, temperature, spicy flags, companion folder (for auto-save). Also contains <B>Update from JSON</B>, <B>Export JSON</B>, and <B>Export MD</B>.</P>
         <HelpTip text="Export JSON strips all app-only fields automatically. Images export as UUID references only — make sure portrait UUIDs are set first." />
       </HelpSection>
 
@@ -7368,7 +7370,7 @@ function HelpPage() {
         <P><B>Gallery tab</B> — All images associated with this world.</P>
         <P><B>World Info tab</B> — Edit world name, description, tags, banner image, notes, plot archetypes (for the Plot tool), and lorebook templates.</P>
         <P><B>Export ZIP</B> — The Export ZIP button in the topbar packages all posted characters + public lorebooks + public collections for this world into a dated zip file, stripped of app-only fields and ready to upload. Stamps site_last_synced_at on everything exported.</P>
-        <HelpTip text="Right-click a world in the sidebar to pin it, export it, or access it quickly." />
+        <HelpTip text="Drag the grip handle (⠿) next to a world in the sidebar to reorder worlds. The order is saved and used throughout the app." />
       </HelpSection>
 
       <HelpSection title="Lorebooks" icon="ti-book">
@@ -7438,14 +7440,23 @@ function HelpPage() {
         <P><B>Swim</B> — Rolls a stroke, event distance, stroke description, and swimmer archetype.</P>
         <P><B>Western Zodiac</B> — Rolls a sun sign with element, modality, traits, shadow side, and vibe.</P>
         <P><B>Chinese Zodiac</B> — Rolls a sign with element, reference years, traits, shadow side, and vibe.</P>
+        <P><B>Image Prompt Generator</B> — Calls the Claude API to generate an image generation prompt for the current character. Art style and mood dropdowns; optional extra notes; copy button. Requires an API key in Settings.</P>
       </HelpSection>
 
-      <HelpSection title="Batch Import" icon="ti-file-import">
-        <P>Batch import scans your local folders and brings everything into Lorekeeper at once.</P>
-        <HelpStep n={1} text="Copy files into I:\Lorekeeper\Companions\CharName\, Lorebooks\, or Collections\."/>
-        <HelpStep n={2} text="Click Scan Folders. Each item shows a badge: new / update ↓ / local newer ↑ / up to date."/>
-        <HelpStep n={3} text="Assign worlds to items that need one, then click Import."/>
-        <HelpTip text="Items marked 'local newer' are skipped by default — your local edits won't be overwritten. To bring in a scanned version anyway (e.g. restoring from a site export), click 'Import anyway' on that item, or check 'Force import all' to override every local-newer item at once. Images alongside JSONs are automatically linked as image_relpath." />
+      <HelpSection title="Image Tools" icon="ti-photo">
+        <P>Found in the right panel → Tools tab → Image Tools section.</P>
+        <P><B>Format Converter</B> — Convert images between PNG, JPEG, and WebP. Drag or paste an image, pick a format, download the result.</P>
+        <P><B>Paste &amp; Save</B> — Paste a screenshot or image from clipboard and save it directly to a character's portrait folder. Useful for quickly capturing site images.</P>
+        <P><B>Crop</B> — Crop any image to an exact pixel region. Drag to define the crop area, adjust handles, download the result.</P>
+        <P><B>Image Prompt Generator</B> — See Tools panel section above.</P>
+      </HelpSection>
+
+      <HelpSection title="Import / Export" icon="ti-file-import">
+        <P>The Import/Export page has three sections: <B>Backup</B>, <B>Restore</B>, and <B>Import</B>.</P>
+        <P><B>Backup</B> — Export a full ZIP of everything (data + all images), or export a single world as a ZIP. Store backups somewhere safe outside the Lorekeeper folder.</P>
+        <P><B>Restore</B> — Two options: <B>Import &amp; merge from backup</B> reads a ZIP and shows a preview of adds, updates, and conflicts — nothing is deleted, local-only data is preserved, and you choose Keep Local or Take Backup per conflict. <B>Restore from last good backup</B> is the emergency option: replaces all data with the auto-saved lastgood file (no zip needed).</P>
+        <P><B>Import (single items or batch)</B> — Paste a JSON directly, or click Scan Folders to scan <Code>Companions\</Code>, <Code>Lorebooks\</Code>, and <Code>Collections\</Code>. Each item shows a badge: new / update ↓ / local newer ↑ / up to date. Assign worlds and click Import.</P>
+        <HelpTip text="Items marked 'local newer' are skipped by default. Click 'Import anyway' on that item, or check 'Force import all', to override. Images alongside JSONs are automatically linked as image_relpath." />
       </HelpSection>
 
       <HelpSection title="Auto-save to disk" icon="ti-device-floppy">
@@ -7464,13 +7475,13 @@ function HelpPage() {
         <P><B>Migrate</B> — Writes base64 images to local files, sets image_relpath, clears the base64. Will not create duplicates.</P>
       </HelpSection>
 
-      <HelpSection title="Backup & Restore" icon="ti-archive">
-        <P>Found at the bottom of the Batch Import page.</P>
-        <P><B>Backup (sidebar)</B> — Creates a full zip of everything: data JSON + all image folders. Same as the Backup button in the sidebar footer.</P>
-        <P><B>Per-world backup</B> — Zips only that world's characters, lorebooks, collections, and images.</P>
-        <P><B>Export ZIP (world topbar)</B> — Platform-ready zip of posted characters + public lorebooks + collections, stripped of app-only fields. This is what you upload to Saucepan, not the full backup.</P>
-        <P><B>Restore</B> — Pick a zip. A full backup replaces everything; a world backup merges that world back in without touching others.</P>
-        <HelpTip text="Always do a full backup before a restore." />
+      <HelpSection title="Data Safety" icon="ti-shield-check">
+        <P>Lorekeeper protects your data with three layers:</P>
+        <P><B>Auto-save</B> — Data is written after every change (600ms debounce). A load guard prevents saving until data is fully loaded.</P>
+        <P><B>Shrink-refuse</B> — If a save would shrink the data file beyond a safety threshold, it is refused. Prevents runaway autosaves from overwriting real data with an empty shape.</P>
+        <P><B>Last-good backup</B> — On every successful save, the previous file is copied to <Code>lorekeeper-data.lastgood.json</Code>. Use Restore → Restore from last good backup to recover it without a zip.</P>
+        <P><B>Export ZIP (world topbar)</B> — Platform-ready zip for upload to Saucepan. Not the same as a backup — only includes posted characters, public lorebooks, and public collections.</P>
+        <HelpTip text="Do a full backup before any restore. Full backup zips are the safest recovery option; the lastgood file is for quick recovery from recent corruption." />
       </HelpSection>
 
       <HelpSection title="Settings" icon="ti-settings">
@@ -7500,17 +7511,6 @@ function HelpPage() {
           <HelpStep n={4} text="In Lorekeeper → Settings → Claude API → paste the key → Save."/>
         </div>
         <P><B>Cost estimate:</B> Sonnet 4.6 costs roughly $0.05–0.15 per conversation depending on world size. Haiku 4.5 is ~10× cheaper but less capable.</P>
-      </HelpSection>
-
-      <HelpSection title="GitHub backup" icon="ti-brand-github">
-        <P>The source files (index.html, main.js, preload.js) are tracked in a private GitHub repo. Data files are never committed.</P>
-        <P>After each session, run in <Code>I:\Lorekeeper\</Code>:</P>
-        <div style={{background:'var(--bg3)',borderRadius:'var(--r)',padding:'10px 14px',fontFamily:'monospace',fontSize:12,color:'var(--text)',marginTop:6,marginBottom:6,lineHeight:1.8}}>
-          git add src/ lorekeeper-master-spec.md<br/>
-          git commit -m "Brief description"<br/>
-          git push
-        </div>
-        <HelpTip text="The lorekeeper-master-spec.md file is also tracked — update it when features are added." />
       </HelpSection>
     </div>
   );
@@ -7628,7 +7628,7 @@ function Modal({modal,setModal,data,update,assignLore,assignChar,assignColl,upda
     <div className="modal-footer">
       <button className="btn" onClick={()=>setModal(null)}>Cancel</button>
       <button className="btn" onClick={()=>{setModal({type:'assign-lore',obj:modal.obj});}}>Import as New</button>
-      <button className="btn primary" onClick={()=>updateLoreFromJSON(modal.obj)}>Update Existing</button>
+      <button className="btn primary" onClick={()=>updateLoreFromJSON(modal.obj,modal.existing)}>Update Existing</button>
     </div>
   </div></div>;
 
