@@ -9,7 +9,4 @@ Personas/
 Templates/
 Notes/
 node_modules/
-assets/
-*.ico
-*.png
-*.svg
+dist/

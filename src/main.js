@@ -4,11 +4,19 @@ const fs = require('fs');
 const AdmZip = require('adm-zip');
 const os = require('os');
 
-const DATA_DIR = 'I:\\Lorekeeper';
+// In production: data lives next to the exe (user chose location at install)
+// In dev: hardcoded to I:\Lorekeeper
+const DATA_DIR = app.isPackaged
+  ? path.dirname(process.execPath)
+  : 'I:\\Lorekeeper';
 const DATA_FILE = path.join(DATA_DIR, 'lorekeeper-data.json');
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
 
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+// Ensure all standard data folders exist on startup
+['', 'Companions', 'Lorebooks', 'Collections', 'Worlds', 'Personas', 'Templates', 'Notes'].forEach(sub => {
+  const p = sub ? path.join(DATA_DIR, sub) : DATA_DIR;
+  if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
+});
 
 let mainWindow;
 
@@ -415,7 +423,7 @@ ipcMain.handle('save-companion-json', async (event, { folderName, data }) => {
   try {
     const charDir = path.join(DATA_DIR, 'Companions', folderName);
     if (!fs.existsSync(charDir)) fs.mkdirSync(charDir, { recursive: true });
-    const filePath = path.join(charDir, 'character.json');
+    const filePath = path.join(charDir, 'companion.json');
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
     return true;
   } catch (e) { console.error('save-companion-json:', e); return false; }

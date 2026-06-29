@@ -915,7 +915,7 @@ const parseTimestamp = (s) => {
   return isNaN(t) ? 0 : t;
 };
 const loreHint = (filename) => "I:" + BS + "Lorekeeper" + BS + "Lorebooks" + BS + filename;
-const charFolderHint = (folder) => "Saves to: I:" + BS + "Lorekeeper" + BS + "Companions" + BS + folder + BS + "character.json";
+const charFolderHint = (folder) => "Saves to: I:" + BS + "Lorekeeper" + BS + "Companions" + BS + folder + BS + "companion.json";
 const now = () => new Date().toISOString();
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -1251,7 +1251,7 @@ function App() {
       if(!p.image?.id) warnings.push(`portrait ${i+1} (${p.name||'unnamed'}): image UUID not set — site will reject import`);
     });
     if(warnings.length>0){const proceed=window.confirm(`Export warnings for ${c.name}:\n\n${warnings.map(w=>'• '+w).join('\n')}\n\nExport anyway?`);if(!proceed)return;}
-    window.lorekeeper.exportFile({ defaultName:`${c.name}-character.json`, content:JSON.stringify(safe,null,2), folder:"Companions" });
+    window.lorekeeper.exportFile({ defaultName:c.companion_folder?"companion.json":`${c.name}-character.json`, content:JSON.stringify(safe,null,2), folder:c.companion_folder?"Companions/"+c.companion_folder:"Companions" });
     update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch)ch.site_last_synced_at=new Date().toISOString();});
   };
   const exportLore = (l) => {
@@ -1290,7 +1290,7 @@ function App() {
         if(!p.image||!p.image.id) warnings.push(c.name + ": portrait " + (i+1) + " (" + (p.name||'unnamed') + ") missing image UUID");
       });
       const safeName = (c.name||"character").replace(/[^a-zA-Z0-9_-]/g, "_");
-      files.push({name: "Companions/" + safeName + "-character.json", content: JSON.stringify(safe, null, 2)});
+      files.push({name: "Companions/" + safeName + "/companion.json", content: JSON.stringify(safe, null, 2)});
     });
     wLores.forEach(l => {
       const {world_id,lorebook_filename,image_data,image_relpath,site_last_synced_at,collaboration_type,status,...rest} = l;
@@ -5608,7 +5608,7 @@ function CharExportTab({charData, data, exportChar, importJSON}) {
   const exportMd = () => {
     const md = buildMd();
     const safeName = (charData.display_name||charData.name||"character").replace(/[^a-zA-Z0-9_-]/g,"_");
-    window.lorekeeper.exportFile({defaultName: safeName + "-character.md", content: md, folder:"Companions"});
+    window.lorekeeper.exportFile({defaultName: safeName + "-character.md", content: md, folder:charData.companion_folder?"Companions/"+charData.companion_folder:"Companions"});
   };
   const [mdPreview, setMdPreview] = React.useState(false);
   const md = buildMd();
@@ -6776,7 +6776,7 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
             </div>
             <BatchImportHelp/>
             <div style={{marginTop:8,fontSize:10,color:'var(--text3)',lineHeight:1.6}}>
-              Place files in <code style={{background:'var(--bg3)',padding:'1px 4px',borderRadius:3}}>Companions\Name\character.json</code>,{' '}
+              Place files in <code style={{background:'var(--bg3)',padding:'1px 4px',borderRadius:3}}>Companions\Name\companion.json</code>,{' '}
               <code style={{background:'var(--bg3)',padding:'1px 4px',borderRadius:3}}>Lorebooks\lorebook.json</code>, or{' '}
               <code style={{background:'var(--bg3)',padding:'1px 4px',borderRadius:3}}>Collections\collection.json</code>
             </div>
@@ -7461,7 +7461,7 @@ function HelpPage() {
 
       <HelpSection title="Auto-save to disk" icon="ti-device-floppy">
         <P>Characters, lorebooks, and collections can auto-save to <Code>I:\Lorekeeper\</Code> on every edit.</P>
-        <P>Set a <B>Folder Name</B> on a character (Settings tab) and it saves to <Code>Companions\FolderName\character.json</Code>.</P>
+        <P>Set a <B>Folder Name</B> on a character (Settings tab) and it saves to <Code>Companions\FolderName\companion.json</Code>.</P>
         <P>Set a <B>Lorebook Filename</B> on a lorebook and it saves to <Code>Lorebooksilename.json</Code>.</P>
         <P>Set a <B>Collections Filename</B> on a collection and it saves to <Code>Collectionsilename.json</Code>.</P>
         <P>New items get a filename auto-generated from their name. Clear the field to disable auto-save.</P>

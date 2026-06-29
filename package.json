@@ -1,23 +1,41 @@
 {
   "name": "lorekeeper",
   "version": "1.0.0",
-  "description": "Lorekeeper — character and world management tool",
+  "description": "Character and lore manager for Saucepan",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder"
   },
+  "dependencies": {
+    "adm-zip": "^0.5.10"
+  },
   "devDependencies": {
-    "electron": "^33.0.0"
+    "electron": "^29.0.0",
+    "electron-builder": "^24.13.0"
   },
   "build": {
     "appId": "com.lorekeeper.app",
     "productName": "Lorekeeper",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*"
+    ],
     "win": {
-      "target": "portable"
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Lorekeeper"
     }
-  },
-  "dependencies": {
-    "adm-zip": "^0.5.17"
   }
 }
