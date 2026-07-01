@@ -406,12 +406,6 @@ ipcMain.handle('copy-image-to-folder', async (event, { srcPath, destFolder, file
     const destFilename = filename ? (filename.endsWith(ext) ? filename : filename + ext) : path.basename(srcPath);
     const destPath = path.join(destDir, destFilename);
 
-    // If destination already exists and is the same file, skip copy
-    if (fs.existsSync(destPath)) {
-      const relPath = `${destFolder}/${destFilename}`.replace(/\\/g, '/');
-      return { relPath, base64: readImageAsBase64(destPath) };
-    }
-
     fs.copyFileSync(srcPath, destPath);
     const relPath = `${destFolder}/${destFilename}`.replace(/\\/g, '/');
     return { relPath, base64: readImageAsBase64(destPath) };
