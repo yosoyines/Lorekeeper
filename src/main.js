@@ -41,7 +41,9 @@ app.whenReady().then(() => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': ["default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:"]
+        // http://localhost is required for local LLM servers (LM Studio, Ollama). Without it
+        // Chromium blocks the fetch in the renderer before it ever leaves the process.
+        'Content-Security-Policy': ["default-src 'self' 'unsafe-inline' 'unsafe-eval' https: http://localhost:* http://127.0.0.1:* data: blob:"]
       }
     });
   });

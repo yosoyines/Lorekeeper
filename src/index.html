@@ -2,7 +2,7 @@
 <html lang="en" style="background:#0f0e13;color:#f2f0ff;">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: http://localhost:* http://127.0.0.1:* data: blob:">
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Lorekeeper</title>
 <script src="https://unpkg.com/react@18.2.0/umd/react.development.js"></script>
@@ -601,6 +601,9 @@ const LITERARY_ARCHETYPES = [
   {name:"The Reluctant Leader",desc:"Thrust into leadership despite resisting it; grows into the role through trial and sacrifice."},
 ];
 
+// Saucepan voice catalogue (LABS). Local-only reference — the platform does not
+// export a voice field, so this is tracked in Lorekeeper and stripped on export.
+const SAUCEPAN_VOICES = [{n:"Passion Flower",d:"A sultry woman whispering in your ear. Suitable for intimate conversations at close quarters."},{n:"Saltbush",d:"The parentified eldest daughter who is a hair's breath from quitting."},{n:"Narrowleaf Milkweed",d:"Preppy, high, excited voice of a young woman who has not been put down by life's realities. Yet."},{n:"Sycamore",d:"The raspy and low voice that accompanies a smouldering gaze."},{n:"Bluestar",d:"A gentle voice ready to walk you down from a panic attack, or another situationship."},{n:"Camphor Tree",d:"A lightly-accented youth who can be a rascal and a devoted lover, whenever you please."},{n:"Redosier Dogwood",d:"The warm voice of a friendly rogue in an unfamiliar place."},{n:"Musk Mallow",d:"A calm, smooth voice in a British book store. Suitable as a narrator."},{n:"Fennel",d:"An exhausted man forced to work a dead end job, here to answer your endless questions."},{n:"Lodgepole Pine",d:"A young man with the signature carefree attitude of youth. Suitable for bratty, sarcastic, or immature characters."},{n:"Foeniculum",d:"An exhausted woman forced to work a dead end job, here to answer your endless questions."},{n:"Meadow Clary",d:"A reserved woman who speaks with maximum vocal fry. Suitable for non-human fantasy characters."},{n:"Blue Bugle",d:"A serious man who leads the charge in high-stakes projects."},{n:"Chive",d:"A man who was born into power and demands perfection from his underlings."},{n:"Grewia",d:"The assertive voice of the smartest person in the room. Suitable as a narrator."},{n:"Purple Foxglove",d:"A higher-pitched man with light German accent. Sensual and slow, and gets throaty for emphasis."},{n:"Yarrow",d:"A man of the Wild West who watches in case strangers bring trouble to town."},{n:"Lyreleaf",d:"A modern woman who tolerates no nonsense and no amateurs."},{n:"Kiaat",d:"A hypnotic storyteller retelling an enchanting tale around a fire. Suitable for folkloric characters."},{n:"Bearberry",d:"The internal monologue that runs as a snide background sound to all things annoying."},{n:"Holm Oak",d:"An attentive lover here to delight you all day and all night."},{n:"Blackberry",d:"A gruff man in his fifties who is used to toil in the unforgiving cold of his homeland."},{n:"Goat Willow",d:"A man with rough edges you do not want to piss off."},{n:"Dahoon",d:"The patient and friendly man who is always ready to cook up a storm for you."},{n:"Catalpa",d:"The friendly new addition to town with a background few people knows."},{n:"Valley Oak",d:"The distinguished voice of an honourable man placed in a position of leadership."},{n:"Sessile Oak",d:"This man loves and dotes on his family with gifts and good-natured ribbing."},{n:"Yew",d:"A documentary narrator with an even cadence and a calming tone of voice."},{n:"Beech",d:"A happy man who is enjoys telling urban legends to his coworkers and the occasional visitors."},{n:"Nopal",d:"An amused lover who loves your smile."},{n:"Marula",d:"A hopeful youth ready to set out towards new adventures."},{n:"Sawara Cypress",d:"A stern elder who speaks with weight in every word."},{n:"Scabious",d:"A weary man who has seen too much and drinks whiskey like water."}];
 const SAUCEPAN_TAGS = {"dead_dove": {"c": "Content Warnings", "d": "Content warning: Content may be actively disturbing or distressing in roleplay. See tags/description for more details."}, "noncon_dubcon": {"c": "Content Warnings", "d": "Content warning: Material contains non-consensual or dubiously consensual elements"}, "abuse": {"c": "Content Warnings", "d": "Content warning: Material depicts physical, emotional, or psychological mistreatment"}, "blackmail": {"c": "Content Warnings", "d": "Content warning: Coercive leverage through threats or exposure"}, "slur_usage": {"c": "Content Warnings", "d": "Content warning: Material contains usage of derogatory slurs or offensive language"}, "self_harm_suicide": {"c": "Content Warnings", "d": "Content warning: Material references or depicts self-harm, suicidal ideation, or suicide attempts"}, "violence": {"c": "Content Warnings", "d": "Content warning: Material contains explicit violent themes"}, "gore": {"c": "Content Warnings", "d": "Content warning: Material contains graphic depictions of blood and injuries"}, "drugs_addiction": {"c": "Content Warnings", "d": "Content warning: Material involves substance use and dependency"}, "incest_stepcest": {"c": "Content Warnings", "d": "Content warning: Material involves romantic or sexual relationships between step-relatives. Blood incest is not allowed on Saucepan."}, "vore": {"c": "Content Warnings", "d": "Content warning: Material contains themes of characters being consumed, swallowed whole, or absorbed by other characters"}, "cannibalism": {"c": "Content Warnings", "d": "Content warning: Material contains themes of characters consuming or eating other characters"}, "feral": {"c": "Content Warnings", "d": "Content warning: Material involves romantic or sexual content with sentient animal characters (real-life animals with human-level intelligence, not fictional species)"}, "trauma": {"c": "Content Warnings", "d": "Content warning: Material contains depictions of traumatic experiences or their aftermath"}, "terminal_illness": {"c": "Content Warnings", "d": "Content warning: Material contains depictions of illness, disease, or medical conditions"}, "user_harm": {"c": "Content Warnings", "d": "Content warning: Material contains scenarios where the user character may be harmed"}, "death": {"c": "Content Warnings", "d": "Content warning: Material deals with dying, loss of life, or grief"}, "body_horror": {"c": "Content Warnings", "d": "Content warning: Material contains graphic depictions of monstrous/grotesque bodily imagery"}, "eating_disorder": {"c": "Content Warnings", "d": "Content warning: Material depicts anorexia, bulimia, or other harmful relationships with food"}, "amputation": {"c": "Content Warnings", "d": "Content warning: Material containing non-consensual amputations or loss of limbs"}, "miscarriage": {"c": "Content Warnings", "d": "Content warning: Material depicting loss of a child or pregnancy"}, "male": {"c": "Character Identity", "d": "Characters with a focus on a male identity and experience."}, "female": {"c": "Character Identity", "d": "Characters with a focus on a female identity and experience."}, "non_binary": {"c": "Character Identity", "d": "Companions who identify outside the traditional gender binary"}, "trans": {"c": "Character Identity", "d": "Companions whose identity differs from their assigned gender"}, "intersex": {"c": "Character Identity", "d": "Companions with variations in sex characteristics (e.g. genitals, reproductive organs, hormonal patterns)"}, "altersex": {"c": "Character Identity", "d": "Companions with alternative or non-standard sex characteristics, often in fantasy or speculative settings"}, "masc": {"c": "Character Identity", "d": "Masculine presenting person, regardless of gender identity"}, "fem": {"c": "Character Identity", "d": "Feminine presenting person, regardless of gender identity"}, "andro": {"c": "Character Identity", "d": "Androgynous presenting person, regardless of gender identity"}, "genderfluid": {"c": "Character Identity", "d": "Characters whose gender identity changes"}, "gender_norms": {"c": "Character Identity", "d": "Characters who explore, challenge, or otherwise engage with gender as a social construct"}, "multiple_genders": {"c": "Character Identity", "d": "Cast contains more than one gender, great for ensemble bots with diverse representation"}, "any_pov": {"c": "Point of View", "d": "Content inclusive and accessible to all readers"}, "male_pov": {"c": "Point of View", "d": "Content from masculine perspectives"}, "fem_pov": {"c": "Point of View", "d": "Content from feminine perspectives"}, "nb_pov": {"c": "Point of View", "d": "Content for non-binary users perspective and experiences"}, "poc_user": {"c": "Point of View", "d": "Content for people of color users perspective and experiences"}, "plus_size_user": {"c": "Point of View", "d": "Content for plus-sized users perspective and experiences"}, "disabled_user": {"c": "Point of View", "d": "Content for disabled users perspective and experiences"}, "trans_pov": {"c": "Point of View", "d": "Content for trans perspectives and experiences"}, "intersex_pov": {"c": "Point of View", "d": "Content for intersex perspectives and experiences"}, "demi_pov": {"c": "Point of View", "d": "Content for demi-human perspectives and experiences"}, "monster_pov": {"c": "Point of View", "d": "Content from a monster's perspective"}, "villain_pov": {"c": "Point of View", "d": "Content from a villain's perspective"}, "good_person_pov": {"c": "Point of View", "d": "Content from a hero/good person perspective (counterpart to VillainPOV)"}, "non_human_pov": {"c": "Point of View", "d": "Content from a non-human/creature perspective"}, "older_user": {"c": "Point of View", "d": "For bots designed with user being an older person in mind (40s and above)"}, "injured_user": {"c": "Point of View", "d": "Roleplay starts with user sick or injured"}, "tall_user": {"c": "Point of View", "d": "For users that are really tall (7ft or more)"}, "short_user": {"c": "Point of View", "d": "For users that are really short (Below 5ft)"}, "victim_pov": {"c": "Point of View", "d": "Content told from a victim's perspective"}, "second_person_pov": {"c": "Point of View", "d": "Narration addresses the reader as 'you'"}, "third_person_pov": {"c": "Point of View", "d": "External narration using he/she/they"}, "first_person_pov": {"c": "Point of View", "d": "Character's narrative uses 'I'"}, "mlm": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to men"}, "wlw": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to women"}, "m4a": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to any gender"}, "w4a": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to any gender"}, "m4nb": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to non-binary"}, "w4nb": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to non-binary"}, "m4w": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to women"}, "w4m": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to men"}, "m4t": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to trans"}, "w4t": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to trans"}, "nb4m": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to men"}, "nb4w": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to women"}, "nb4a": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to any gender"}, "nb4nb": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to non-binary"}, "t4m": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to men"}, "t4w": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to women"}, "t4t": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to trans"}, "t4a": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to any gender"}, "t4nb": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to non-binary"}, "bi": {"c": "Sexual & Romantic Orientation", "d": "Characters attracted to more than one gender"}, "pansexual": {"c": "Sexual & Romantic Orientation", "d": "Characters attracted to people regardless of gender"}, "asexual": {"c": "Sexual & Romantic Orientation", "d": "Characters who experience little to no sexual attraction"}, "demisexual": {"c": "Sexual & Romantic Orientation", "d": "Characters who only experience sexual attraction after forming an emotional bond"}, "aromantic": {"c": "Sexual & Romantic Orientation", "d": "Characters who experience little to no romantic attraction"}, "queer": {"c": "Sexual & Romantic Orientation", "d": "Sexuality or identity that is harder to label; umbrella term for diverse orientations"}, "closeted": {"c": "Sexual & Romantic Orientation", "d": "Characters secretly hiding their true sexuality or gender identity from those around them"}, "dom": {"c": "Relationship Structure & Dynamics", "d": "Dominant companions in power dynamics"}, "sub": {"c": "Relationship Structure & Dynamics", "d": "Submissive companions in power dynamics"}, "switch": {"c": "Relationship Structure & Dynamics", "d": "Companions that can switch between dominant and submissive roles"}, "multiple": {"c": "Relationship Structure & Dynamics", "d": "Stories with polyamorous or multiple-companion dynamics"}, "vanilla": {"c": "Relationship Structure & Dynamics", "d": "Stories with traditional romantic dynamics"}, "bdsm": {"c": "Relationship Structure & Dynamics", "d": "Stories exploring power dynamics, bondage, discipline and consensual kink"}, "ntr": {"c": "Relationship Structure & Dynamics", "d": "Stories involving infidelity, cuckoldry, or cheating"}, "unestablished_relationship": {"c": "Relationship Structure & Dynamics", "d": "Stories where relationships are developing or undefined"}, "contractual_relationship": {"c": "Relationship Structure & Dynamics", "d": "Relationships bound by formal agreement - contracts, obligations, or arranged terms"}, "qpr": {"c": "Relationship Structure & Dynamics", "d": "Queer Platonic Relationship - an intimate, committed relationship that is not romantic in nature"}, "sugar_parent": {"c": "Relationship Structure & Dynamics", "d": "Relationship dynamic where one partner provides financial support in exchange for companionship"}, "platonic": {"c": "Relationship Structure & Dynamics", "d": "Non-romantic relationships focused on friendship"}, "step_sibling": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving step-siblings"}, "neighbor": {"c": "Relationship Structure & Dynamics", "d": "Relationships between people living next to each other"}, "roommate": {"c": "Relationship Structure & Dynamics", "d": "Relationships between people sharing living quarters"}, "spouse": {"c": "Relationship Structure & Dynamics", "d": "Relationships between married partners"}, "step_parent": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving step-parents"}, "lover": {"c": "Relationship Structure & Dynamics", "d": "Romantic partners in established relationships"}, "childhood_friend": {"c": "Relationship Structure & Dynamics", "d": "Relationships with friends from childhood"}, "butler": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving a servant or household staff member"}, "senpai": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving a senior or older companion"}, "kouhai": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving a junior or younger companion"}, "power_dynamics": {"c": "Relationship Structure & Dynamics", "d": "Content involving dominance and submission in a consensual context"}, "age_gap": {"c": "Relationship Structure & Dynamics", "d": "Content involving a significant age difference between companions"}, "ex": {"c": "Relationship Structure & Dynamics", "d": "Content involving former romantic partners or relationships"}, "cheating": {"c": "Relationship Structure & Dynamics", "d": "Content involving infidelity. Different from NTR in that it doesn't involve cuckoldry."}, "unrequited_love": {"c": "Relationship Structure & Dynamics", "d": "One-sided romantic feelings that aren't reciprocated"}, "forbidden_love": {"c": "Relationship Structure & Dynamics", "d": "Content involving love that is prohibited or taboo"}, "soulmate": {"c": "Relationship Structure & Dynamics", "d": "Characters bound by fate, destiny, or a supernatural bond"}, "boss": {"c": "Relationship Structure & Dynamics", "d": "Content involving a boss-employee relationship dynamic"}, "harem": {"c": "Relationship Structure & Dynamics", "d": "Relationship structures featuring one focal partner with multiple romantic interests"}, "concubine": {"c": "Relationship Structure & Dynamics", "d": "Historical or hierarchical companion in a secondary spouse/consort role"}, "captive": {"c": "Relationship Structure & Dynamics", "d": "Scenarios where someone is held against will"}, "dark_romance": {"c": "Relationship Structure & Dynamics", "d": "Toxic, intense, and/or abusive love scenarios"}, "best_friend": {"c": "Relationship Structure & Dynamics", "d": "Close friend, long-time companion, or confidant"}, "taken": {"c": "Relationship Structure & Dynamics", "d": "Characters already in committed relationship with someone not User"}, "colleague": {"c": "Relationship Structure & Dynamics", "d": "Person with mostly professional relationship"}, "crush": {"c": "Relationship Structure & Dynamics", "d": "Passionate, romantic attraction to someone not their partner"}, "fwb": {"c": "Relationship Structure & Dynamics", "d": "Friends with benefits; casual sexual relationships without romance"}, "hookup": {"c": "Relationship Structure & Dynamics", "d": "Intimacy without romance (one-time, distinct from FWB)"}, "rejection": {"c": "Relationship Structure & Dynamics", "d": "Refusal or dismissal of someone's feelings/proposals"}, "lovers_to_enemies": {"c": "Relationship Structure & Dynamics", "d": "Relationships shift from romance to hostility"}, "savior": {"c": "Relationship Structure & Dynamics", "d": "One character rescues another (from bullies, jail, bad situations)"}, "partner": {"c": "Relationship Structure & Dynamics", "d": "Fellow cop, firefighter, soldier; someone you trust to watch your back"}, "teammate": {"c": "Relationship Structure & Dynamics", "d": "Someone on the same team, whether sports, esports, military squad, or any shared-goal group"}, "party_member": {"c": "Relationship Structure & Dynamics", "d": "Fellow adventurers in your party, bonded through dungeon crawls, quests, and shared danger"}, "objectification": {"c": "Relationship Structure & Dynamics", "d": "Treated as less than human and more like something to be owned"}, "stranger": {"c": "Relationship Structure & Dynamics", "d": "Encounters with someone completely unknown, no prior connection or history"}, "pbf": {"c": "Relationship Structure & Dynamics", "d": "Romantic or sexual tension with a parent's close friend from the older generation"}, "parent_in_law": {"c": "Relationship Structure & Dynamics", "d": "Complicated or romantic dynamics with a spouse's mother or father"}, "top": {"c": "Relationship Structure & Dynamics", "d": "Characters who exclusively take the dominant or penetrative role in intimacy"}, "bottom": {"c": "Relationship Structure & Dynamics", "d": "Characters who exclusively take the receptive or submissive role in intimacy"}, "soft_dom": {"c": "Relationship Structure & Dynamics", "d": "Dominant but leads with care, patience and a gentle touch"}, "selfcest": {"c": "Relationship Structure & Dynamics", "d": "Romantic/sexual relationship with a clone, AU version, or time-travelling self"}, "enemies_to_lovers": {"c": "Plot Devices & Structure", "d": "Stories of conflict transforming into romance"}, "friends_to_lovers": {"c": "Plot Devices & Structure", "d": "Stories where friendship evolves into romantic relationship"}, "love_triangle": {"c": "Plot Devices & Structure", "d": "Stories involving three people in a complicated romantic dynamic"}, "forced_proximity": {"c": "Plot Devices & Structure", "d": "Stories where characters are forced to stay close together"}, "arranged_marriage": {"c": "Plot Devices & Structure", "d": "Marriages planned by families, politics, or duty rather than personal choice"}, "fake_relationship": {"c": "Plot Devices & Structure", "d": "Partners pretending to date or be together for ulterior motives"}, "pregnant": {"c": "Plot Devices & Structure", "d": "Scenarios involving pregnancy"}, "oc": {"c": "Plot Devices & Structure", "d": "Original user-created characters"}, "scenario": {"c": "Plot Devices & Structure", "d": "A companion built around a specific situation or premise rather than a character"}, "interactive_rpg": {"c": "Plot Devices & Structure", "d": "This companion functions as an interactive roleplaying game"}, "amnesia": {"c": "Plot Devices & Structure", "d": "Stories featuring memory loss as a plot device"}, "gender_bend": {"c": "Plot Devices & Structure", "d": "Stories featuring characters transformed into the opposite gender"}, "time_travel": {"c": "Plot Devices & Structure", "d": "Content where characters move between different time periods"}, "chosen_one": {"c": "Plot Devices & Structure", "d": "Narratives with specially selected characters destined for greatness"}, "prophecy": {"c": "Plot Devices & Structure", "d": "Content involving predicted events or destinies"}, "quest": {"c": "Plot Devices & Structure", "d": "Stories structured around journeys to achieve specific goals"}, "tournament": {"c": "Plot Devices & Structure", "d": "Narratives centered on competitions or formalized contests"}, "found_family": {"c": "Plot Devices & Structure", "d": "Stories about non-biological family bonds formed through circumstance"}, "ensemble_cast": {"c": "Plot Devices & Structure", "d": "Stories featuring multiple main characters of equal importance"}, "unreliable_narrator": {"c": "Plot Devices & Structure", "d": "Content told from the perspective of a character whose credibility is questionable"}, "colleagues_to_lovers": {"c": "Plot Devices & Structure", "d": "Stories where professional relationships evolve into romance"}, "curse": {"c": "Plot Devices & Structure", "d": "Stories where character/setting is under supernatural harm/misfortune"}, "mistaken_identity": {"c": "Plot Devices & Structure", "d": "Characters led to believe someone's identity is another's"}, "chance_meeting": {"c": "Plot Devices & Structure", "d": "Stories about characters who just happen to run into each other"}, "kidnapping": {"c": "Plot Devices & Structure", "d": "Scenario involving forced abduction and confinement"}, "hostage": {"c": "Plot Devices & Structure", "d": "Scenario where person is held against their will"}, "lore_heavy": {"c": "Plot Devices & Structure", "d": "Companions deeply tied to the lore of their world; may require reading canon material"}, "passional_crime": {"c": "Plot Devices & Structure", "d": "A violent crime committed in a sudden heat of passion or rage"}, "sexual_awakening": {"c": "Plot Devices & Structure", "d": "Characters discovering or coming to terms with a previously unexplored side of their sexuality"}, "parallel_universe": {"c": "Plot Devices & Structure", "d": "Stories featuring alternate versions of reality or different dimensions that exist alongside our own"}, "portal": {"c": "Plot Devices & Structure", "d": "Stories where characters are transported or reincarnated into a different world, often with fantasy or game-like elements"}, "smut": {"c": "Story Genres & Styles", "d": "Content with mature themes and consensual intimacy"}, "fluff": {"c": "Story Genres & Styles", "d": "Heartwarming content celebrating joy and comfort"}, "angst": {"c": "Story Genres & Styles", "d": "Stories heavy with emotional pain, inner conflict, and suffering"}, "comfort": {"c": "Story Genres & Styles", "d": "Content focused on providing emotional support and reassurance"}, "hurt_comfort": {"c": "Story Genres & Styles", "d": "Content featuring emotional or physical hurt followed by comfort and care"}, "hurt_no_comfort": {"c": "Story Genres & Styles", "d": "Content featuring emotional or physical hurt without resolution or comfort"}, "comedy": {"c": "Story Genres & Styles", "d": "Content focused on humor and joy"}, "horror": {"c": "Story Genres & Styles", "d": "Stories designed to frighten, unsettle, or create dread"}, "fantasy": {"c": "Story Genres & Styles", "d": "Content with magical and otherworldly elements"}, "adventure": {"c": "Story Genres & Styles", "d": "Content focused on exploration and discovery"}, "action": {"c": "Story Genres & Styles", "d": "Content with dynamic and exciting sequences"}, "romance": {"c": "Story Genres & Styles", "d": "Content focused on romantic relationships and emotions"}, "slice_of_life": {"c": "Story Genres & Styles", "d": "Content depicting ordinary day-to-day experiences"}, "noir": {"c": "Story Genres & Styles", "d": "Stories with dark, cynical themes and stylized crime drama"}, "urban_fantasy": {"c": "Story Genres & Styles", "d": "Stories blending magical elements with modern city settings"}, "magical": {"c": "Story Genres & Styles", "d": "Stories where magic, spells, and enchantment are central to the world"}, "sci_fi": {"c": "Story Genres & Styles", "d": "Stories set in futuristic or technologically advanced worlds"}, "mystery": {"c": "Story Genres & Styles", "d": "Content involving secrets, puzzles, or unsolved questions"}, "conspiracy": {"c": "Story Genres & Styles", "d": "Stories featuring hidden plots and secret schemes"}, "heist": {"c": "Story Genres & Styles", "d": "Narratives about elaborate theft or complex robberies"}, "slow_burn": {"c": "Story Genres & Styles", "d": "Content where relationships develop gradually over extended periods"}, "politics": {"c": "Story Genres & Styles", "d": "Stories centered on political intrigue, governance, and power struggles"}, "religion": {"c": "Story Genres & Styles", "d": "Content exploring faith and spirituality"}, "philosophy": {"c": "Story Genres & Styles", "d": "Content examining life's big questions"}, "coming_of_age": {"c": "Story Genres & Styles", "d": "Stories focusing on growth and transition from youth to adulthood"}, "redemption": {"c": "Story Genres & Styles", "d": "Stories about characters seeking forgiveness or atonement"}, "revenge": {"c": "Story Genres & Styles", "d": "Narratives centered on retribution for past wrongs"}, "justice": {"c": "Story Genres & Styles", "d": "Content exploring fairness, morality, and consequences"}, "betrayal": {"c": "Story Genres & Styles", "d": "Stories involving deception and broken trust"}, "sacrifice": {"c": "Story Genres & Styles", "d": "Narratives featuring characters giving up something valuable"}, "survival": {"c": "Story Genres & Styles", "d": "Content focusing on perseverance against difficult circumstances"}, "identity": {"c": "Story Genres & Styles", "d": "Stories exploring who characters are and their sense of self"}, "freedom": {"c": "Story Genres & Styles", "d": "Content examining liberation and autonomy"}, "otome": {"c": "Story Genres & Styles", "d": "Content involving female-centric romantic relationships"}, "supernatural": {"c": "Story Genres & Styles", "d": "Stories featuring paranormal phenomena - ghosts, cryptids, unexplained events"}, "psychological": {"c": "Story Genres & Styles", "d": "Stories exploring the mind - mental illness, manipulation, paranoia, or psychological tension"}, "thriller": {"c": "Story Genres & Styles", "d": "Content involving suspense, danger, and unexpected twists"}, "urban_fiction": {"c": "Story Genres & Styles", "d": "Gritty, street-level narratives set in modern city environments"}, "wuxia": {"c": "Story Genres & Styles", "d": "Martial arts heroes and mystical cultivation in Chinese-inspired settings"}, "non_canonical_au": {"c": "Story Genres & Styles", "d": "Stories in established universe not related to/changed from original"}, "canon_compliant": {"c": "Story Genres & Styles", "d": "Roleplays that stay true to media source with canon references"}, "sfw": {"c": "Story Genres & Styles", "d": "Stories not designed to be sexually motivated (for spicy-tagged bots)"}, "war": {"c": "Story Genres & Styles", "d": "Narratives set during armed conflicts"}, "peace": {"c": "Story Genres & Styles", "d": "Stories focusing on harmony and conflict resolution"}, "contemporary": {"c": "Locations and Eras", "d": "Content set in the present day with realistic elements"}, "renaissance": {"c": "Locations and Eras", "d": "Stories set in the cultural rebirth period of 14th-17th century Europe"}, "prison": {"c": "Locations and Eras", "d": "Stories set in prison or correctional facilities"}, "victorian": {"c": "Locations and Eras", "d": "Stories set in the Victorian era (1837-1901)"}, "college": {"c": "Locations and Eras", "d": "Stories set in higher education environments"}, "hospital": {"c": "Locations and Eras", "d": "Stories set in medical facilities and healthcare environments"}, "library": {"c": "Locations and Eras", "d": "Stories set in libraries and archives of knowledge"}, "tavern_inn": {"c": "Locations and Eras", "d": "Stories set in traditional inns, taverns, and guesthouses"}, "hotel": {"c": "Locations and Eras", "d": "Stories set in hotels and modern accommodation facilities"}, "mansion": {"c": "Locations and Eras", "d": "Stories set in large, luxurious estates and grand homes"}, "home": {"c": "Locations and Eras", "d": "Stories set in domestic home environments"}, "island": {"c": "Locations and Eras", "d": "Stories set on islands, both tropical and remote"}, "bar": {"c": "Locations and Eras", "d": "Stories set in modern bars and drinking establishments"}, "club": {"c": "Locations and Eras", "d": "Stories set in nightclubs and dance venues"}, "circus": {"c": "Locations and Eras", "d": "Stories set in circuses and traveling entertainment shows"}, "holidays": {"c": "Locations and Eras", "d": "Stories centered around holiday celebrations and seasonal festivities"}, "small_town": {"c": "Locations and Eras", "d": "Stories set in tight-knit rural or suburban communities"}, "gym": {"c": "Locations and Eras", "d": "Stories set in fitness centers and athletic training environments"}, "workplace": {"c": "Locations and Eras", "d": "Stories set in professional work environments"}, "cyberpunk": {"c": "Locations and Eras", "d": "Stories set in high-tech, low-life dystopian futures"}, "steampunk": {"c": "Locations and Eras", "d": "Stories set in Victorian-inspired worlds with steam-powered technology"}, "solarpunk": {"c": "Locations and Eras", "d": "Stories set in sustainable futures powered by renewable energy"}, "post_apocalyptic": {"c": "Locations and Eras", "d": "Stories set after a global catastrophe or civilization collapse"}, "medieval": {"c": "Locations and Eras", "d": "Stories set in middle ages-inspired settings"}, "space": {"c": "Locations and Eras", "d": "Stories set in outer space or on other planets"}, "underwater": {"c": "Locations and Eras", "d": "Stories set beneath the ocean or in aquatic environments"}, "military": {"c": "Locations and Eras", "d": "Stories set in military or armed forces environments"}, "wild_west": {"c": "Locations and Eras", "d": "Stories set in the American frontier era"}, "historical": {"c": "Locations and Eras", "d": "Stories set in past historical periods or ancient times"}, "historical_china": {"c": "Locations and Eras", "d": "Stories set in ancient or imperial China"}, "vintage": {"c": "Locations and Eras", "d": "Stories set in the 1900s era with classic, retro aesthetics"}, "y2k": {"c": "Locations and Eras", "d": "Stories set in the early 2000s with millennium-era aesthetics"}, "online": {"c": "Locations and Eras", "d": "Stories set mainly over internet or digital settings"}, "wilderness": {"c": "Locations and Eras", "d": "Stories set in remote outdoors / nature biomes (forests, savannahs, plains, tundras)"}, "desert": {"c": "Locations and Eras", "d": "Stories set in desert or arid land settings"}, "laboratory": {"c": "Locations and Eras", "d": "Stories set within laboratory or research facilities"}, "eatery": {"c": "Locations and Eras", "d": "Stories set in restaurant, fast food, or meal service areas"}, "temple_church": {"c": "Locations and Eras", "d": "Stories set within places of religious worship"}, "party_festival": {"c": "Locations and Eras", "d": "Stories set at social gathering or celebration"}, "beach": {"c": "Locations and Eras", "d": "Stories set on sandy shores with sun, surf, boardwalks, and coastal vibes"}, "remote_cabin": {"c": "Locations and Eras", "d": "Stories set in remote areas like cabin in woods or lake house"}, "farm_setting": {"c": "Locations and Eras", "d": "Working with the land, managing natural resources, raising animals, cultivating crops"}, "regency_era": {"c": "Locations and Eras", "d": "Content from 1795–1837 in Britain; high-fashion, neoclassical architecture, strict social etiquette"}, "mpreg": {"c": "World-Building Concepts", "d": "World setting featuring male pregnancy"}, "omegaverse": {"c": "World-Building Concepts", "d": "World setting with alpha/beta/omega dynamics"}, "bdsm_verse": {"c": "World-Building Concepts", "d": "World setting where dom/sub/switch dynamics are a fundamental part of society"}, "guide_sentinel": {"c": "World-Building Concepts", "d": "World setting featuring enhanced sensory guides and their protectors"}, "dystopian": {"c": "World-Building Concepts", "d": "Content set in oppressive, troubled future societies"}, "utopian": {"c": "World-Building Concepts", "d": "Content set in idealized, perfect future societies"}, "disabled": {"c": "Character Archetypes & Personalities", "d": "Companions with a physical or mental condition that limits their movements, senses, or activities"}, "neurodivergent": {"c": "Character Archetypes & Personalities", "d": "Companions who are neurodivergent, including autism, ADHD, and other neurological differences"}, "hero": {"c": "Character Archetypes & Personalities", "d": "Protagonists who fight for good, protect others, or champion a cause"}, "villain": {"c": "Character Archetypes & Personalities", "d": "Antagonists who oppose the protagonist - from cunning schemers to outright evil"}, "villainess": {"c": "Character Archetypes & Personalities", "d": "Female antagonists and morally grey characters"}, "anti_hero": {"c": "Character Archetypes & Personalities", "d": "Protagonists with questionable morals or unconventional methods"}, "royalty": {"c": "Character Archetypes & Personalities", "d": "Characters in positions of privilege and power"}, "nobility": {"c": "Character Archetypes & Personalities", "d": "Characters belonging to the noble class or aristocracy"}, "duke_duchess": {"c": "Character Archetypes & Personalities", "d": "Characters holding the title of duke or duchess"}, "pirate": {"c": "Character Archetypes & Personalities", "d": "Seafaring outlaws, treasure hunters, and swashbucklers"}, "dilf": {"c": "Character Archetypes & Personalities", "d": "Content featuring an attractive older male character, often a father figure"}, "milf": {"c": "Character Archetypes & Personalities", "d": "Content featuring an attractive older female character, often a mother figure"}, "emo": {"c": "Character Archetypes & Personalities", "d": "Characters with dark, emotional, and introspective personalities"}, "murderer": {"c": "Character Archetypes & Personalities", "d": "Characters who have committed homicide"}, "jock": {"c": "Character Archetypes & Personalities", "d": "Athletic characters often associated with sports"}, "nerd": {"c": "Character Archetypes & Personalities", "d": "Characters who are intellectual and nerdy"}, "bimbo_himbo": {"c": "Character Archetypes & Personalities", "d": "Attractive characters who appear superficial but have good hearts"}, "bully": {"c": "Character Archetypes & Personalities", "d": "Characters who intimidate or mistreat others"}, "rival": {"c": "Character Archetypes & Personalities", "d": "Characters in competition with each other"}, "virgin": {"c": "Character Archetypes & Personalities", "d": "Characters who haven't experienced sexual intimacy"}, "promiscuous": {"c": "Character Archetypes & Personalities", "d": "Characters with multiple sexual partners or casual attitudes toward sex"}, "filthy": {"c": "Character Archetypes & Personalities", "d": "Content featuring dirty, unhygienic, or unclean characters"}, "wealthy": {"c": "Character Archetypes & Personalities", "d": "Characters with significant financial resources"}, "healer": {"c": "Character Archetypes & Personalities", "d": "Characters who specialize in healing, whether magical or medical"}, "rogue": {"c": "Character Archetypes & Personalities", "d": "Stealthy, cunning characters skilled in trickery or thievery"}, "warrior": {"c": "Character Archetypes & Personalities", "d": "Characters skilled in combat and battle"}, "mage": {"c": "Character Archetypes & Personalities", "d": "Characters with magical abilities or training"}, "tsundere": {"c": "Character Archetypes & Personalities", "d": "Characters who mask affection with hostility before revealing their true feelings"}, "yandere": {"c": "Character Archetypes & Personalities", "d": "Characters whose love manifests in obsessive or dangerous ways"}, "kuudere": {"c": "Character Archetypes & Personalities", "d": "Characters who are emotionally reserved but caring underneath"}, "dandere": {"c": "Character Archetypes & Personalities", "d": "Quiet, shy characters who open up over time"}, "deredere": {"c": "Character Archetypes & Personalities", "d": "Sweet, affectionate characters who are openly loving"}, "himedere": {"c": "Character Archetypes & Personalities", "d": "Characters who act like royalty and expect to be treated as such"}, "kamidere": {"c": "Character Archetypes & Personalities", "d": "Arrogant characters with a god complex or superiority attitude"}, "bakadere": {"c": "Character Archetypes & Personalities", "d": "Silly, clumsy characters who are often naive or oblivious"}, "kakkodere": {"c": "Character Archetypes & Personalities", "d": "Characters who are normally cool and confident, but become cute, affectionate, and deredere for their love interest"}, "introverted": {"c": "Character Archetypes & Personalities", "d": "Reserved characters who gain energy from solitude"}, "extroverted": {"c": "Character Archetypes & Personalities", "d": "Outgoing characters who gain energy from social interactions"}, "anxious": {"c": "Character Archetypes & Personalities", "d": "Characters who experience worry, nervousness, or unease"}, "ambitious": {"c": "Character Archetypes & Personalities", "d": "Characters with strong desire and determination to achieve goals"}, "incel": {"c": "Character Archetypes & Personalities", "d": "Involuntarily celibate characters consumed by romantic or sexual frustration"}, "stalker": {"c": "Character Archetypes & Personalities", "d": "Characters who are a little *too* obsessive"}, "needy_clingy": {"c": "Character Archetypes & Personalities", "d": "Personalities marked by intense attachment and reassurance seeking"}, "biker": {"c": "Character Archetypes & Personalities", "d": "Outlaw club or motorcycle culture archetype"}, "ninja_samurai": {"c": "Character Archetypes & Personalities", "d": "Traditional Japanese warriors and stealth fighters"}, "esl": {"c": "Character Archetypes & Personalities", "d": "Non‑native speaker character trait affecting language and cadence"}, "grumpy": {"c": "Character Archetypes & Personalities", "d": "Characters with a consistently irritable or bad-tempered personality"}, "brat": {"c": "Character Archetypes & Personalities", "d": "Characters who are defiant, playfully disobedient, and enjoy pushing boundaries"}, "masochist": {"c": "Character Archetypes & Personalities", "d": "Characters who derive pleasure from receiving pain or humiliation"}, "sadist": {"c": "Character Archetypes & Personalities", "d": "Characters who derive pleasure from inflicting pain or humiliation"}, "person_next_door": {"c": "Character Archetypes & Personalities", "d": "Approachable, relatable characters with an everyday charm"}, "gentle_giant": {"c": "Character Archetypes & Personalities", "d": "Large, imposing characters with a surprisingly soft and caring nature"}, "reluctant_hero": {"c": "Character Archetypes & Personalities", "d": "Characters who are thrust into heroic roles despite their own resistance"}, "mastermind": {"c": "Character Archetypes & Personalities", "d": "Brilliant strategists who orchestrate complex plans and manipulations"}, "well_intentioned_extremist": {"c": "Character Archetypes & Personalities", "d": "Characters who pursue noble goals through morally questionable methods"}, "daredevil": {"c": "Character Archetypes & Personalities", "d": "Thrill-seekers who live for danger and take extreme risks"}, "mean_catty": {"c": "Character Archetypes & Personalities", "d": "Sharp-tongued, petty, and quick to tear others down"}, "perverted": {"c": "Character Archetypes & Personalities", "d": "Lecherous and dirty-minded characters"}, "sensitive": {"c": "Character Archetypes & Personalities", "d": "Emotionally/physically over-reactive characters"}, "loyal": {"c": "Character Archetypes & Personalities", "d": "Devoted and faithful characters"}, "manipulator": {"c": "Character Archetypes & Personalities", "d": "Scheming characters who gaslight and control"}, "corrupt": {"c": "Character Archetypes & Personalities", "d": "Morally depraved characters"}, "mentally_ill": {"c": "Character Archetypes & Personalities", "d": "Characters with any mental illness (includes delusional)"}, "cosplayer": {"c": "Character Archetypes & Personalities", "d": "Characters who dress as other media characters as hobby"}, "two_faced": {"c": "Character Archetypes & Personalities", "d": "Present façade while hiding true personality"}, "stoner": {"c": "Character Archetypes & Personalities", "d": "Characters/settings involving cannabis use or stoner culture"}, "widowed": {"c": "Character Archetypes & Personalities", "d": "Someone who lost their partner"}, "divorced": {"c": "Character Archetypes & Personalities", "d": "Characters navigating life after the end of a marriage"}, "clown": {"c": "Character Archetypes & Personalities", "d": "Individuals who work as clowns, jesters, or similar entertainment"}, "sassy": {"c": "Character Archetypes & Personalities", "d": "Confident, flamboyant, \"extra\", but not malicious/mean-spirited"}, "drag_crossdress": {"c": "Character Archetypes & Personalities", "d": "Wearing clothing associated with another gender"}, "tomboy": {"c": "Character Archetypes & Personalities", "d": "Female character who enjoys typically masculine activities and style"}, "femboy": {"c": "Character Archetypes & Personalities", "d": "Male character who enjoys typically feminine activities and style"}, "gyaru": {"c": "Character Archetypes & Personalities", "d": "Tanned skin, bleached/dyed hair, glamorous fashion and makeup, rebellious attitude"}, "popular": {"c": "Character Archetypes & Personalities", "d": "Characters who command social authority and attention within their peer group"}, "genki": {"c": "Character Archetypes & Personalities", "d": "Character has excessive amounts of energy and enthusiasm"}, "emotionally_unavailable": {"c": "Character Archetypes & Personalities", "d": "Detached and unwilling to connect"}, "hedonistic": {"c": "Character Archetypes & Personalities", "d": "Lives for excess, constantly chasing pleasure, luxury, and indulgence"}, "charismatic": {"c": "Character Archetypes & Personalities", "d": "Effortlessly charming characters who draw others in with magnetic personality"}, "telepath": {"c": "Character Archetypes & Personalities", "d": "Character is able to read minds"}, "empath": {"c": "Character Archetypes & Personalities", "d": "Deeply attuned to the emotions of others on an instinctual, near-supernatural level"}, "unreliable": {"c": "Character Archetypes & Personalities", "d": "Wishy-washy, often say what they don't mean"}, "selfish": {"c": "Character Archetypes & Personalities", "d": "Think of themselves above all others"}, "empathetic": {"c": "Character Archetypes & Personalities", "d": "Connect to others on deep emotional level"}, "playful": {"c": "Character Archetypes & Personalities", "d": "Enjoy playing around and teasing"}, "independent": {"c": "Character Archetypes & Personalities", "d": "Self-sufficient, don't need to rely on others"}, "celebrity": {"c": "Professions", "d": "Public figures and their experiences"}, "detective": {"c": "Professions", "d": "Characters who investigate and seek truth"}, "assistant": {"c": "Professions", "d": "Personal assistants or secretaries who support their employers"}, "executive": {"c": "Professions", "d": "Characters in high-level management positions"}, "business_owner": {"c": "Professions", "d": "Characters who own and operate their own businesses or enterprises"}, "o_l": {"c": "Professions", "d": "Female white-collar office workers - a common character archetype in Japanese media"}, "content_creator": {"c": "Professions", "d": "Digital creators and online personalities"}, "vtuber": {"c": "Professions", "d": "Virtual YouTubers who stream and create content as anime avatars"}, "idol": {"c": "Professions", "d": "Performers who entertain and inspire fans"}, "performer": {"c": "Professions", "d": "Artists who entertain audiences through various forms of performance"}, "mafia": {"c": "Professions", "d": "Characters involved in organized crime"}, "gangster": {"c": "Professions", "d": "Characters involved in street-level criminal activities and urban gangs"}, "musician": {"c": "Professions", "d": "Artists who create and perform music"}, "teacher_professor": {"c": "Professions", "d": "Educators who impart knowledge and skills"}, "student": {"c": "Professions", "d": "Individuals pursuing education and learning"}, "nurse": {"c": "Professions", "d": "Healthcare professionals who provide care and support"}, "doctor": {"c": "Professions", "d": "Medical professionals who diagnose and treat illnesses"}, "police_officer": {"c": "Professions", "d": "Law enforcement officers who maintain public safety"}, "firefighter": {"c": "Professions", "d": "Emergency responders who combat fires and rescue people"}, "pilot": {"c": "Professions", "d": "Aviation professionals who operate aircraft"}, "soldier": {"c": "Professions", "d": "Military personnel who serve and protect"}, "chef": {"c": "Professions", "d": "Culinary artists who create and prepare food"}, "athlete": {"c": "Professions", "d": "Sports professionals who compete and excel"}, "lawyer": {"c": "Professions", "d": "Legal professionals who represent and advise clients"}, "politician": {"c": "Professions", "d": "Public servants who govern and make decisions"}, "scientist": {"c": "Professions", "d": "Researchers who explore and discover new knowledge"}, "engineer": {"c": "Professions", "d": "Professionals who design and build structures and systems"}, "artist": {"c": "Professions", "d": "Creative individuals who express themselves through art"}, "writer": {"c": "Professions", "d": "Authors who create and share written works"}, "journalist": {"c": "Professions", "d": "Reporters who gather and disseminate news and information"}, "model": {"c": "Professions", "d": "Individuals who showcase fashion and products"}, "actor": {"c": "Professions", "d": "Performers who portray characters in various media"}, "intern": {"c": "Professions", "d": "Individuals gaining experience and training in a profession"}, "librarian": {"c": "Professions", "d": "Professionals who manage and organize information resources"}, "plumber": {"c": "Professions", "d": "Skilled workers who install and repair plumbing systems"}, "cowboy_cowgirl": {"c": "Professions", "d": "Individuals associated with ranching and the American West"}, "maid_butler": {"c": "Professions", "d": "Domestic workers who provide cleaning and personal services"}, "bartender": {"c": "Professions", "d": "Professionals who mix and serve alcoholic beverages"}, "waiter_waitress": {"c": "Professions", "d": "Service professionals who take orders and serve food"}, "stripper": {"c": "Professions", "d": "Performers who entertain through dance and striptease"}, "porn_star": {"c": "Professions", "d": "Adult film actors who perform in explicit content"}, "hikikomori": {"c": "Professions", "d": "Individuals who withdraw from society and live in isolation"}, "unemployed": {"c": "Professions", "d": "Individuals without a job or source of income"}, "homeless": {"c": "Professions", "d": "Individuals without a permanent place to live"}, "bodyguard": {"c": "Professions", "d": "Professionals who provide personal protection and security"}, "viking": {"c": "Professions", "d": "Norse-inspired seafaring warriors, raiders, and explorers"}, "adventurer": {"c": "Professions", "d": "Bold explorers who seek treasure, glory, and excitement"}, "hunter": {"c": "Professions", "d": "Characters who track and hunt prey, game, or targets"}, "blue_collar": {"c": "Professions", "d": "Those who typically perform physical labor"}, "white_collar": {"c": "Professions", "d": "Those who typically work in an office"}, "pink_collar": {"c": "Professions", "d": "Those who work roles typically associated with women"}, "pro_dom": {"c": "Professions", "d": "Professionals who provide domination services"}, "retail": {"c": "Professions", "d": "Those who work in retail stores"}, "cashier": {"c": "Professions", "d": "Those who handle money and transactions"}, "surfer": {"c": "Professions", "d": "Those who embody the \"go with the flow\" mentality"}, "servant": {"c": "Professions", "d": "Those who serve others in various capacities"}, "special_agents": {"c": "Professions", "d": "Law enforcement officers with specialized training"}, "spy": {"c": "Professions", "d": "Covert operative involved in intelligence gathering and infiltration"}, "part_timer": {"c": "Professions", "d": "Character working limited hours, side job, or flexible shifts"}, "pimp": {"c": "Professions", "d": "Manager within the sex trade overseeing workers and clientele"}, "priest": {"c": "Professions", "d": "Religious clergy figure offering rites, guidance, or counsel"}, "florist": {"c": "Professions", "d": "Artisan who arranges and sells flowers, often with a gentle demeanor"}, "assassin": {"c": "Professions", "d": "Professional killer trained in stealth and lethal techniques"}, "mail_carrier": {"c": "Professions", "d": "Postal worker who delivers mail and packages to homes and businesses"}, "masseuse": {"c": "Professions", "d": "Professional who provides therapeutic massage and bodywork"}, "therapist": {"c": "Professions", "d": "Mental health professional who provides counseling and psychological support"}, "barista": {"c": "Professions", "d": "Coffee specialist who crafts specialty drinks at cafes"}, "housespouse": {"c": "Professions", "d": "Characters with stay-at-home domestic role"}, "coach": {"c": "Professions", "d": "Athletic trainers, team coaches, or personal fitness mentors"}, "fan": {"c": "Professions", "d": "Devoted admirers, superfans, or groupies fixated on someone they idolize"}, "lessor": {"c": "Professions", "d": "Characters who lease housing to tenants"}, "sex_worker": {"c": "Professions", "d": "Individuals who engage in sexual activity for monetary exchange"}, "frat_sorority": {"c": "Professions", "d": "Individuals in college Greek life organizations"}, "farmer": {"c": "Professions", "d": "Individuals who own or work on a farm"}, "mechanic": {"c": "Professions", "d": "Person working as mechanic (cars, planes, mechs, etc.)"}, "owner": {"c": "Professions", "d": "Characters who own (slave master, pet owner, etc.)"}, "pet": {"c": "Professions", "d": "Pet characters (demi-humans, etc. kept as pets)"}, "sugar_baby": {"c": "Professions", "d": "Person who receives cash in exchange for their companionship"}, "racer": {"c": "Professions", "d": "High stakes, loud engines, no mercy on the track"}, "tech": {"c": "Professions", "d": "Works in the tech sector, hackers, cyber security"}, "indentured": {"c": "Professions", "d": "Characters in a state of ownership or servitude"}, "astronaut": {"c": "Professions", "d": "Explorers, pilots, and crew venturing beyond Earth's atmosphere"}, "martial_artist": {"c": "Professions", "d": "Professional boxers, fighters, and combat sports athletes"}, "hacker": {"c": "Professions", "d": "Person who hacks into computers for work, whether legal or illegal"}, "non_human": {"c": "Species/Being Types", "d": "Characters who are not human - covers any non-human species or entity"}, "monster": {"c": "Species/Being Types", "d": "Fearsome or grotesque creatures distinct from demi-humans and furries"}, "monster_girl": {"c": "Species/Being Types", "d": "Feminine characters with monstrous or inhuman physical features"}, "demi_human": {"c": "Species/Being Types", "d": "Characters blending human and animal traits"}, "furry": {"c": "Species/Being Types", "d": "Anthropomorphic animal characters with human-like traits and personalities"}, "giant": {"c": "Species/Being Types", "d": "Characters of extraordinary size"}, "robot": {"c": "Species/Being Types", "d": "Fully artificial or mechanical beings - androids, automata, AI constructs"}, "vampire": {"c": "Species/Being Types", "d": "Blood-drinking immortals, often with supernatural powers and dark allure"}, "alien": {"c": "Species/Being Types", "d": "Extraterrestrial beings from other planets or dimensions"}, "elf": {"c": "Species/Being Types", "d": "Graceful, long-lived beings often associated with magic, beauty, or nature"}, "dragon": {"c": "Species/Being Types", "d": "Powerful mythical reptilian beings with magic and ancient wisdom"}, "zombie": {"c": "Species/Being Types", "d": "Undead beings reanimated through supernatural means"}, "orc": {"c": "Species/Being Types", "d": "Strong warrior beings often portrayed as fierce and tribal"}, "centaur": {"c": "Species/Being Types", "d": "Half-human, half-horse beings combining human intellect with equine strength"}, "goblin": {"c": "Species/Being Types", "d": "Small mischievous creatures known for cunning and trickery"}, "werewolf": {"c": "Species/Being Types", "d": "Humans who transform into wolves or wolf-like beasts, often under the full moon"}, "werekin": {"c": "Species/Being Types", "d": "People who identify as werecreatures, humans with animal forms (not just wolves)"}, "beastkin": {"c": "Species/Being Types", "d": "Humanoids with animal traits like ears, tails, or fur; part human, part beast"}, "deity": {"c": "Species/Being Types", "d": "Divine beings, gods, or goddesses with supernatural powers"}, "kemono": {"c": "Species/Being Types", "d": "Japanese-style anthropomorphic animal characters"}, "monster_boy": {"c": "Species/Being Types", "d": "Male or masculine characters with monster or supernatural features"}, "mermaid": {"c": "Species/Being Types", "d": "Mythical beings with a human upper body and a fish tail"}, "eldritch": {"c": "Species/Being Types", "d": "Cosmic or incomprehensible beings, often tied to horror and the unknown."}, "fairy": {"c": "Species/Being Types", "d": "Small, magical beings from folklore, known for enchantment and mischief."}, "fae": {"c": "Species/Being Types", "d": "Mysterious magical folk from the faerie realm, often tricky or ancient."}, "demon": {"c": "Species/Being Types", "d": "Supernatural beings from the underworld, often embodying temptation, chaos, or dark power"}, "cryptid": {"c": "Species/Being Types", "d": "Mysterious creatures from folklore and urban legends, whose existence remains unproven"}, "ghost": {"c": "Species/Being Types", "d": "Disembodied spirit or lingering presence from the afterlife"}, "kobold": {"c": "Species/Being Types", "d": "Small reptilian or draconic creatures known for their cunning and trap-making"}, "dwarf": {"c": "Species/Being Types", "d": "Stout, bearded humanoids known for mining, crafting, and fierce loyalty"}, "undead": {"c": "Species/Being Types", "d": "Creatures that have died but continue to exist through supernatural means"}, "angel": {"c": "Species/Being Types", "d": "Celestial beings associated with divine light, purity, and guidance"}, "human": {"c": "Species/Being Types", "d": "Ordinary people without supernatural, magical, or non-human traits"}, "insectoid": {"c": "Species/Being Types", "d": "Characters possessing insect-like traits"}, "tiefling": {"c": "Species/Being Types", "d": "Draconic/demonic-appearing characters"}, "demigod": {"c": "Species/Being Types", "d": "Characters descended from gods (not gods themselves)"}, "mutant": {"c": "Species/Being Types", "d": "Characters with abilities or traits arising from genetic mutation"}, "enhanced": {"c": "Species/Being Types", "d": "Characters with enhanced abilities (typically through science)"}, "shapechanger": {"c": "Species/Being Types", "d": "Characters that can change forms (usually at will)"}, "cyborg": {"c": "Species/Being Types", "d": "Character that is partially machine (distinct from fully mechanical Robot)"}, "naga": {"c": "Species/Being Types", "d": "Characters with the upper body of a human and lower body of a serpent"}, "plus_sized_bot": {"c": "Species/Being Types", "d": "Companions who are plus-sized (counterpart to existing plus_size_user)"}, "mythological": {"c": "Species/Being Types", "d": "Characters or creatures from myths, legends, and folklore"}, "futa": {"c": "Kinks & Intimate Content", "d": "Companions identifying as futanari, with both male and female traits."}, "breeding": {"c": "Kinks & Intimate Content", "d": "Content involving impregnation fantasies"}, "somnophilia": {"c": "Kinks & Intimate Content", "d": "Content involving attraction to sleeping or unconscious individuals"}, "body_worship": {"c": "Kinks & Intimate Content", "d": "Content focusing on adoration and reverence of a partner's body"}, "pet_play": {"c": "Kinks & Intimate Content", "d": "Content involving roleplaying as pets or owners in a power dynamic"}, "praise_kink": {"c": "Kinks & Intimate Content", "d": "Content focusing on verbal affirmation and positive reinforcement"}, "bondage": {"c": "Kinks & Intimate Content", "d": "Content involving restraint for sensual pleasure"}, "voyeurism": {"c": "Kinks & Intimate Content", "d": "Content involving the excitement of watching others"}, "exhibitionism": {"c": "Kinks & Intimate Content", "d": "Content involving the thrill of being seen by others"}, "size_difference": {"c": "Kinks & Intimate Content", "d": "Content emphasizing height or body size disparities between partners"}, "hyper": {"c": "Kinks & Intimate Content", "d": "Content featuring exaggerated or extreme anatomical proportions"}, "orgasm_denial": {"c": "Kinks & Intimate Content", "d": "Content involving controlling or delaying release for heightened pleasure"}, "humiliation": {"c": "Kinks & Intimate Content", "d": "Content exploring embarrassment and degradation"}, "impact_play": {"c": "Kinks & Intimate Content", "d": "Content involving physical force or impact for sexual pleasure"}, "blood_play": {"c": "Kinks & Intimate Content", "d": "Content involving the use of blood for sexual pleasure"}, "breath_play": {"c": "Kinks & Intimate Content", "d": "Content involving the intentional restriction of oxygen for sexual pleasure"}, "temperature_play": {"c": "Kinks & Intimate Content", "d": "Content involving temperature-based sensations for sexual pleasure"}, "cnc": {"c": "Kinks & Intimate Content", "d": "Content involving consensual non-consent role-play scenarios"}, "brat_taming": {"c": "Kinks & Intimate Content", "d": "Content involving the disciplining of defiant or rebellious partners"}, "weapon_play": {"c": "Kinks & Intimate Content", "d": "Content involving the use of weapons for sexual pleasure"}, "sensory_play": {"c": "Kinks & Intimate Content", "d": "Focus on heightened sensations and stimulus experimentation"}, "age_play": {"c": "Kinks & Intimate Content", "d": "Roleplay involving caregiver and regressed roles by agreement"}, "mind_control": {"c": "Kinks & Intimate Content", "d": "Themes of compelled thought, altered will, or implanted urges"}, "watersports": {"c": "Kinks & Intimate Content", "d": "Uro‑centric play involving fluids as part of intimacy"}, "dollification": {"c": "Kinks & Intimate Content", "d": "Transformation or treatment of a partner as a living doll"}, "hair_kink": {"c": "Kinks & Intimate Content", "d": "Content involving attraction to or play with hair"}, "transformation": {"c": "Kinks & Intimate Content", "d": "Content involving physical or mental transformation of characters"}, "food_play": {"c": "Kinks & Intimate Content", "d": "Incorporating food into intimate activities for sensory pleasure"}, "wax_play": {"c": "Kinks & Intimate Content", "d": "Using warm or hot wax for sensory stimulation during intimacy"}, "freeuse": {"c": "Kinks & Intimate Content", "d": "Consensual arrangement where one partner is available at any time"}, "oral": {"c": "Kinks & Intimate Content", "d": "Focus on mouth-to-genital acts for sexual pleasure"}, "safe_sex": {"c": "Kinks & Intimate Content", "d": "Practice of safe and consensual sex with protection"}, "face_sitting": {"c": "Kinks & Intimate Content", "d": "One partner sits on the other's face for oral stimulation"}, "feet": {"c": "Kinks & Intimate Content", "d": "Focus on feet worship/attraction for sexual pleasure"}, "primal_play": {"c": "Kinks & Intimate Content", "d": "Raw, animalistic intimacy (growling, biting, scratching, wrestling, predator/prey)"}, "drunk_sex": {"c": "Kinks & Intimate Content", "d": "Content involving characters under influence during sex (aphrodisiacs, drugs, alcohol)"}, "findom": {"c": "Kinks & Intimate Content", "d": "Sexual control over another's financial assets"}, "tendrils": {"c": "Kinks & Intimate Content", "d": "Sexual use of tentacles or tentacle-like appendages"}, "e_sex": {"c": "Kinks & Intimate Content", "d": "Sexual activities in digital/online spaces (phone, VR, etc.)"}, "omorashi": {"c": "Kinks & Intimate Content", "d": "Arousal from holding one's bladder/lack of control"}, "chastity": {"c": "Kinks & Intimate Content", "d": "Confinement of genitalia for ownership, pain, or pleasure denial"}, "non_human_genitalia": {"c": "Kinks & Intimate Content", "d": "Exotic or fantastical anatomy like knots, ovipositors, hemipenes, and other inhuman features"}, "olfactophilia": {"c": "Kinks & Intimate Content", "d": "Arousal from scents and smells, including body odour, perfume, and natural aromas"}, "lactation": {"c": "Kinks & Intimate Content", "d": "Lactation and/or consuming human breast milk"}, "sexual_roleplay": {"c": "Kinks & Intimate Content", "d": "Consensual sexual LARPing or acting out roles"}, "ovipositor": {"c": "Kinks & Intimate Content", "d": "Laying eggs for sexual pleasure"}, "plushophilia": {"c": "Kinks & Intimate Content", "d": "Sexually interacting with stuffed animals"}, "small_anatomy": {"c": "Kinks & Intimate Content", "d": "Characters who have below average or small penises or breasts"}, "large_anatomy": {"c": "Kinks & Intimate Content", "d": "Characters who have above average or large penises or breasts"}, "masturbation": {"c": "Kinks & Intimate Content", "d": "Content that involves sexual self-gratification"}, "breastplay": {"c": "Kinks & Intimate Content", "d": "Erotic focus on fondling, sucking, or stimulating breasts"}, "sex_toys": {"c": "Kinks & Intimate Content", "d": "Use of sex toys or objects for sexual pleasure"}, "risque": {"c": "Kinks & Intimate Content", "d": "Stories that aren't inherently \"very intimate\" but can have a sensual undertone"}, "inflation": {"c": "Kinks & Intimate Content", "d": "Characters who are inflated or will inflate to extreme and unnatural limits"}, "heat_rut": {"c": "Kinks & Intimate Content", "d": "A period of intense, instinct-driven sexual desire or mating cycle (Alpha/Omega dynamics)"}, "glory_hole": {"c": "Kinks & Intimate Content", "d": "A hole in a wall or partition for anonymous sexual activity"}, "dacryphilia": {"c": "Kinks & Intimate Content", "d": "Sexual interest in tears or sobbing"}, "ugly_bastard": {"c": "Kinks & Intimate Content", "d": "Sexual content involving an unattractive or repulsive character"}, "game": {"c": "Media Sources", "d": "Characters from video games"}, "rpg": {"c": "Media Sources", "d": "Content from roleplaying games"}, "anime": {"c": "Media Sources", "d": "Characters from Japanese media"}, "books": {"c": "Media Sources", "d": "Characters from literature"}, "movie": {"c": "Media Sources", "d": "Characters from films"}, "tv_show": {"c": "Media Sources", "d": "Characters from television"}, "comic": {"c": "Media Sources", "d": "Characters from visual storytelling"}, "theatre": {"c": "Media Sources", "d": "Characters from theatrical performances"}, "utility": {"c": "Other", "d": "Content focused on practical or functional purposes"}, "unknown": {"c": "Other", "d": "Content that doesn't fit into any other category"}};
 
 const PLOT_DESCRIPTIONS = {
@@ -920,7 +923,79 @@ const now = () => new Date().toISOString();
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-const initData = () => ({ worlds:[], characters:[], lorebooks:[], collections:[], gallery:[], schedule:[], notes:'', personas:[], templates:[], release_cycle:[], schedule_notes:{}, lorebook_templates:[], map_positions:{}, world_order:[], settings:{} });
+const initData = () => ({ worlds:[], characters:[], lorebooks:[], collections:[], gallery:[], schedule:[], notes:'', personas:[], templates:[], release_cycle:[], schedule_notes:{}, lorebook_templates:[], map_positions:{}, world_order:[], cycle_head_world_id:null, cycle_skipped:[], settings:{} });
+
+// Depth fields — a character with all of these filled in is fully developed.
+// Used by the dashboard "Needs rework" list to surface published companions
+// that were made before these fields were part of the workflow.
+const REWORK_FIELDS = [
+  ["full desc", "full_description"],
+  ["personality", "card"],
+  ["formatting", "formatting_instructions"],
+  ["example dialogue", "example_dialogue"],
+  ["advanced prompt", "advanced_prompt"],
+  ["intros", "starting_scenarios"],
+  ["voice", "voice_catalog_id"]
+];
+// Banner UUID actually used on export. A manually pasted id always wins; otherwise the
+// companion inherits the banner of any community collection it belongs to, so shared
+// collection art doesn't have to be re-uploaded per companion on the site.
+function resolveBannerId(c, data) {
+  const manual = c.companion_profile_banner_image && c.companion_profile_banner_image.id;
+  if (manual) return manual;
+  const colls = (data && data.collections) || [];
+  const inColl = c.collections || [];
+  for (let i = 0; i < colls.length; i++) {
+    const cl = colls[i];
+    if (cl.is_community && cl.image && cl.image.id && inColl.includes(cl.id)) return cl.image.id;
+  }
+  return null;
+}
+
+const LORE_ON_STYLE = {fontSize:9,padding:'2px 7px',borderRadius:3,background:'var(--accent-dim)',color:'var(--accent)',border:'1px solid var(--accent)',cursor:'pointer'};
+const LORE_OFF_STYLE = {fontSize:9,padding:'2px 7px',borderRadius:3,background:'var(--bg3)',color:'var(--text3)',border:'1px solid var(--border)',cursor:'pointer'};
+const CTX_SELECT_STYLE = {flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',fontSize:10,padding:'2px 4px',borderRadius:3,outline:'none',minWidth:0};
+const CTX_OK_STYLE = {fontSize:10,color:'#6ee7b7',flexShrink:0,fontVariantNumeric:'tabular-nums'};
+const CTX_WARN_STYLE = {fontSize:10,color:'var(--amber)',flexShrink:0,fontVariantNumeric:'tabular-nums'};
+const LM_OK_STYLE = {fontSize:11,color:'#6ee7b7'};
+const LM_WARN_STYLE = {fontSize:11,color:'var(--amber)'};
+const LM_ERR_STYLE = {fontSize:11,color:'#f87171'};
+const VOICE_DESC_STYLE = {fontSize:11,color:'var(--text3)',marginTop:6,lineHeight:1.5};
+const AUDIT_SELECT_STYLE = {background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',fontSize:10,padding:'1px 4px',borderRadius:3,outline:'none',maxWidth:280};
+const AUDIT_WRITE_STYLE = {fontSize:10,color:'var(--text3)'};
+const BANNER_PREVIEW_STYLE = {height:60,borderRadius:'var(--r)',overflow:'hidden',border:'1px solid var(--border)'};
+const BANNER_IMG_STYLE = {width:'100%',height:'100%',objectFit:'cover'};
+const BANNER_INPUT_STYLE = {flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',fontFamily:'monospace',minWidth:0};
+const BANNER_COPY_STYLE = {padding:'4px 6px',fontSize:10,flexShrink:0};
+const BANNER_HINT_STYLE = {fontSize:10,color:'var(--text3)',marginTop:6,lineHeight:1.5};
+const BANNER_CHIP_STYLE = {marginTop:6,width:'100%',justifyContent:'center',fontSize:10,padding:'4px 6px'};
+const RW_OK_STYLE = {fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(110,231,183,0.12)',color:'#6ee7b7',border:'1px solid rgba(110,231,183,0.25)'};
+const RW_GAP_STYLE = {fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(251,191,36,0.12)',color:'var(--amber)',border:'1px solid rgba(251,191,36,0.25)'};
+
+// Returns every depth field with whether it's filled, so the row shows a full checklist
+// rather than only the gaps.
+function reworkChecks(c) {
+  const out = [];
+  for (let i = 0; i < REWORK_FIELDS.length; i++) {
+    const label = REWORK_FIELDS[i][0], key = REWORK_FIELDS[i][1];
+    const v = c[key];
+    const ok = key === "starting_scenarios" ? (v || []).length > 0 : String(v || "").trim().length > 0;
+    out.push({label: label, ok: ok});
+  }
+  return out;
+}
+
+function reworkPostedKey(c) {
+  const dates = (c.posted_dates || []).slice().sort();
+  return dates[0] || c.created_at || '9999';
+}
+
+function reworkGapCount(c) {
+  const checks = reworkChecks(c);
+  let n = 0;
+  for (let i = 0; i < checks.length; i++) { if (!checks[i].ok) n++; }
+  return n;
+}
 
 function sortedWorlds(data) {
   const order = data.world_order || [];
@@ -931,6 +1006,19 @@ function sortedWorlds(data) {
     if(bi>=0) return 1;
     return (a.name||'').localeCompare(b.name||'');
   });
+}
+
+// Pure helper — operates directly on a structuredClone draft.
+// Advances cycle_head_world_id if the given world is the expected next in the cycle.
+// Out-of-order posts (worldIdx <= headIdx) are silently ignored.
+function advanceCycleHeadInDraft(d, worldId) {
+  const cycle = d.release_cycle || [];
+  if(cycle.length === 0 || !worldId) return;
+  const worldIdx = cycle.indexOf(worldId);
+  if(worldIdx === -1) return;
+  const headIdx = d.cycle_head_world_id ? cycle.indexOf(d.cycle_head_world_id) : -1;
+  const expectedNext = headIdx === -1 ? 0 : (headIdx + 1) % cycle.length;
+  if(worldIdx === expectedNext) d.cycle_head_world_id = worldId;
 }
 
 function App() {
@@ -1014,6 +1102,25 @@ function App() {
       });
       update(d=>{d.world_order=sorted.map(w=>w.id);});
     }
+    // Always recalculate and store cycle_head_world_id on load to fix any corruption
+    // from previous versions. Uses highest cycle position with a recently posted char
+    // (posted_dates OR schedule_dates within 45 days) — short enough to exclude previous
+    // wave posts while covering normal weekly/bi-weekly release cadences.
+    if((data.release_cycle||[]).length>0) {
+      const cycleArr=data.release_cycle;
+      const cutoff45=new Date(); cutoff45.setDate(cutoff45.getDate()-45);
+      const pds45=s=>{const p=(s.split('T')[0]).split('-');return new Date(+p[0],+p[1]-1,+p[2]);};
+      let headIdx=-1;
+      cycleArr.forEach((wid,idx)=>{
+        const ok=data.characters.some(c=>c.world_id===wid&&c.status==='posted'&&(
+          (c.posted_dates||[]).some(d=>pds45(d)>=cutoff45)||
+          (c.schedule_dates||[]).some(d=>pds45(d)>=cutoff45)
+        ));
+        if(ok&&idx>headIdx) headIdx=idx;
+      });
+      const correctHead=headIdx===-1?null:cycleArr[headIdx];
+      if(correctHead!==data.cycle_head_world_id) update(d=>{d.cycle_head_world_id=correctHead;});
+    }
   },[dataLoaded]);
 
   // Autosave to disk on every change — NEVER fires until the initial load has completed,
@@ -1089,17 +1196,19 @@ function App() {
 
   const assignLore = (worldId) => {
     const obj = modal.obj;
-    update(d => { d.lorebooks.push({id:obj.id||uuid(),world_id:worldId,name:obj.name||'Untitled',short_description:obj.short_description||'',content:obj.content||[],tags:obj.tags||[],fandom_tags:obj.fandom_tags||[],nsfw:obj.nsfw||false,very_nsfw:obj.very_nsfw||false,image_id:obj.image_id||null,collaboration_type:obj.collaboration_type||'private',definition_protection:obj.definition_protection||'copy_protection',has_been_public:obj.has_been_public||false,posted_at:obj.posted_at||now(),updated_at:now(),hide_on_owner_profile:obj.hide_on_owner_profile||false,selected_chapter_index:0,access_level:obj.access_level||'private'}); });
+    const wid = worldId==='__none__' ? null : worldId;
+    update(d => { d.lorebooks.push({id:obj.id||uuid(),world_id:wid,name:obj.name||'Untitled',short_description:obj.short_description||'',content:obj.content||[],tags:obj.tags||[],fandom_tags:obj.fandom_tags||[],nsfw:obj.nsfw||false,very_nsfw:obj.very_nsfw||false,image_id:obj.image_id||null,collaboration_type:obj.collaboration_type||'private',definition_protection:obj.definition_protection||'copy_protection',has_been_public:obj.has_been_public||false,posted_at:obj.posted_at||now(),updated_at:now(),hide_on_owner_profile:obj.hide_on_owner_profile||false,selected_chapter_index:0,access_level:obj.access_level||'private'}); });
     setModal(null);
   };
 
   const assignChar = (worldId) => {
     const obj = modal.obj;
+    const wid = worldId==='__none__' ? null : worldId;
     const status = obj.access_level === 'public' ? 'posted' : 'draft';
     const portraits = obj.portraits || [];
     const image = obj.image || null;
     update(d => {
-      d.characters.push({id:obj.id||uuid(),world_id:worldId,name:obj.name||'Unnamed',display_name:obj.display_name||obj.name||'',short_description:obj.short_description||'',full_description:obj.full_description||'',card:obj.card||'',example_dialogue:obj.example_dialogue||'',tags:obj.tags||[],fandom_tags:obj.fandom_tags||[],sus:obj.sus||false,very_sus:obj.very_sus||false,starting_scenarios:obj.starting_scenarios||[],formatting_instructions:obj.formatting_instructions||'',advanced_prompt:obj.advanced_prompt||'',access_level:obj.access_level||'private',open_definition:obj.open_definition||false,external_model_policy:obj.external_model_policy||'vetted_only',locked_starting_message:obj.locked_starting_message||false,unlocked_portraits:obj.unlocked_portraits!==undefined?obj.unlocked_portraits:true,hide_on_owner_profile:obj.hide_on_owner_profile||false,suppress_companion_profile_banner:obj.suppress_companion_profile_banner||false,preserve_existing_chats:obj.preserve_existing_chats!==undefined?obj.preserve_existing_chats:true,posted_at:obj.posted_at||now(),created_at:obj.created_at||now(),updated_at:now(),voice_catalog_id:obj.voice_catalog_id||null,temperature_offset_percentage:obj.temperature_offset_percentage||0,status,schedule_dates:[],collections:[],image,portraits,companion_profile_banner_image:obj.companion_profile_banner_image||null,author_id:obj.author_id||'',author_handle:obj.author_handle||''});
+      d.characters.push({id:obj.id||uuid(),world_id:wid,display_name:obj.display_name||obj.name||'',short_description:obj.short_description||'',full_description:obj.full_description||'',card:obj.card||'',example_dialogue:obj.example_dialogue||'',tags:obj.tags||[],fandom_tags:obj.fandom_tags||[],sus:obj.sus||false,very_sus:obj.very_sus||false,starting_scenarios:obj.starting_scenarios||[],formatting_instructions:obj.formatting_instructions||'',advanced_prompt:obj.advanced_prompt||'',access_level:obj.access_level||'private',open_definition:obj.open_definition||false,external_model_policy:obj.external_model_policy||'vetted_only',locked_starting_message:obj.locked_starting_message||false,unlocked_portraits:obj.unlocked_portraits!==undefined?obj.unlocked_portraits:true,hide_on_owner_profile:obj.hide_on_owner_profile||false,suppress_companion_profile_banner:obj.suppress_companion_profile_banner||false,preserve_existing_chats:obj.preserve_existing_chats!==undefined?obj.preserve_existing_chats:true,posted_at:obj.posted_at||now(),created_at:obj.created_at||now(),updated_at:now(),voice_catalog_id:obj.voice_catalog_id||null,temperature_offset_percentage:obj.temperature_offset_percentage||0,status,schedule_dates:[],collections:[],image,portraits,companion_profile_banner_image:obj.companion_profile_banner_image||null,author_id:obj.author_id||'',author_handle:obj.author_handle||''});
       // auto-link to any collections that reference this character's ID
       const charId = obj.id;
       if(charId) {
@@ -1179,6 +1288,7 @@ function App() {
   };
 
   const assignColl = (worldId) => {
+    worldId = worldId==='__none__' ? null : worldId;
     const obj = modal.obj;
     // auto-link characters whose platform id matches companions list
     const companionIds = obj.companions || [];
@@ -1207,7 +1317,7 @@ function App() {
     if (res && res.success) { const mb=(res.size/1048576).toFixed(1); alert("Backup saved ("+mb+" MB)"); }
   };
   const exportColl = (c) => {
-    const {world_id,image_data,image_relpath,collection_filename,definition,...rest}=c;
+    const {world_id,image_data,image_relpath,collection_filename,definition,is_community,...rest}=c;
     // The platform's field for this text is "description", not "definition" — Lorekeeper's
     // internal data model uses "definition" but that name was leaking straight through to
     // the export, so Saucepan never actually received the collection's description text.
@@ -1218,23 +1328,25 @@ function App() {
   // Save platform fields back to Companions/FolderName/character.json
   const saveCompanionJson = (c) => {
     if (!c.companion_folder) return; // no folder assigned, skip
-    const {world_id,status,schedule_dates,collections,linked_lorebooks,companion_folder,...rest} = c;
+    const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,...rest} = c;
     const exportImage = rest.image?.id ? {id: rest.image.id} : null;
     const exportPortraits = (rest.portraits||[]).map(p => { const {data,relPath,...pRest} = p; return pRest; });
-    const exportBanner = rest.companion_profile_banner_image?.id ? {id: rest.companion_profile_banner_image.id} : undefined;
+    const _bannerId = resolveBannerId(c, data);
+    const exportBanner = _bannerId ? {id: _bannerId} : undefined;
     const safe = {...rest, image: exportImage, portraits: exportPortraits, companion_profile_banner_image: exportBanner, card: rest.card||' ', example_dialogue: rest.example_dialogue||'', temperature_offset_percentage: rest.temperature_offset_percentage||0};
     window.lorekeeper.saveCompanionJson(c.companion_folder, safe);
   };
 
   const exportChar = (c) => {
-    const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,...rest}=c;
+    const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,...rest}=c;
     // Strip base64 image data — site only accepts {id: "uuid"}
     const exportImage = rest.image?.id ? {id: rest.image.id} : null;
     const exportPortraits = (rest.portraits||[]).map(p => {
       const {data,...pRest} = p;
       return pRest;
     });
-    const exportBanner = rest.companion_profile_banner_image?.id ? {id: rest.companion_profile_banner_image.id} : undefined;
+    const _bannerId = resolveBannerId(c, data);
+    const exportBanner = _bannerId ? {id: _bannerId} : undefined;
     const safe = {
       ...rest,
       image: exportImage,
@@ -1255,7 +1367,7 @@ function App() {
     });
     if(warnings.length>0){const proceed=window.confirm(`Export warnings for ${c.name}:\n\n${warnings.map(w=>'• '+w).join('\n')}\n\nExport anyway?`);if(!proceed)return;}
     window.lorekeeper.exportFile({ defaultName:c.companion_folder?"companion.json":`${c.name}-character.json`, content:JSON.stringify(safe,null,2), folder:c.companion_folder?"Companions/"+c.companion_folder:"Companions" });
-    update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch)ch.site_last_synced_at=new Date().toISOString();});
+    update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch){ch.site_last_synced_at=new Date().toISOString();ch.reworked_at=new Date().toISOString();}});
   };
   const exportLore = (l) => {
     const {world_id,lorebook_filename,image_data,image_relpath,collaboration_type,status,...rest}=l;
@@ -1282,10 +1394,11 @@ function App() {
     const files = [];
     const warnings = [];
     wChars.forEach(c => {
-      const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,lorebook_entry_text,lorebook_entry_title,...rest} = c;
+      const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,...rest} = c;
       const exportImage = rest.image && rest.image.id ? {id: rest.image.id} : null;
       const exportPortraits = (rest.portraits||[]).map(p => { const {data,...pr} = p; return pr; });
-      const exportBanner = rest.companion_profile_banner_image && rest.companion_profile_banner_image.id ? {id: rest.companion_profile_banner_image.id} : undefined;
+      const _bannerId = resolveBannerId(c, data);
+      const exportBanner = _bannerId ? {id: _bannerId} : undefined;
       const safe = {...rest, image: exportImage, portraits: exportPortraits, companion_profile_banner_image: exportBanner, card: rest.card||" ", example_dialogue: rest.example_dialogue||"", temperature_offset_percentage: rest.temperature_offset_percentage||0};
       if (!exportImage) warnings.push(c.name + ": no portrait UUID");
       (c.portraits||[]).forEach((p,i) => {
@@ -1303,7 +1416,7 @@ function App() {
       files.push({name: "Lorebooks/" + safeName + "-lorebook.json", content: JSON.stringify(safe, null, 2)});
     });
     wColls.forEach(c => {
-      const {world_id,image_data,image_relpath,collection_filename,site_last_synced_at,definition,...rest} = c;
+      const {world_id,image_data,image_relpath,collection_filename,site_last_synced_at,definition,is_community,...rest} = c;
       const safe = {...rest, description: definition||'', lorebooks: c.lorebooks||[]};
       const safeName = (c.name||"collection").replace(/[^a-zA-Z0-9_-]/g, "_");
       files.push({name: "Collections/" + safeName + "-collection.json", content: JSON.stringify(safe, null, 2)});
@@ -2587,7 +2700,6 @@ function TagSelector({value, onChange, max, showCW, worldChars}) {
       <div style={{position:'relative'}}>
         <input ref={inputRef} value={search} onChange={e=>{setSearch(e.target.value);setOpen(true);}}
           onFocus={()=>setOpen(true)}
-          onBlur={()=>setTimeout(()=>setOpen(false),150)}
           onKeyDown={e=>{if(e.key==='Enter'){addCustom(search);}if(e.key==='Escape'){setOpen(false);setSearch('');}}}
           placeholder="Search or type a custom tag…"
           style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none'}}/>
@@ -2598,7 +2710,7 @@ function TagSelector({value, onChange, max, showCW, worldChars}) {
                 <div style={{fontSize:9,color:'var(--text3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',padding:'6px 10px 3px',borderTop:'1px solid var(--border)'}}>{cat}</div>
                 {items.map(([id, meta]) => (
                   <div key={id}
-                    onMouseDown={e=>{e.preventDefault();toggleTag(id);setSearch('');}}
+                    onClick={()=>{toggleTag(id);setSearch('');inputRef.current?.focus();}}
                     title={meta.d}
                     style={{padding:'5px 10px',cursor:'pointer',display:'flex',alignItems:'center',gap:8,fontSize:12}}
                     onMouseEnter={e=>e.currentTarget.style.background='var(--accent-dim)'}
@@ -2611,7 +2723,7 @@ function TagSelector({value, onChange, max, showCW, worldChars}) {
               </div>
             ))}
             {search.trim() && !SAUCEPAN_TAGS[search.trim().toLowerCase().replace(/\s+/g,'_')] && (
-              <div onMouseDown={e=>{e.preventDefault();addCustom(search);}}
+              <div onClick={()=>addCustom(search)}
                 style={{padding:'7px 10px',cursor:'pointer',fontSize:12,color:'var(--text3)',borderTop:'1px solid var(--border)'}}
                 onMouseEnter={e=>e.currentTarget.style.background='var(--accent-dim)'}
                 onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
@@ -3235,6 +3347,7 @@ function hasActiveKey(settings) {
   if (provider === 'openai') return !!settings.openai_api_key;
   if (provider === 'google') return !!settings.google_api_key;
   if (provider === 'openrouter') return !!settings.openrouter_api_key;
+  if (provider === 'lmstudio') return true; // local server, no key needed
   return false;
 }
 
@@ -3291,6 +3404,20 @@ async function callAI(data, systemPrompt, messages, maxTokens) {
       return text ? { text } : { error: 'No response from Google.' };
     }
 
+    if (provider === 'lmstudio') {
+      const baseUrl = (settings.lmstudio_base_url || 'http://localhost:1234/v1').replace(/\/+$/, '');
+      const model = settings.lmstudio_model || 'local-model';
+      const res = await fetch(baseUrl + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] })
+      });
+      const resp = await res.json();
+      if (resp.error) return { error: (resp.error.message || resp.error) + '' };
+      const text = resp.choices?.[0]?.message?.content || '';
+      return text ? { text } : { error: 'No response from LM Studio.' };
+    }
+
     if (provider === 'openrouter') {
       const apiKey = settings.openrouter_api_key || '';
       const model = settings.openrouter_model || 'anthropic/claude-sonnet-4-6';
@@ -3308,11 +3435,22 @@ async function callAI(data, systemPrompt, messages, maxTokens) {
 
     return { error: 'Unknown AI provider.' };
   } catch (e) {
+    if (provider === 'lmstudio') {
+      const u = (data.settings || {}).lmstudio_base_url || 'http://localhost:1234/v1';
+      return { error: 'Could not reach LM Studio at ' + u + ' — is the local server started and a model loaded?' };
+    }
     return { error: 'Network error: ' + e.message };
   }
 }
 
-function ClaudePanel({data, currentWorld, currentChar, currentPage, setPage}) {
+function ChapterChip({lid, ci, ch, on, toggle}) {
+  const tok = Math.round((ch.text||'').length / 4);
+  const label = tok >= 1000 ? (tok/1000).toFixed(1)+'k' : tok;
+  const click = () => toggle(lid+'::'+ci);
+  return <button onClick={click} style={on?LORE_ON_STYLE:LORE_OFF_STYLE}>{ch.title||('ch '+(ci+1))} · {label}</button>;
+}
+
+function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setPage}) {
   const [messages, setMessages] = React.useState([]);
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
@@ -3336,8 +3474,12 @@ function ClaudePanel({data, currentWorld, currentChar, currentPage, setPage}) {
     messagesEndRef.current?.scrollIntoView({behavior:'smooth'});
   }, [messages]);
 
-  const buildSystemPrompt = () => {
-    const world = currentWorld ? data.worlds.find(w => w.id === currentWorld.id) : null;
+  const buildSystemPrompt = (scopeArg) => {
+    // 'character' = the edited character only; 'world' = world + lorebook summaries, no
+    // chapter bodies; 'full' = everything. Chapter text is what blows past a local model's
+    // context window — 27k tokens on a mature world vs ~8k available.
+    const scope = scopeArg || data.settings?.assistant_context_scope || 'full';
+    const world = (scope !== 'character' && currentWorld) ? data.worlds.find(w => w.id === currentWorld.id) : null;
     const parts = [];
 
     parts.push(`You are a creative writing assistant helping with character and world development for the Saucepan AI companion platform. Be concise and practical. When suggesting text for fields, write it ready to use — don't add meta-commentary like "here's a suggestion". Just write the content.`);
@@ -3355,9 +3497,20 @@ function ClaudePanel({data, currentWorld, currentChar, currentPage, setPage}) {
         worldLores.forEach(l => {
           parts.push(`\n### Lorebook: ${l.name}`);
           if(l.short_description) parts.push(l.short_description);
-          (l.content||[]).forEach(ch => {
-            parts.push(`\n#### ${ch.title}\n${ch.text}`);
+          // In 'world' scope the user picks which lorebooks are worth their token cost —
+          // usually the one describing how the world's mechanics actually work, without
+          // which a model that has never seen this setting can't write anything useful.
+          // Chapter-level, not lorebook-level: a whole lorebook is 10-14k tokens on a mature
+          // world, which alone overruns a local model. Usually only the chapter explaining
+          // how the setting works is actually needed to write in-world.
+          const picks = data.settings?.assistant_chapters || [];
+          const kept = [], skipped = [];
+          (l.content||[]).forEach((ch, ci) => {
+            if(scope === 'full' || picks.includes(l.id+'::'+ci)) kept.push(ch);
+            else if(ch.title) skipped.push(ch.title);
           });
+          kept.forEach(ch => parts.push(`\n#### ${ch.title}\n${ch.text}`));
+          if(skipped.length) parts.push(`Other chapters (titles only): ${skipped.join(', ')}`);
         });
       }
 
@@ -3383,6 +3536,19 @@ function ClaudePanel({data, currentWorld, currentChar, currentPage, setPage}) {
       }
     }
 
+    // The world's template is the house structure for these fields. Feeding it in means
+    // generated text comes back already shaped the way the catalogue is written, instead
+    // of needing to be reformatted by hand afterwards.
+    const worldTpl = currentWorld ? (data.templates||[]).find(t => t.world_id === currentWorld.id) : null;
+    const tf = worldTpl && worldTpl.fields ? worldTpl.fields : null;
+    if(tf && (tf.full_description || tf.card || tf.formatting_instructions)) {
+      parts.push(`\n## HOUSE FORMAT — follow this structure exactly`);
+      parts.push(`When writing or rewriting a field below, match this skeleton including its headers, dividers and section order. Replace the placeholder text, keep the structure.`);
+      if(tf.full_description) parts.push(`\n### Full description template\n${tf.full_description}`);
+      if(tf.card) parts.push(`\n### Character card template\n${tf.card}`);
+      if(tf.formatting_instructions) parts.push(`\n### Formatting instructions template\n${tf.formatting_instructions}`);
+    }
+
     // Current character being edited
     if(currentChar) {
       const c = data.characters.find(x => x.id === currentChar.id) || currentChar;
@@ -3404,6 +3570,20 @@ function ClaudePanel({data, currentWorld, currentChar, currentPage, setPage}) {
     return parts.join('\n');
   };
 
+  const ctxScope = data.settings?.assistant_context_scope || 'full';
+  const setScope = (v) => update(d=>{ if(!d.settings) d.settings={}; d.settings.assistant_context_scope = v; });
+  const pickedChapters = data.settings?.assistant_chapters || [];
+  const worldLoreList = currentWorld ? data.lorebooks.filter(l => l.world_id === currentWorld.id) : [];
+  const toggleChapter = (key) => update(d=>{
+    if(!d.settings) d.settings={};
+    const cur = d.settings.assistant_chapters || [];
+    d.settings.assistant_chapters = cur.includes(key) ? cur.filter(x=>x!==key) : [...cur, key];
+  });
+  const clearChapters = () => update(d=>{ if(!d.settings) d.settings={}; d.settings.assistant_chapters = []; });
+  // Rough estimate — ~4 chars/token for English. Only needs to be good enough to show
+  // whether the prompt will fit a local model's window before sending it.
+  const ctxTokens = Math.round(buildSystemPrompt(ctxScope).length / 4);
+
   const send = async () => {
     if(!input.trim() || loading) return;
     const userMsg = input.trim();
@@ -3413,7 +3593,7 @@ function ClaudePanel({data, currentWorld, currentChar, currentPage, setPage}) {
     setMessages(newMessages);
     setLoading(true);
 
-    const systemPrompt = buildSystemPrompt();
+    const systemPrompt = buildSystemPrompt(ctxScope);
     const result = await callAI(data, systemPrompt, newMessages.map(m => ({role:m.role, content:m.content})), 2000);
     if(result.error) { setError(result.error); setLoading(false); return; }
     setMessages(prev => [...prev, {role:'assistant', content:result.text}]);
@@ -3438,6 +3618,28 @@ function ClaudePanel({data, currentWorld, currentChar, currentPage, setPage}) {
       {!hasActiveKey(data.settings)&&<div style={{padding:'8px 12px',background:'rgba(251,191,36,0.08)',borderBottom:'1px solid rgba(251,191,36,0.2)',fontSize:11,color:'var(--amber)',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
         <i className="ti ti-key" style={{fontSize:12}}></i>
         No API key set — <span style={{textDecoration:'underline',cursor:'pointer'}} onClick={()=>setPage('settings')}>add in Settings</span>
+      </div>}
+      {/* Context scope */}
+      <div style={{padding:'6px 12px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+        <span style={{fontSize:10,color:'var(--text3)',flexShrink:0}}>Context</span>
+        <select value={ctxScope} onChange={e=>setScope(e.target.value)} style={CTX_SELECT_STYLE}>
+          <option value="character">Character only</option>
+          <option value="world">World, no lorebook text</option>
+          <option value="full">Everything</option>
+        </select>
+        <span style={ctxTokens>7000?CTX_WARN_STYLE:CTX_OK_STYLE}>≈{ctxTokens.toLocaleString()} tok</span>
+      </div>
+      {ctxScope==='world'&&worldLoreList.length>0&&<div style={{padding:'0 12px 6px',borderBottom:'1px solid var(--border)',flexShrink:0,maxHeight:150,overflowY:'auto'}}>
+        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
+          <span style={{fontSize:9,color:'var(--text3)',flex:1}}>Include chapter text:</span>
+          {pickedChapters.length>0&&<button onClick={clearChapters} style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:9,padding:0}}>clear</button>}
+        </div>
+        {worldLoreList.map(l=><div key={l.id} style={{marginBottom:5}}>
+          <div style={{fontSize:9,color:'var(--text3)',opacity:0.7,marginBottom:2}}>{l.name}</div>
+          <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+            {(l.content||[]).map((ch,ci)=><ChapterChip key={ci} lid={l.id} ci={ci} ch={ch} on={pickedChapters.includes(l.id+'::'+ci)} toggle={toggleChapter}/>)}
+          </div>
+        </div>)}
       </div>}
       {/* Context indicator */}
       <div style={{padding:'8px 12px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
@@ -3575,7 +3777,7 @@ function RightPanel({tab,setTab,data,update,currentWorld,currentChar,currentPage
           </>
         )}
         {tab==='tools'&&<ToolsPanel data={data} currentChar={currentChar}/>}
-        {tab==='claude'&&<ClaudePanel data={data} currentWorld={currentWorld} currentChar={currentChar} currentPage={currentPage} setPage={setPage}/>}
+        {tab==='claude'&&<ClaudePanel data={data} update={update} currentWorld={currentWorld} currentChar={currentChar} currentPage={currentPage} setPage={setPage}/>}
         {tab==='map'&&<RelationshipsPage data={data} update={update} initialWorld={currentWorld?.id||null}/>}
       </div>
     </div>
@@ -3687,6 +3889,114 @@ function LorebookDraftsPanel({data, openLore}) {
   );
 }
 
+// Required fields before a character can be published.
+function progressMissing(c) {
+  const m = [];
+  if (!c.name?.trim()) m.push('name');
+  if (!c.display_name?.trim()) m.push('display name');
+  if (!c.short_description?.trim()) m.push('short desc');
+  if (!c.full_description?.trim()) m.push('full desc');
+  if (!(c.card||'').trim() || c.card === ' ') m.push('card');
+  if ((c.tags||[]).length < 5) m.push('tags (' + (c.tags||[]).length + '/5)');
+  if (!c.image) m.push('portrait');
+  else if (!c.image.id) m.push('portrait UUID');
+  if (!(c.portraits||[]).length) m.push('portrait slots');
+  if (!(c.starting_scenarios||[]).length) m.push('scenarios');
+  return m;
+}
+
+function InProgressPanel({data, setSelectedChar}) {
+  const [showAll, setShowAll] = useState(false);
+  const rows = data.characters.filter(c => c.status !== 'posted');
+  if (rows.length === 0) return null;
+  const visible = showAll ? rows : rows.slice(0, 5);
+  const toggle = () => setShowAll(v => !v);
+  return (
+    <div style={{marginTop:16}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+        <div style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em'}}>In progress · {rows.length}</div>
+        {rows.length > 5 && <button className="btn" style={{fontSize:11,padding:'2px 8px'}} onClick={toggle}>{showAll ? 'Show less' : 'Show all'}</button>}
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:8}}>
+        {visible.map(c => <InProgressRow key={c.id} c={c} data={data} setSelectedChar={setSelectedChar}/>)}
+      </div>
+    </div>
+  );
+}
+
+function InProgressRow({c, data, setSelectedChar}) {
+  const world = data.worlds.find(w => w.id === c.world_id);
+  const missing = progressMissing(c);
+  const open = () => setSelectedChar(c);
+  const hoverOn = e => e.currentTarget.style.borderColor = 'var(--accent2)';
+  const hoverOff = e => e.currentTarget.style.borderColor = 'var(--border)';
+  return (
+    <div style={{display:'flex',gap:12,padding:'10px 12px',background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r)',cursor:'pointer',transition:'border-color 0.15s',overflow:'hidden'}}
+      onClick={open} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
+      <div style={{width:48,height:48,borderRadius:'var(--r)',overflow:'hidden',flexShrink:0,background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+        {c.image ? <ImgFromPath src={c.image.data||c.image.relPath} alt={c.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <i className="ti ti-user" style={{color:'var(--text3)',fontSize:20}}></i>}
+      </div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,fontWeight:600,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.display_name||c.name}{c.short_description&&<span style={{fontWeight:400,color:'var(--text3)'}}> · {c.short_description}</span>}</div>
+        <div style={{fontSize:11,color:'var(--text3)',marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{world?.name||'No world'}{c.schedule_dates?.length>0?' · '+c.schedule_dates[0]:' · unscheduled'}</div>
+        {missing.length>0&&<div style={{display:'flex',flexWrap:'wrap',gap:3,marginTop:5}}>
+          {missing.map(m => <span key={m} style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(251,191,36,0.12)',color:'var(--amber)',border:'1px solid rgba(251,191,36,0.25)'}}>{m}</span>)}
+        </div>}
+        {missing.length===0&&<div style={{marginTop:5}}><span style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(110,231,183,0.12)',color:'#6ee7b7',border:'1px solid rgba(110,231,183,0.25)'}}>✓ ready to post</span></div>}
+      </div>
+      <span className={`status-badge status-${c.status||'draft'}`} style={{alignSelf:'flex-start',flexShrink:0,marginTop:2}}>{c.status||'draft'}</span>
+    </div>
+  );
+}
+
+function ReworkPanel({data, openChar}) {
+  const [showAll, setShowAll] = useState(false);
+  const rows = [];
+  data.characters.forEach(c => {
+    if (c.status !== 'posted') return;
+    if (c.reworked_at) return; // reworked and exported — done
+    rows.push({c: c, gaps: reworkGapCount(c), since: reworkPostedKey(c)});
+  });
+  if (rows.length === 0) return null;
+  rows.sort((a, b) => (b.gaps - a.gaps) || a.since.localeCompare(b.since));
+  const visible = showAll ? rows : rows.slice(0, 5);
+  const toggle = () => setShowAll(v => !v);
+  return (
+    <div style={{marginTop:16}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+        <div style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Rework · {rows.length}</div>
+        {rows.length > 5 && <button className="btn" style={{fontSize:11,padding:'2px 8px'}} onClick={toggle}>{showAll ? 'Show less' : 'Show all'}</button>}
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:8}}>
+        {visible.map(row => <ReworkRow key={row.c.id} c={row.c} gaps={row.gaps} data={data} openChar={openChar}/>)}
+      </div>
+    </div>
+  );
+}
+
+function ReworkRow({c, gaps, data, openChar}) {
+  const world = data.worlds.find(w => w.id === c.world_id);
+  const open = () => openChar(c);
+  const hoverOn = e => e.currentTarget.style.borderColor = 'var(--accent2)';
+  const hoverOff = e => e.currentTarget.style.borderColor = 'var(--border)';
+  return (
+    <div style={{display:'flex',gap:12,padding:'10px 12px',background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r)',cursor:'pointer',transition:'border-color 0.15s',overflow:'hidden'}}
+      onClick={open} onMouseEnter={hoverOn} onMouseLeave={hoverOff}>
+      <div style={{width:48,height:48,borderRadius:'var(--r)',overflow:'hidden',flexShrink:0,background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+        {c.image ? <ImgFromPath src={c.image.data||c.image.relPath} alt={c.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <i className="ti ti-user" style={{color:'var(--text3)',fontSize:20}}></i>}
+      </div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:13,fontWeight:600,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.display_name||c.name}</div>
+        <div style={{fontSize:11,color:'var(--text3)',marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{world?.name||'No world'}</div>
+        <div style={{display:'flex',flexWrap:'wrap',gap:3,marginTop:5}}>
+          {reworkChecks(c).map(ch => <span key={ch.label} style={ch.ok ? RW_OK_STYLE : RW_GAP_STYLE}>{ch.ok ? '\u2713 ' : ''}{ch.label}</span>)}
+        </div>
+      </div>
+      <span style={{fontSize:10,color:'var(--text3)',background:'var(--bg3)',border:'1px solid var(--border)',padding:'2px 7px',borderRadius:4,alignSelf:'flex-start',flexShrink:0,marginTop:2}}>{gaps.length}</span>
+    </div>
+  );
+}
+
 function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOnDay,postedOnDay,calDate,setCalDate,upcoming,data,update,setSelectedChar,openChar,openLore,openColl,setSelectedWorld}) {
   const [schedPicker,setSchedPicker]=useState(null); // cellDateStr when open
   const [schedSearch,setSchedSearch]=useState('');
@@ -3699,30 +4009,49 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
   const getNextCycleWorld=()=>{
     if(cycle.length===0) return null;
     const futureDate=new Date(today.getFullYear(),today.getMonth(),today.getDate());
-    const sevenDaysAgo=new Date(today.getFullYear(),today.getMonth(),today.getDate()-7);
     const pds=s=>{const p=(s.split('T')[0]).split('-');return new Date(+p[0],+p[1]-1,+p[2]);};
-    // Walk cycle in order:
-    // - skip worlds that recently posted (within 7 days) and have nothing upcoming
-    // - skip worlds where all future chars are 'ready' (scheduled, handled) or 'posted'
-    // - stop at first world with a 'draft' future char (needs work)
-    // - stop at first world with no future scheduled char (needs scheduling)
+    const worldIdToName={};
+    data.worlds.forEach(w=>{worldIdToName[w.id]=w.name;});
+    const cycleNames=cycle.map(wid=>{const w=data.worlds.find(x=>x.id===wid);return w?w.name:null;});
+    const cycleIdx={};
+    data.characters.forEach(c=>{
+      const wName=worldIdToName[c.world_id];
+      if(!wName) return;
+      const ci=cycleNames.indexOf(wName);
+      if(ci>=0) cycleIdx[c.id]=ci;
+    });
+    // Find the cycle position of the most recently posted character (by date).
+    // This is the current wave head — walk forward from the next position.
+    let headIdx=-1, headDate=new Date(0);
+    data.characters.forEach(c=>{
+      if(c.status!=='posted') return;
+      const ci=cycleIdx[c.id];
+      if(ci===undefined) return;
+      const dates=[...(c.posted_dates||[]),...(c.schedule_dates||[])];
+      dates.forEach(d=>{const pd=pds(d);if(pd>headDate){headDate=pd;headIdx=ci;}});
+    });
+    const startIdx=headIdx===-1?0:(headIdx+1)%cycle.length;
     for(let i=0;i<cycle.length;i++){
-      const wid=cycle[i];
-      const futureChars=data.characters.filter(c=>c.world_id===wid&&(c.schedule_dates||[]).some(d=>pds(d)>=futureDate));
-      if(futureChars.length===0){
-        // No future chars — check if this world recently posted (would be a false alarm)
-        const recentlyPosted=data.characters.some(c=>c.world_id===wid&&c.status==='posted'&&(c.posted_dates||[]).some(d=>pds(d)>=sevenDaysAgo));
-        if(recentlyPosted) continue; // just posted — skip, look at next world
-        return wid; // genuinely needs scheduling
+      const idx=(startIdx+i)%cycle.length;
+      if(!cycleNames[idx]) continue; // stale
+      if((data.cycle_skipped||[]).includes(cycleNames[idx])) continue; // skipped this cycle
+      const chars=data.characters.filter(c=>cycleIdx[c.id]===idx);
+      const futureUnposted=chars.filter(c=>c.status!=='posted'&&(c.schedule_dates||[]).some(d=>pds(d)>=futureDate));
+      if(futureUnposted.length===0&&chars.every(c=>c.status==='posted'||!(c.schedule_dates||[]).length)){
+        // World exists but no future chars scheduled — needs scheduling
+        // Only flag if we haven't wrapped back to head (avoids false positives)
+        if(i<cycle.length-1||(headIdx===-1)) return cycle[idx];
+        continue;
       }
-      const hasDraft=futureChars.some(c=>c.status==='draft');
-      if(hasDraft) return wid; // has a draft — stop here, needs work
-      // all ready or posted — this world is handled, continue
+      if(futureUnposted.some(c=>c.status==='draft')) return cycle[idx];
+      if(futureUnposted.length===0) return cycle[idx];
+      // all ready — skip
     }
-    return cycle[0];
+    return cycle[startIdx];
   };
   const nextWorldId=getNextCycleWorld();
   const nextWorld=nextWorldId?data.worlds.find(w=>w.id===nextWorldId):null;
+  const skipNext=nextWorld?()=>update(d=>{d.cycle_skipped=[...(d.cycle_skipped||[]),nextWorld.name];}):null;
   const noteKey=(charId,dateStr)=>`${charId}_${dateStr}`;
   const getNote=(charId,dateStr)=>(data.schedule_notes||{})[noteKey(charId,dateStr)]||'';
   return (
@@ -3734,7 +4063,7 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
             <strong>{c.display_name||c.name}</strong> is scheduled for today
             {getNote(c.id,todayStr)&&<span style={{color:'var(--text3)',marginLeft:6}}>· {getNote(c.id,todayStr)}</span>}
           </div>
-          <button className="btn primary" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch){ch.status='posted';if(!ch.posted_dates)ch.posted_dates=[];const t=new Date();const td=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');if(!ch.posted_dates.includes(td))ch.posted_dates.push(td);}})}>Mark posted</button>
+          <button className="btn primary" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch){ch.status='posted';if(!ch.posted_dates)ch.posted_dates=[];const t=new Date();const td=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');if(!ch.posted_dates.includes(td))ch.posted_dates.push(td);advanceCycleHeadInDraft(d,ch.world_id);}})}>Mark posted</button>
           <button className="btn" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>setSelectedChar(c)}>Reschedule</button>
           <button style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',padding:'0 4px',fontSize:16}} onClick={()=>setDismissed(d=>[...d,c.id])}>×</button>
         </div>
@@ -3844,52 +4173,8 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
               })}
             </div>;
           })()}
-          {/* Drafts in progress */}
-          {(()=>{
-            const drafts=data.characters.filter(c=>c.status==='draft');
-            if(drafts.length===0) return null;
-            const getMissing=(c)=>{
-              const m=[];
-              if(!c.name?.trim()) m.push('name');
-              if(!c.display_name?.trim()) m.push('display name');
-              if(!c.short_description?.trim()) m.push('short desc');
-              if(!c.full_description?.trim()) m.push('full desc');
-              if(!(c.card||'').trim()||c.card===' ') m.push('card');
-              if((c.tags||[]).length<5) m.push(`tags (${(c.tags||[]).length}/5)`);
-              if(!c.image) m.push('portrait');
-              else if(!c.image.id) m.push('portrait UUID');
-              if(!(c.portraits||[]).length) m.push('portrait slots');
-              if(!(c.starting_scenarios||[]).length) m.push('scenarios');
-              return m;
-            };
-            return <div style={{marginTop:16}}>
-              <div style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:10}}>Drafts in progress</div>
-              <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                {drafts.map(c=>{
-                  const world=data.worlds.find(w=>w.id===c.world_id);
-                  const missing=getMissing(c);
-                  return <div key={c.id} style={{display:'flex',gap:12,padding:'10px 12px',background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r)',cursor:'pointer',transition:'border-color 0.15s',overflow:'hidden'}}
-                    onClick={()=>setSelectedChar(c)}
-                    onMouseEnter={e=>e.currentTarget.style.borderColor='var(--accent2)'}
-                    onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
-                  >
-                    <div style={{width:48,height:48,borderRadius:'var(--r)',overflow:'hidden',flexShrink:0,background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                      {c.image?<ImgFromPath src={c.image.data||c.image.relPath} alt={c.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<i className="ti ti-user" style={{color:'var(--text3)',fontSize:20}}></i>}
-                    </div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:13,fontWeight:600,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.display_name||c.name}{c.short_description&&<span style={{fontWeight:400,color:'var(--text3)'}}> · {c.short_description}</span>}</div>
-                      <div style={{fontSize:11,color:'var(--text3)',marginTop:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{world?.name||'No world'}{c.schedule_dates?.length>0?` · ${c.schedule_dates[0]}`:' · unscheduled'}</div>
-                      {missing.length>0&&<div style={{display:'flex',flexWrap:'wrap',gap:3,marginTop:5}}>
-                        {missing.map(m=><span key={m} style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(251,191,36,0.12)',color:'var(--amber)',border:'1px solid rgba(251,191,36,0.25)'}}>{m}</span>)}
-                      </div>}
-                      {missing.length===0&&<div style={{marginTop:5}}><span style={{fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(110,231,183,0.12)',color:'#6ee7b7',border:'1px solid rgba(110,231,183,0.25)'}}>✓ ready to post</span></div>}
-                    </div>
-                    <span style={{fontSize:10,color:'#9ca3af',background:'rgba(156,163,175,0.15)',border:'1px solid rgba(156,163,175,0.2)',padding:'2px 7px',borderRadius:4,alignSelf:'flex-start',flexShrink:0,marginTop:2}}>draft</span>
-                  </div>;
-                })}
-              </div>
-            </div>;
-          })()}
+          <InProgressPanel data={data} setSelectedChar={setSelectedChar}/>
+          <ReworkPanel data={data} openChar={openChar}/>
           <LorebookDraftsPanel data={data} openLore={openLore}/>
           {/* Site Checklist */}
           <SiteChecklistPanel data={data} openChar={openChar} openLore={openLore} openColl={openColl}/>
@@ -3979,9 +4264,12 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
               <button className="btn" style={{fontSize:11,padding:'2px 8px'}} onClick={()=>setShowCycle(s=>!s)}><i className={`ti ${showCycle?'ti-chevron-up':'ti-settings'}`}></i>{showCycle?'Done':'Edit'}</button>
             </div>
             {nextWorld?(
-              <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:showCycle?12:0}}>
-                <span style={{fontSize:12,color:'var(--text3)'}}>Next up:</span>
-                <span style={{fontSize:13,fontWeight:600,color:'var(--accent)'}}>{nextWorld.emoji?nextWorld.emoji+' ':''}{nextWorld.name}</span>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:showCycle?12:0}}>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{fontSize:12,color:'var(--text3)'}}>Next up:</span>
+                  <span style={{fontSize:13,fontWeight:600,color:'var(--accent)'}}>{nextWorld.emoji?nextWorld.emoji+' ':''}{nextWorld.name}</span>
+                </div>
+                <button className="btn" style={{fontSize:11,padding:'2px 8px'}} onClick={skipNext}><i className="ti ti-player-skip-forward"></i>Skip</button>
               </div>
             ):<p style={{fontSize:12,color:'var(--text3)',marginBottom:showCycle?12:0}}>{cycle.length===0?'No cycle set up yet.':'All worlds covered.'}</p>}
             {showCycle&&(
@@ -3998,7 +4286,7 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
                     <i className="ti ti-grip-vertical" style={{color:'var(--text3)',fontSize:13,flexShrink:0}}></i>
                     <span style={{fontSize:12,color:'var(--text3)',minWidth:14,textAlign:'center'}}>{i+1}</span>
                     <span style={{flex:1,fontSize:12,color:wid===nextWorldId?'var(--accent)':'var(--text)'}}>{w.emoji?w.emoji+' ':''}{w.name}</span>
-                    <button style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',padding:'0 4px'}} onClick={()=>update(d=>{d.release_cycle=d.release_cycle.filter(x=>x!==wid);})}>×</button>
+                    <button style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',padding:'0 4px'}} onClick={()=>update(d=>{d.release_cycle=d.release_cycle.filter(x=>x!==wid);d.cycle_skipped=(d.cycle_skipped||[]).filter(n=>n!==w.name);})}>×</button>
                   </div>;
                 })}
                 <select style={{width:'100%',marginTop:8,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none'}}
@@ -4792,7 +5080,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
       fn(c);
       c.updated_at=new Date().toISOString();
       if(c.companion_folder){
-        const {world_id,status,schedule_dates,collections,linked_lorebooks,companion_folder,...rest}=c;
+        const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,...rest}=c;
         const safe={...rest,image:rest.image?.id?{id:rest.image.id}:null,portraits:(rest.portraits||[]).map(p=>{const{data,...pr}=p;return pr;}),companion_profile_banner_image:rest.companion_profile_banner_image?.id?{id:rest.companion_profile_banner_image.id}:undefined,card:rest.card||' ',example_dialogue:rest.example_dialogue||'',temperature_offset_percentage:rest.temperature_offset_percentage||0};
         window.lorekeeper.saveCompanionJson(companion_folder,safe);
       }
@@ -4804,9 +5092,29 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
   const scenarioDragOverIdx=useRef(null);
   const portraitDragIdx=useRef(null);
   const portraitDragOverIdx=useRef(null);
-  const handlePortrait=async()=>{const r=await window.lorekeeper.importImage();if(r)updChar(c=>{c.image={...( c.image||{}),data:r.base64};});};
-  const handleBanner=async()=>{const r=await window.lorekeeper.importImage();if(r)updChar(c=>{c.companion_profile_banner_image={data:r.base64};});};
+  const handlePortrait=async()=>{
+    const r=await window.lorekeeper.importImage();
+    if(!r) return;
+    const folder=charData.companion_folder?'Companions/'+charData.companion_folder:'Companions';
+    const res=await window.lorekeeper.copyImageToFolder(r.srcPath,folder);
+    if(res) updChar(c=>{c.image={...(c.image||{}),data:null,relPath:res.relPath};});
+    else updChar(c=>{c.image={...(c.image||{}),data:r.base64};});
+  };
+  const handleBanner=async()=>{
+    const r=await window.lorekeeper.importImage();
+    if(!r) return;
+    const folder=charData.companion_folder?'Companions/'+charData.companion_folder:'Companions';
+    const safeName=(charData.name||'banner').replace(/[^a-zA-Z0-9_-]/g,'_')+'-banner';
+    const res=await window.lorekeeper.copyImageToFolder(r.srcPath,folder,safeName);
+    if(res) updChar(c=>{c.companion_profile_banner_image={...(c.companion_profile_banner_image||{}),data:res.base64,relPath:res.relPath};});
+    else updChar(c=>{c.companion_profile_banner_image={...(c.companion_profile_banner_image||{}),data:r.base64};});
+  };
   const charData=data.characters.find(x=>x.id===char.id)||char;
+  // A companion in a community collection can reuse that collection's uploaded banner,
+  // so the same art doesn't have to be uploaded again per-companion on the site.
+  const charColls=data.collections.filter(cl=>(charData.collections||[]).includes(cl.id));
+  const communityColl=charColls.find(cl=>cl.is_community&&cl.image&&cl.image.id);
+  const bannerHintColl=(!communityColl&&charColls.length>0)?charColls[0]:null;
   React.useEffect(()=>{
     const pp=charData.portraits&&charData.portraits.find(p=>p.name==='profile_pic');
     if(!pp) return;
@@ -4845,7 +5153,16 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
             </div>
           </div>
           <button className="btn" style={{width:'100%',justifyContent:'center'}} onClick={handleBanner}><i className="ti ti-photo"></i>{charData.companion_profile_banner_image?.data?'Change Banner':'Set Banner'}</button>
-          {charData.companion_profile_banner_image?.data&&<div style={{height:60,borderRadius:'var(--r)',overflow:'hidden',border:'1px solid var(--border)'}}><img src={charData.companion_profile_banner_image.data} alt="banner" style={{width:'100%',height:'100%',objectFit:'cover'}}/></div>}
+          {charData.companion_profile_banner_image?.data&&<div style={BANNER_PREVIEW_STYLE}><ImgFromPath src={charData.companion_profile_banner_image.data||charData.companion_profile_banner_image.relPath} alt="banner" style={BANNER_IMG_STYLE}/></div>}
+          <div className="field-block" style={{padding:'10px 12px'}}>
+            <label style={{fontSize:10}}>Banner <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0}}>(from site)</span></label>
+            <div style={{display:'flex',gap:6,marginTop:4}}>
+              <input value={charData.companion_profile_banner_image?.id||''} onChange={e=>updChar(c=>{if(!c.companion_profile_banner_image)c.companion_profile_banner_image={};c.companion_profile_banner_image.id=e.target.value;})} placeholder={communityColl?communityColl.image.id:'paste UUID…'} style={BANNER_INPUT_STYLE}/>
+              {charData.companion_profile_banner_image?.id&&<button className="btn" style={BANNER_COPY_STYLE} onClick={()=>navigator.clipboard.writeText(charData.companion_profile_banner_image.id)} title="Copy"><i className="ti ti-copy" style={{fontSize:12}}></i></button>}
+            </div>
+            {communityColl&&!charData.companion_profile_banner_image?.id&&<div style={BANNER_HINT_STYLE}>Inherited from "{communityColl.name}" — exports automatically. Paste a UUID above to override.</div>}
+            {bannerHintColl&&<div style={BANNER_HINT_STYLE}>{bannerHintColl.is_community?'"'+bannerHintColl.name+'" has no image UUID — add one in its Settings tab.':'Tick "Community collection" in "'+bannerHintColl.name+'" settings to reuse its banner here.'}</div>}
+          </div>
           <div className="info-card">
             <h4>Quick Info</h4>
             <div className="info-row"><span className="label">World</span><span className="value">{data.worlds.find(w=>w.id===charData.world_id)?.name||'—'}</span></div>
@@ -4973,7 +5290,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                       const slots=10-(charData.portraits||[]).length;
                       const toAdd=imgs.slice(0,slots);
                       const destFolder='Companions'+(charData.companion_folder?'/'+charData.companion_folder:'');
-                      const copies=await Promise.all(toAdd.map(img=>window.lorekeeper.copyImageToFolder({srcPath:img.srcPath,destFolder})));
+                      const copies=await Promise.all(toAdd.map(img=>window.lorekeeper.copyImageToFolder(img.srcPath,destFolder)));
                       updChar(c=>{
                         if(!c.portraits)c.portraits=[];
                         toAdd.forEach((img,idx)=>{
@@ -5062,7 +5379,15 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
               </div>
               <div className="field-row">
                 <div className="field-block"><label>Access Level</label><select value={charData.access_level||'private'} onChange={e=>updChar(c=>c.access_level=e.target.value)}><option value="private">Private</option><option value="unlisted">Unlisted</option><option value="public">Public</option></select></div>
-                <div className="field-block"><label>Temperature Offset %</label><input type="number" min="-100" max="100" value={charData.temperature_offset_percentage||0} onChange={e=>{const v=Math.max(-100,Math.min(100,Number(e.target.value)));updChar(c=>c.temperature_offset_percentage=v);}} style={{width:80}}/></div>
+                <div className="field-block"><label>Temperature Offset %</label><input type="number" min="-100" max="100" value={charData.temperature_offset_percentage||0} onChange={e=>updChar(c=>c.temperature_offset_percentage=Number(e.target.value))}/></div>
+              </div>
+              <div className="field-block">
+                <label>Voice <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0}}>(set on the site — tracked here for reference)</span></label>
+                <select value={charData.voice_catalog_id||''} onChange={e=>updChar(c=>c.voice_catalog_id=e.target.value||null)}>
+                  <option value="">— none —</option>
+                  {SAUCEPAN_VOICES.map(v=><option key={v.n} value={v.n}>{v.n}</option>)}
+                </select>
+                {charData.voice_catalog_id&&<div style={VOICE_DESC_STYLE}>{(SAUCEPAN_VOICES.find(v=>v.n===charData.voice_catalog_id)||{}).d}</div>}
               </div>
               <div className="field-block">
                 <label>Flags</label>
@@ -5084,16 +5409,15 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
           )}
           {tab==='schedule'&&(
             <div style={{display:'flex',flexDirection:'column',gap:12}}>
-              <div className="field-block"><label>Status</label><select value={charData.status||'draft'} onChange={e=>updChar(c=>{
-                const newStatus=e.target.value;
-                c.status=newStatus;
+              <div className="field-block"><label>Status</label><select value={charData.status||'draft'} onChange={e=>{const newStatus=e.target.value;update(d=>{const c=d.characters.find(x=>x.id===charData.id);if(!c)return;c.status=newStatus;
                 if(newStatus==='posted'&&(!c.posted_dates||c.posted_dates.length===0)){
                   const t=new Date();
                   const td=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
                   if(!c.posted_dates)c.posted_dates=[];
                   c.posted_dates.push(td);
                 }
-              })}><option value="draft">Draft</option><option value="ready">Ready</option><option value="posted">Posted</option></select></div>
+                if(newStatus==='posted')advanceCycleHeadInDraft(d,c.world_id);
+              });}}><option value="draft">Draft</option><option value="ready">Ready</option><option value="posted">Posted</option></select></div>
               {charData.status!=='posted'&&<div className="field-block">
                 <label>Schedule Dates</label>
                 {(charData.schedule_dates||[]).map((d,i)=>(
@@ -5453,6 +5777,12 @@ function CollSettingsTab({col,setCol,data,world,update,openChar,setModal,onBack}
             <option value="private">Private</option>
             <option value="public">Public</option>
           </select>
+          <label style={{display:'flex',alignItems:'center',gap:8,fontSize:13,color:'var(--text2)',cursor:'pointer',fontWeight:'normal',textTransform:'none',letterSpacing:0,marginTop:10}}>
+            <input type="checkbox" checked={!!col.is_community} onChange={e=>setCol(c=>{c.is_community=e.target.checked;})} style={{width:'auto',accentColor:'var(--accent)'}}/>Community collection
+          </label>
+          <div style={{fontSize:10,color:'var(--text3)',marginTop:4,lineHeight:1.5}}>Saucepan doesn't export this flag — set it here to match the site, so companions in this collection can reuse its banner image.</div>
+          <label style={{fontSize:10,marginTop:10,display:'block'}}>Image UUID <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0}}>(from site)</span></label>
+          <input value={col.image?.id||''} onChange={e=>setCol(c=>{if(!c.image)c.image={};c.image.id=e.target.value;})} placeholder="paste UUID…" style={BANNER_INPUT_STYLE}/>
         </div>
         <div className="field-block">
           <label>Tags</label>
@@ -6208,21 +6538,48 @@ function ImageMigrationPanel({data, update}) {
     for(const c of data.collections) await checkItem('collection', c.id, c.name, c.image_data, c.image_relpath, c.collection_filename);
     for(const w of data.worlds) await checkItem('world', w.id, w.name, w.image, w.image_relpath, w.name.replace(/[^a-zA-Z0-9_-]/g,'_'));
     for(const p of (data.personas||[])) await checkItem('persona', p.id, p.name, p.image?.data, p.image_relpath, p.name.replace(/[^a-zA-Z0-9_-]/g,'_'));
+    // Portraits and main images are the bulk of the base64. Match them against files
+    // already present in each companion folder so nothing gets written twice.
+    let folderImages = {};
+    try {
+      const comps = await window.lorekeeper.scanCompanions();
+      (comps||[]).forEach(f => { folderImages[f.folderName] = f.imageFiles || []; });
+    } catch(e) { folderImages = {}; }
     for(const c of data.characters) {
+      const files = c.companion_folder ? (folderImages[c.companion_folder] || []) : [];
+      const safeCharName = (c.name||'image').replace(/[^a-zA-Z0-9_-]/g,'_');
       if(c.companion_profile_banner_image?.data && !c.companion_profile_banner_image?.relPath) {
-        items.push({type:'companion_banner', id:c.id, name:(c.display_name||c.name)+' (banner)', filename:(c.companion_folder||c.name.replace(/[^a-zA-Z0-9_-]/g,'_'))+'_banner', status:'needs_migration'});
+        items.push({key:c.id+'-banner', type:'companion_banner', id:c.id, name:(c.display_name||c.name)+' (banner)', filename:(c.companion_folder||safeCharName)+'_banner', status:'needs_migration'});
       }
+      if(c.image?.data && !c.image?.relPath) {
+        // Exact matches only — guessing from leftover files picks the wrong picture when
+        // portrait numbering has gaps. Anything unmatched is chosen by hand below.
+        const m = files.find(f=>f.name===c.name)
+               || files.find(f=>f.name===safeCharName)
+               || files.find(f=>/profile[_-]?pic|main|cover/i.test(f.name));
+        items.push({key:c.id+'-image', type:'char_image', id:c.id, name:(c.display_name||c.name)+' — main image', match:m?m.relPath:null, files:files, filename:safeCharName, status:'needs_migration'});
+      }
+      (c.portraits||[]).forEach((p,idx)=>{
+        if(p.data && !p.relPath) {
+          const m = files.find(f=>f.name===p.name);
+          items.push({key:c.id+'-p'+idx, type:'portrait', id:c.id, idx:idx, name:(c.display_name||c.name)+' — '+(p.name||('portrait '+(idx+1))), match:m?m.relPath:null, files:files, filename:(p.name||('portrait'+(idx+1))).replace(/[^a-zA-Z0-9_-]/g,'_'), status:'needs_migration'});
+        }
+      });
     }
     setReport(items);
     setStatus('scanned');
   };
 
+  const setMatch = (key, relPath) => setReport(prev => prev.map(x => ((x.key||x.id)===key ? {...x, match: relPath||null} : x)));
+
   const migrate = async () => {
     setStatus('migrating');
-    let count = 0;
     const folderMap = {lorebook:'Lorebooks', collection:'Collections', world:'Worlds', persona:'Personas'};
+    const resolved = [];
     for(const item of report) {
       if(item.status !== 'needs_migration') continue;
+      // Already sitting in the folder — link it instead of writing a duplicate.
+      if(item.match) { resolved.push({item:item, relPath:item.match}); continue; }
       const basename = item.filename ? item.filename.replace(/\.json$/i,'') : item.name.replace(/[^a-zA-Z0-9_-]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
       let base64 = null;
       let destFolder = folderMap[item.type]||'Misc';
@@ -6230,25 +6587,36 @@ function ImageMigrationPanel({data, update}) {
       else if(item.type==='collection') base64 = data.collections.find(x=>x.id===item.id)?.image_data;
       else if(item.type==='world') base64 = data.worlds.find(x=>x.id===item.id)?.image;
       else if(item.type==='persona') base64 = (data.personas||[]).find(x=>x.id===item.id)?.image?.data;
-      else if(item.type==='companion_banner') {
+      else {
         const ch = data.characters.find(x=>x.id===item.id);
-        base64 = ch?.companion_profile_banner_image?.data;
         destFolder = 'Companions/' + (ch?.companion_folder || basename);
+        if(item.type==='companion_banner') base64 = ch?.companion_profile_banner_image?.data;
+        else if(item.type==='char_image') base64 = ch?.image?.data;
+        else if(item.type==='portrait') base64 = (ch?.portraits||[])[item.idx]?.data;
       }
       if(!base64) continue;
       const res = await window.lorekeeper.writeImageFromBase64({ base64, destFolder, filename: basename });
-      if(res?.relPath) {
-        update(d=>{
-          if(item.type==='lorebook'){ const o=d.lorebooks.find(x=>x.id===item.id); if(o){o.image_relpath=res.relPath;o.image_data=null;}}
-          else if(item.type==='collection'){ const o=d.collections.find(x=>x.id===item.id); if(o){o.image_relpath=res.relPath;o.image_data=null;}}
-          else if(item.type==='world'){ const o=d.worlds.find(x=>x.id===item.id); if(o){o.image_relpath=res.relPath;o.image=null;}}
-          else if(item.type==='persona'){ const o=(d.personas||[]).find(x=>x.id===item.id); if(o){o.image_relpath=res.relPath;if(o.image)o.image.data=null;}}
-          else if(item.type==='companion_banner'){ const o=d.characters.find(x=>x.id===item.id); if(o)o.companion_profile_banner_image={relPath:res.relPath};}
-        });
-        count++;
-      }
+      if(res?.relPath) resolved.push({item:item, relPath:res.relPath});
     }
-    setMigrated(count);
+    // One state write for the whole batch — updating per image would deep-clone the
+    // entire dataset once per portrait, which is the very cost this migration removes.
+    if(resolved.length) update(d=>{
+      resolved.forEach(r=>{
+        const item = r.item, rel = r.relPath;
+        if(item.type==='lorebook'){ const o=d.lorebooks.find(x=>x.id===item.id); if(o){o.image_relpath=rel;o.image_data=null;} }
+        else if(item.type==='collection'){ const o=d.collections.find(x=>x.id===item.id); if(o){o.image_relpath=rel;o.image_data=null;} }
+        else if(item.type==='world'){ const o=d.worlds.find(x=>x.id===item.id); if(o){o.image_relpath=rel;o.image=null;} }
+        else if(item.type==='persona'){ const o=(d.personas||[]).find(x=>x.id===item.id); if(o){o.image_relpath=rel;if(o.image)o.image.data=null;} }
+        else {
+          const o=d.characters.find(x=>x.id===item.id);
+          if(!o) return;
+          if(item.type==='companion_banner') o.companion_profile_banner_image={...(o.companion_profile_banner_image||{}), data:null, relPath:rel};
+          else if(item.type==='char_image'){ if(!o.image)o.image={}; o.image.relPath=rel; o.image.data=null; }
+          else if(item.type==='portrait'){ const p=(o.portraits||[])[item.idx]; if(p){p.relPath=rel;p.data=null;} }
+        }
+      });
+    });
+    setMigrated(resolved.length);
     setStatus('done');
   };
 
@@ -6277,7 +6645,7 @@ function ImageMigrationPanel({data, update}) {
         </div>
       </div>
       <p style={{fontSize:12,color:'var(--text3)',marginBottom:status?12:0}}>
-        Checks lorebooks and collections for base64 images that should be stored as local files instead.
+        Checks lorebooks, collections, worlds, personas, and companion portraits for base64 images that should be local files instead. Portraits already sitting in a companion folder are linked rather than rewritten.
       </p>
       {status==='scanned'&&report.length===0&&(
         <div style={{fontSize:12,color:'#6ee7b7'}}>✓ No base64 images found — all clean.</div>
@@ -6297,13 +6665,19 @@ function ImageMigrationPanel({data, update}) {
               <div style={{fontSize:12,color:'var(--amber)',marginBottom:8}}>
                 {needsMigration.length} item{needsMigration.length>1?'s':''} storing image as base64 — can be migrated to local files:
               </div>
+              <div style={{fontSize:11,color:'var(--text3)',marginBottom:6}}>
+                {needsMigration.filter(r=>r.match).length} will link to a file already in the folder · {needsMigration.filter(r=>!r.match).length} will be written out from base64
+              </div>
               {needsMigration.map(r=>(
-                <div key={r.id} style={{fontSize:11,color:'var(--text3)',padding:'3px 0',display:'flex',gap:8,alignItems:'center'}}>
-                  <i className={`ti ${r.type==='lorebook'?'ti-book':'ti-folders'}`} style={{color:'var(--amber)',fontSize:12}}></i>
+                <div key={r.key||r.id} style={{fontSize:11,color:'var(--text3)',padding:'3px 0',display:'flex',gap:8,alignItems:'center'}}>
+                  <i className={`ti ${r.type==='lorebook'?'ti-book':r.type==='portrait'?'ti-photo':'ti-folders'}`} style={{color:r.match?'#6ee7b7':'var(--amber)',fontSize:12}}></i>
                   {r.name}
-                  {r.filename
-                    ?<span style={{fontSize:10,color:'var(--text3)'}}>→ {r.type==='lorebook'?'Lorebooks':'Collections'}\{r.filename.replace(/\.json$/i,'')}</span>
-                    :<span style={{fontSize:10,color:'var(--red)'}}>— no filename set, will use sanitized name</span>}
+                  {r.files&&r.files.length>0
+                    ?<select value={r.match||''} onChange={e=>setMatch(r.key||r.id,e.target.value)} style={AUDIT_SELECT_STYLE}>
+                        <option value="">write a new file</option>
+                        {r.files.map(f=><option key={f.relPath} value={f.relPath}>link {f.filename||f.name}</option>)}
+                      </select>
+                    :<span style={AUDIT_WRITE_STYLE}>write new file</span>}
                 </div>
               ))}
               <button className="btn primary" style={{marginTop:10,fontSize:12}} onClick={migrate}>
@@ -7263,6 +7637,20 @@ function SettingsPage({data, update, dataPath}) {
   const set = (key, val) => update(d => { if(!d.settings) d.settings={}; d.settings[key]=val; });
 
   const [apiKeyVisible, setApiKeyVisible] = React.useState(false);
+  const [lmTest, setLmTest] = React.useState(null);
+  const testLmStudio = async () => {
+    const base = ((data.settings||{}).lmstudio_base_url || 'http://localhost:1234/v1').replace(/\/+$/, '');
+    setLmTest({state:'testing', msg:'Contacting ' + base + '…'});
+    try {
+      const res = await fetch(base + '/models');
+      const j = await res.json();
+      const ids = (j.data||[]).map(m=>m.id);
+      if(!ids.length) { setLmTest({state:'warn', msg:'Connected, but no model is loaded in LM Studio.'}); return; }
+      setLmTest({state:'ok', msg:'Connected. Loaded: ' + ids.join(', '), ids:ids});
+    } catch(e) {
+      setLmTest({state:'err', msg:'No response from ' + base + '. Start the server in LM Studio (Developer tab) and load a model.'});
+    }
+  };
   const [apiKeySaved, setApiKeySaved] = React.useState(false);
 
   const saveApiKey = (field, val) => {
@@ -7307,6 +7695,7 @@ function SettingsPage({data, update, dataPath}) {
             <option value="openai">OpenAI (GPT)</option>
             <option value="google">Google (Gemini)</option>
             <option value="openrouter">OpenRouter</option>
+            <option value="lmstudio">LM Studio (local)</option>
           </select>
         </Field>
 
@@ -7407,6 +7796,27 @@ function SettingsPage({data, update, dataPath}) {
             <input type="text" value={settings.openrouter_model||'anthropic/claude-sonnet-4-6'} onChange={e=>set('openrouter_model',e.target.value)} placeholder="anthropic/claude-sonnet-4-6"
               style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',fontFamily:'monospace',boxSizing:'border-box'}}/>
           </Field>
+        </React.Fragment>}
+
+        {settings.ai_provider==='lmstudio'&&<React.Fragment>
+          <Field label="Server URL" hint="LM Studio → Developer tab → start the server. Default port is 1234. No API key is needed.">
+            <input type="text" value={settings.lmstudio_base_url||''} onChange={e=>set('lmstudio_base_url',e.target.value)} placeholder="http://localhost:1234/v1"
+              style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',fontFamily:'monospace',boxSizing:'border-box'}}/>
+          </Field>
+          <Field label="Model" hint="The model identifier as LM Studio lists it. Run the test below to see what is loaded.">
+            <input type="text" value={settings.lmstudio_model||''} onChange={e=>set('lmstudio_model',e.target.value)} placeholder="qwen3-14b-instruct"
+              style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',fontFamily:'monospace',boxSizing:'border-box'}}/>
+          </Field>
+          <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+            <button className="btn" onClick={testLmStudio}><i className="ti ti-plug-connected"></i>Test connection</button>
+            {lmTest&&<span style={lmTest.state==='ok'?LM_OK_STYLE:lmTest.state==='warn'?LM_WARN_STYLE:LM_ERR_STYLE}>{lmTest.msg}</span>}
+          </div>
+          {lmTest&&lmTest.state==='ok'&&lmTest.ids&&<div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:8}}>
+            {lmTest.ids.map(id=><button key={id} className="btn" style={{fontSize:10,padding:'2px 8px'}} onClick={()=>set('lmstudio_model',id)}>use {id}</button>)}
+          </div>}
+          <div style={{fontSize:11,color:'var(--text3)',marginTop:10,lineHeight:1.6}}>
+            Local models have far less context room than the cloud providers. Until the context scope selector lands, the Assistant still sends the whole world — for large worlds use the Image Prompt Generator here and keep the Assistant on a cloud provider.
+          </div>
         </React.Fragment>}
       </Section>
 
@@ -7729,6 +8139,7 @@ function WorldSelectWithCreate({data,worldId,setWorldId,update}) {
       <label>World</label>
       <select value={creating?'__new__':worldId} onChange={e=>setWorldId(e.target.value)}>
         <option value="">— Select —</option>
+        <option value="__none__">No World (standalone)</option>
         {sortedWorlds(data).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
         <option value="__new__">＋ Create new world…</option>
       </select>
@@ -7776,13 +8187,13 @@ function Modal({modal,setModal,data,update,assignLore,assignChar,assignColl,upda
     </div>
   </div></div>;
 
-  if(modal.type==='assign-coll') return <div className="modal-bg"><div className="modal"><h2>Assign Collection to World</h2><p style={{fontSize:13,color:'var(--text3)',marginBottom:8}}>"{modal.obj.name}"</p><p style={{fontSize:12,color:'var(--text3)',marginBottom:16}}>{(modal.obj.companions||[]).length} companions will be auto-linked if their IDs match existing characters.</p><WorldSelectWithCreate data={data} worldId={worldId} setWorldId={setWorldId} update={update}/><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={!worldId||worldId==='__new__'} onClick={()=>assignColl(worldId)}>Import</button></div></div></div>;
+  if(modal.type==='assign-coll') return <div className="modal-bg"><div className="modal"><h2>Assign Collection to World</h2><p style={{fontSize:13,color:'var(--text3)',marginBottom:8}}>"{modal.obj.name}"</p><p style={{fontSize:12,color:'var(--text3)',marginBottom:16}}>{(modal.obj.companions||[]).length} companions will be auto-linked if their IDs match existing characters.</p><WorldSelectWithCreate data={data} worldId={worldId} setWorldId={setWorldId} update={update}/><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={(!worldId||worldId==='__new__')&&worldId!=='__none__'} onClick={()=>assignColl(worldId)}>Import</button></div></div></div>;
 
   if(modal.type==='confirm-update-coll') return <div className="modal-bg"><div className="modal"><h2>Update existing collection?</h2><p style={{fontSize:13,color:'var(--text3)',marginBottom:8}}>A collection with this ID already exists:</p><p style={{fontSize:14,fontWeight:600,color:'var(--teal)',marginBottom:16}}>{modal.existing.name}</p><p style={{fontSize:13,color:'var(--text3)',marginBottom:20}}>This will update the name, description and tags, and re-link any matching characters.</p><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn" onClick={()=>{setModal({type:'assign-coll',obj:modal.obj});}}>Import as New</button><button className="btn primary" onClick={()=>updateCollFromJSON(modal.obj)}>Update Existing</button></div></div></div>;
 
-  if(modal.type==='assign-lore') return <div className="modal-bg"><div className="modal"><h2>Assign Lorebook to World</h2><p style={{fontSize:13,color:'var(--text3)',marginBottom:16}}>"{modal.obj.name}"</p><WorldSelectWithCreate data={data} worldId={worldId} setWorldId={setWorldId} update={update}/><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={!worldId||worldId==='__new__'} onClick={()=>assignLore(worldId)}>Import</button></div></div></div>;
+  if(modal.type==='assign-lore') return <div className="modal-bg"><div className="modal"><h2>Assign Lorebook to World</h2><p style={{fontSize:13,color:'var(--text3)',marginBottom:16}}>"{modal.obj.name}"</p><WorldSelectWithCreate data={data} worldId={worldId} setWorldId={setWorldId} update={update}/><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={(!worldId||worldId==='__new__')&&worldId!=='__none__'} onClick={()=>assignLore(worldId)}>Import</button></div></div></div>;
 
-  if(modal.type==='assign-char') return <div className="modal-bg"><div className="modal"><h2>Assign Character to World</h2><p style={{fontSize:13,color:'var(--text3)',marginBottom:16}}>"{modal.obj.name}"</p><WorldSelectWithCreate data={data} worldId={worldId} setWorldId={setWorldId} update={update}/><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={!worldId||worldId==='__new__'} onClick={()=>assignChar(worldId)}>Import</button></div></div></div>;
+  if(modal.type==='assign-char') return <div className="modal-bg"><div className="modal"><h2>Assign Character to World</h2><p style={{fontSize:13,color:'var(--text3)',marginBottom:16}}>"{modal.obj.name}"</p><WorldSelectWithCreate data={data} worldId={worldId} setWorldId={setWorldId} update={update}/><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={(!worldId||worldId==='__new__')&&worldId!=='__none__'} onClick={()=>assignChar(worldId)}>Import</button></div></div></div>;
 
   if(modal.type==='new-persona') return <div className="modal-bg"><div className="modal"><h2>New Persona</h2><div className="form-group"><label>Name</label><input autoFocus value={form.name||''} onChange={e=>f('name',e.target.value)} placeholder="Persona name"/></div><div className="form-group"><label>Pronouns</label><input value={form.pronouns||''} onChange={e=>f('pronouns',e.target.value)} placeholder="they/them, she/her…"/></div><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={!form.name?.trim()} onClick={()=>{update(d=>{if(!d.personas)d.personas=[];d.personas.push({id:uuid(),name:form.name.trim(),pronouns:form.pronouns||'',description:'',image:null,linked_lorebook:null,created_at:now()});});setModal(null);}}>Create</button></div></div></div>;
 
