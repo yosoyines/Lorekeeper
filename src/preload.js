@@ -3,6 +3,9 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('lorekeeper', {
   loadData: () => ipcRenderer.invoke('load-data'),
   saveData: (data) => ipcRenderer.invoke('save-data', data),
+  saveDataAllowShrink: (data, reason) => ipcRenderer.invoke('save-data-allow-shrink', { data, reason }),
+  onFlushBeforeClose: (cb) => ipcRenderer.on('flush-before-close', cb),
+  flushComplete: () => ipcRenderer.send('flush-complete'),
   exportFile: (opts) => ipcRenderer.invoke('export-file', opts),
   saveImage: (opts) => ipcRenderer.invoke('save-image', opts),
   pasteImage: () => ipcRenderer.invoke('paste-image'),
@@ -13,6 +16,7 @@ contextBridge.exposeInMainWorld('lorekeeper', {
   scanCompanions: () => ipcRenderer.invoke('scan-companions'),
   scanLorebooks: () => ipcRenderer.invoke('scan-lorebooks'),
   scanCollections: () => ipcRenderer.invoke('scan-collections'),
+  listFolderImages: (subfolder) => ipcRenderer.invoke('list-folder-images', subfolder),
   openFolder: (relPath) => ipcRenderer.invoke('open-folder', relPath),
   getDataPath: () => ipcRenderer.invoke('get-data-path'),
   saveCompanionJson: (folderName, data) => ipcRenderer.invoke('save-companion-json', { folderName, data }),

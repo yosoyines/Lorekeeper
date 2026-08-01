@@ -19,6 +19,9 @@ const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
 });
 
 let mainWindow;
+let allowClose = false;
+// Tracks the current disk write so shutdown can wait for it instead of killing it midway.
+let saveInFlight = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -33,6 +36,28 @@ function createWindow() {
   });
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
   mainWindow.setMenuBarVisibility(false);
+
+  // Autosave is debounced in the renderer, and a large data file takes real time to
+  // stringify and write. Quitting used to kill both the pending timer and any in-flight
+  // write, silently losing the last edit of a session. Hold the window open until the
+  // renderer confirms it has flushed.
+  mainWindow.on('close', (e) => {
+    if (allowClose) return;
+    e.preventDefault();
+    let settled = false;
+    const finish = async () => {
+      if (settled) return;
+      settled = true;
+      ipcMain.removeListener('flush-complete', finish);
+      if (saveInFlight) { try { await saveInFlight; } catch (err) {} }
+      allowClose = true;
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
+    };
+    // A hung or crashed renderer must never trap the window open.
+    setTimeout(finish, 8000);
+    ipcMain.once('flush-complete', finish);
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('flush-before-close');
+  });
 }
 
 app.whenReady().then(() => {
@@ -120,11 +145,15 @@ ipcMain.handle('save-data', async (event, data) => {
       }
     }
 
-    await fs.promises.writeFile(DATA_FILE, newContent, 'utf-8');
-
-    // Keep a rolling last-known-good backup of any write that passed the safety check above.
-    // This is a cheap extra layer of recovery in case of any other unforeseen issue.
-    fs.promises.writeFile(DATA_BACKUP_FILE, newContent, 'utf-8').catch(() => {});
+    const write = (async () => {
+      await fs.promises.writeFile(DATA_FILE, newContent, 'utf-8');
+      // Keep a rolling last-known-good backup of any write that passed the safety check above.
+      // This is a cheap extra layer of recovery in case of any other unforeseen issue.
+      fs.promises.writeFile(DATA_BACKUP_FILE, newContent, 'utf-8').catch(() => {});
+    })();
+    saveInFlight = write;
+    await write;
+    if (saveInFlight === write) saveInFlight = null;
 
     return true;
   }
@@ -132,6 +161,35 @@ ipcMain.handle('save-data', async (event, data) => {
 });
 
 ipcMain.handle('get-data-path', () => DATA_FILE);
+
+// Intentional-shrink save. The ratio guard above cannot tell a catastrophic empty-state
+// write from a legitimate bulk shrink (clearing 190 MB of base64 down to file paths), so
+// the image migration/cleanup paths use this instead. It is NOT a blind bypass: it takes a
+// timestamped snapshot of the current file first, so the pre-shrink state stays recoverable.
+ipcMain.handle('save-data-allow-shrink', async (event, { data, reason }) => {
+  try {
+    const newContent = JSON.stringify(data);
+
+    let snapshotPath = null;
+    if (fs.existsSync(DATA_FILE)) {
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      snapshotPath = path.join(DATA_DIR, 'lorekeeper-data.preshrink-' + stamp + '.json');
+      await fs.promises.copyFile(DATA_FILE, snapshotPath);
+      console.warn('save-data-allow-shrink (' + (reason || 'unspecified') + '): snapshot at ' + snapshotPath);
+    }
+
+    await fs.promises.writeFile(DATA_FILE, newContent, 'utf-8');
+    // Reset lastgood too, otherwise the next ordinary autosave is measured against the
+    // old 190 MB baseline and gets refused for being "suspiciously small".
+    await fs.promises.writeFile(DATA_BACKUP_FILE, newContent, 'utf-8').catch(() => {});
+
+    return { success: true, snapshot: snapshotPath };
+  }
+  catch (e) {
+    console.error('save-data-allow-shrink:', e);
+    return { success: false, error: e.message };
+  }
+});
 
 // Read image from system clipboard
 ipcMain.handle('paste-image', async () => {
@@ -346,6 +404,20 @@ ipcMain.handle('scan-collections', async () => {
     } catch (e) {}
   }
   return results;
+});
+
+// ── List image files in a top-level data folder ──────────
+ipcMain.handle('list-folder-images', async (event, subfolder) => {
+  const dir = path.join(DATA_DIR, subfolder);
+  if (!fs.existsSync(dir)) return [];
+  const files = fs.readdirSync(dir);
+  return files
+    .filter(f => IMAGE_EXTS.includes(path.extname(f).slice(1).toLowerCase()))
+    .map(f => ({
+      name: path.basename(f, path.extname(f)),
+      filename: f,
+      relPath: `${subfolder}/${f}`
+    }));
 });
 
 // ── Open folder in Explorer ──────────────────────────────

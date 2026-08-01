@@ -897,11 +897,22 @@ const MACROS = [
 const NAMES_MASC = ['Adrián','Aleksei','Anders','Arash','Bastian','Cillian','Dario','Emre','Esteban','Ezra','Fabian','Felix','Finn','Gabriel','Hadrian','Ignacio','Ivan','Jae-won','Jasper','Kenji','Lachlan','Leandro','Lucian','Marek','Mateo','Nico','Oisín','Orion','Rafael','Rémi','Rhys','Roman','Ryōta','Saoirse','Sebastian','Silas','Søren','Stellan','Tariq','Tobias','Tomás','Valentín','Viktor','Wren','Xander','Yusuf','Zaid'];
 
 const NAMES_FEM = ['Aelinn','Amara','Ariadne','Astrid','Beatriz','Brynn','Calla','Camille','Demi','Elowen','Emara','Esme','Faye','Freya','Ginevra','Hana','Ingrid','Isolde','Juno','Kassia','Lena','Liora','Lourdes','Luna','Maëlle','Margot','Mirela','Nadia','Noa','Odessa','Paloma','Petra','Rosaline','Sable','Saskia','Selene','Serra','Signe','Solène','Tamsin','Teodora','Valentina','Veda','Wren','Yara','Zara','Zélie'];
-</script>
-<script type="text/babel">
-const { useState, useEffect, useCallback, useRef, useMemo } = React;
+
+
+const IMG_COVER={width:'100%',height:'100%',objectFit:'cover'};
+const IMG_ICON16={width:16,height:16,borderRadius:2,objectFit:'cover'};
+const IMG_ICON32={width:32,height:32,borderRadius:4,objectFit:'cover',flexShrink:0};
+const COLL_FOLDER_ICON={fontSize:24,color:'var(--teal)',opacity:0.5};
+
+// ===== Moved out of the Babel block (session 32) =====
+// These have no JSX and no hooks, so Babel never needed to see them. Babel standalone
+// has a hard ~500KB ceiling past which it deoptimises and silently breaks click handlers
+// app-wide with no error (see session 23). Keep new pure helpers and data in THIS block.
+
 const uuid = () => ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
+
 const BS = String.fromCharCode(92);
+
 // Robust timestamp parser. Saucepan exports use a format like
 // "2026-06-18 03:01:00.455294 +00:00:00" which native Date() cannot parse (returns NaN).
 // Normalize: space -> T, truncate microseconds to milliseconds, fix the timezone offset
@@ -917,10 +928,15 @@ const parseTimestamp = (s) => {
   t = new Date(norm).getTime();
   return isNaN(t) ? 0 : t;
 };
+
 const loreHint = (filename) => "I:" + BS + "Lorekeeper" + BS + "Lorebooks" + BS + filename;
+
 const charFolderHint = (folder) => "Saves to: I:" + BS + "Lorekeeper" + BS + "Companions" + BS + folder + BS + "companion.json";
+
 const now = () => new Date().toISOString();
+
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
 const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 const initData = () => ({ worlds:[], characters:[], lorebooks:[], collections:[], gallery:[], schedule:[], notes:'', personas:[], templates:[], release_cycle:[], schedule_notes:{}, lorebook_templates:[], map_positions:{}, world_order:[], cycle_head_world_id:null, cycle_skipped:[], settings:{} });
@@ -937,6 +953,7 @@ const REWORK_FIELDS = [
   ["intros", "starting_scenarios"],
   ["voice", "voice_catalog_id"]
 ];
+
 // Banner UUID actually used on export. A manually pasted id always wins; otherwise the
 // companion inherits the banner of any community collection it belongs to, so shared
 // collection art doesn't have to be re-uploaded per companion on the site.
@@ -953,23 +970,41 @@ function resolveBannerId(c, data) {
 }
 
 const LORE_ON_STYLE = {fontSize:9,padding:'2px 7px',borderRadius:3,background:'var(--accent-dim)',color:'var(--accent)',border:'1px solid var(--accent)',cursor:'pointer'};
+
 const LORE_OFF_STYLE = {fontSize:9,padding:'2px 7px',borderRadius:3,background:'var(--bg3)',color:'var(--text3)',border:'1px solid var(--border)',cursor:'pointer'};
+
 const CTX_SELECT_STYLE = {flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',fontSize:10,padding:'2px 4px',borderRadius:3,outline:'none',minWidth:0};
+
 const CTX_OK_STYLE = {fontSize:10,color:'#6ee7b7',flexShrink:0,fontVariantNumeric:'tabular-nums'};
+
 const CTX_WARN_STYLE = {fontSize:10,color:'var(--amber)',flexShrink:0,fontVariantNumeric:'tabular-nums'};
+
 const LM_OK_STYLE = {fontSize:11,color:'#6ee7b7'};
+
 const LM_WARN_STYLE = {fontSize:11,color:'var(--amber)'};
+
 const LM_ERR_STYLE = {fontSize:11,color:'#f87171'};
+
 const VOICE_DESC_STYLE = {fontSize:11,color:'var(--text3)',marginTop:6,lineHeight:1.5};
+
 const AUDIT_SELECT_STYLE = {background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',fontSize:10,padding:'1px 4px',borderRadius:3,outline:'none',maxWidth:280};
+
 const AUDIT_WRITE_STYLE = {fontSize:10,color:'var(--text3)'};
+
 const BANNER_PREVIEW_STYLE = {height:60,borderRadius:'var(--r)',overflow:'hidden',border:'1px solid var(--border)'};
+
 const BANNER_IMG_STYLE = {width:'100%',height:'100%',objectFit:'cover'};
+
 const BANNER_INPUT_STYLE = {flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',fontFamily:'monospace',minWidth:0};
+
 const BANNER_COPY_STYLE = {padding:'4px 6px',fontSize:10,flexShrink:0};
+
 const BANNER_HINT_STYLE = {fontSize:10,color:'var(--text3)',marginTop:6,lineHeight:1.5};
+
 const BANNER_CHIP_STYLE = {marginTop:6,width:'100%',justifyContent:'center',fontSize:10,padding:'4px 6px'};
+
 const RW_OK_STYLE = {fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(110,231,183,0.12)',color:'#6ee7b7',border:'1px solid rgba(110,231,183,0.25)'};
+
 const RW_GAP_STYLE = {fontSize:9,padding:'1px 5px',borderRadius:3,background:'rgba(251,191,36,0.12)',color:'var(--amber)',border:'1px solid rgba(251,191,36,0.25)'};
 
 // Returns every depth field with whether it's filled, so the row shows a full checklist
@@ -1020,6 +1055,495 @@ function advanceCycleHeadInDraft(d, worldId) {
   const expectedNext = headIdx === -1 ? 0 : (headIdx + 1) % cycle.length;
   if(worldIdx === expectedNext) d.cycle_head_world_id = worldId;
 }
+
+// Displays an image from either base64 data or file path
+
+function renderMd(text) {
+  if(!text) return '';
+  // code blocks first
+  let html = text.replace(/```([\s\S]*?)```/g, (_,c)=>`<pre><code>${c.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code></pre>`);
+  // inline code
+  html = html.replace(/`([^`]+)`/g, (_,c)=>`<code>${c.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code>`);
+  // headings
+  html = html.replace(/^#### (.+)$/gm,'<h4>$1</h4>');
+  html = html.replace(/^### (.+)$/gm,'<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm,'<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm,'<h1>$1</h1>');
+  // hr
+  html = html.replace(/^---+$/gm,'<hr/>');
+  // bold+italic, bold, italic
+  html = html.replace(/\*\*\*([^*]+)\*\*\*/g,'<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+  html = html.replace(/\*([^*\n]+)\*/g,'<em>$1</em>');
+  // blockquote
+  html = html.replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>');
+  // ul
+  html = html.replace(/^[\-\*] (.+)$/gm,'<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+  // ol
+  html = html.replace(/^\d+\. (.+)$/gm,'<li>$1</li>');
+  // paragraphs: wrap non-tag lines
+  html = html.split('\n').map(line=>{
+    const trimmed=line.trim();
+    if(!trimmed) return '<br/>';
+    if(/^<(h[1-4]|ul|ol|li|pre|hr|blockquote)/.test(trimmed)) return trimmed;
+    return `<p>${trimmed}</p>`;
+  }).join('');
+  return html;
+}
+
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+
+const NAMES_NEUTRAL = ['Aiden','Alev','Ash','Avery','Blair','Cairo','Cameron','Cedar','Coda','Cypress','Dakota','Ember','Everest','Falco','Harbor','Haven','Indigo','Joss','Kai','Kendall','Lake','Lark','Lennon','Lumen','Maren','Marlowe','Morgan','Nova','Onyx','Pax','Quinn','Rayne','Reed','Remy','River','Roan','Rowan','Sage','Scout','Shiloh','Skye','Sol','Soren','Story','Storm','Sable','Theo','Vale','Winter','Zephyr'];
+
+const SURNAMES = ['Adeyemi','Alvarado','Ashford','Beaumont','Blackwell','Callahan','Castillo','Chen','Delacroix','Dimitriou','Espinoza','Ferreira','Fontaine','Gallagher','Hansson','Hayashi','Ibrahim','Johansson','Kaczmarek','Kaur','Khalil','Kim','Kowalski','Laurent','Lévesque','Malik','Marchetti','Mori','Nakamura','Navarro','Nguyen',"O'Brien",'Okafor','Osei','Park','Petrov','Qon','Reyes','Rosewood','Rousseau','Saito','Santos','Schmidt','Seo','Sharma','Tanaka','Thorne','Torres','Vance','Vasquez','Volkov','Walsh','Yamamoto','Yilmaz','Zhao'];
+
+const EYE_BASE = ['brown','dark brown','light brown','hazel','amber','green','light green','blue','light blue','steel blue','grey','dark grey','blue-grey','grey-green','violet','black'];
+
+const EYE_DETAILS = ['','','','with gold flecks','with amber flecks','with hazel specks','with green flecks','with silver flecks','with dark limbal ring','heterochromia — one slightly lighter','unusually pale','deep-set','heavy-lidded','slightly upturned','almond-shaped'];
+
+const HAIR_COLOR = ['black','jet black','dark brown','medium brown','light brown','chestnut','auburn','copper','red','strawberry blonde','dirty blonde','golden blonde','platinum blonde','silver','grey','white','dark grey','ash brown'];
+
+const HAIR_DETAIL = ['','','','with natural highlights','with subtle warm tones','slightly sun-bleached','with grey at the temples','with a few silver strands','with natural wave','coarse-textured','fine-textured','thick'];
+
+const HAIR_LENGTH = ['very short','short','ear-length','jaw-length','neck-length','shoulder-length','collarbone-length','mid-back','long','very long','down to the waist'];
+
+const HAIR_TEXTURE = ['straight','mostly straight','wavy','loosely wavy','curly','tightly curled','coily','with natural body'];
+
+const HAIR_STYLE = ['','worn loose','worn slicked back','worn in a bun','kept tied back','usually disheveled','neatly kept','often tucked behind one ear','undercut','with a side part','with a middle part','cropped close on the sides'];
+
+const BUILD_FRAME = ['lean','slender','slim','wiry','athletic','toned','average','stocky','broad-shouldered','heavyset','muscular','powerfully built'];
+
+const BUILD_HEIGHT = ['short for their gender','on the shorter side','average height','slightly above average','tall','very tall'];
+
+const BUILD_DETAIL = ['','','','with a long torso','with broad shoulders','with narrow shoulders','with a slight build despite height','carries weight in the chest and shoulders','long-limbed','compact','with visible muscle definition','with a soft build','with a naturally lean frame'];
+
+// ── Esper Powers Tool ────────────────────────────────────────────────────
+const ESPER_TYPES = [
+  "Telekinesis","Telepathy","Pyrokinesis","Cryokinesis","Electrokinesis",
+  "Biokinesis","Chronokinesis","Aerokinesis","Hydrokinesis","Geokinesis",
+  "Photokinesis","Umbrakinesis","Precognition","Postcognition","Astral Projection",
+  "Psychometry","Empathy","Technopathy","Ferrokinesis","Thermokinesis",
+  "Sonokinesis","Haemokinesis","Necromancy","Illusion","Force Field",
+];
+
+const ESPER_TIERS = ["F","E","D","C","B","A","S"];
+
+const ESPER_DRAWBACKS = [
+  "Nosebleeds with heavy use","Severe migraines after extended use",
+  "Temporary blindness when pushed","Emotional bleed — feels targets' feelings",
+  "Power bleeds during sleep or nightmares","Loses control under high stress",
+  "Physical exhaustion — needs 8+ hours recovery","Burns through calories fast; must eat constantly",
+  "Chronic low-grade pain","Shortened lifespan with each major exertion",
+  "Memory gaps after peak use","Heightened sensitivity to their own element",
+  "Random involuntary activation","Amplifies nearby espers uncontrollably",
+  "Requires physical contact to activate","Useless within 10 metres of suppression tech",
+  "Leaves a detectable psychic signature","Painful to suppress; constant low drain",
+  "Triggers strong animal fear responses","Power tied to emotional state — useless when calm",
+];
+
+const ESPER_NAMES_ADJ = [
+  "Crimson","Silver","Static","Hollow","Fractured","Neon","Ashen","Gilded",
+  "Ironclad","Phantom","Dusk","Solar","Null","Apex","Feral","Obsidian",
+];
+
+const ESPER_NAMES_NOUN = [
+  "Veil","Surge","Tide","Echo","Pulse","Edge","Storm","Ward",
+  "Void","Flame","Gale","Drift","Shard","Coil","Chain","Flux",
+];
+
+// ── Hockey Positions Tool ─────────────────────────────────────────────────
+const HOCKEY_HANDEDNESS = ["Shoots left","Shoots right"];
+
+const HOCKEY_TRAITS = [
+  "Dangles past three defenders like they're pylons",
+  "Known for a devastating one-timer from the circle",
+  "Never misses a backcheck, somehow still leads the team in points",
+  "Plays hurt every game, never mentions it",
+  "Talks non-stop on the ice — opponents hate it, teammates love it",
+  "Fights clean — earns respect even from the guys they drop",
+  "Has a signature move the whole league knows is coming and still can't stop",
+  "Reads the play two seconds ahead of everyone else",
+  "Biggest hitter on the team, but never takes a penalty",
+  "Chirps are legendary — opposing bench is always distracted",
+  "Goes to the dirty areas everyone else avoids",
+  "Breakaway speed that makes everyone in the building stand up",
+];
+
+// ── Swim Strokes Tool ─────────────────────────────────────────────────────
+const SWIM_ROLES = [
+  "The anchor on every relay — coaches don't trust anyone else in the water last",
+  "Technician. Form is flawless; every practice drill is done at race pace",
+  "Sprinter mentality — hates anything over 200m, gods gifted with fast-twitch muscle",
+  "Distance grinder. Goes out slow, comes back faster, beats everyone on the back half",
+  "The team's loudest cheerleader on the block, completely silent underwater",
+  "Obsessive about start and turn times — shaves tenths no one else bothers with",
+  "Came to swimming late; raw and improving every meet",
+  "Dual-sport athlete — the body is wrong for swimming, the results are not",
+  "Streaky. When it's on, it's terrifying. When it's off, it's a mystery",
+  "Team captain energy — knows everyone's best times, gives the warmup speech",
+];
+
+const CW_TAGS = new Set(["dead_dove", "noncon_dubcon", "abuse", "blackmail", "slur_usage", "self_harm_suicide", "violence", "gore", "drugs_addiction", "incest_stepcest", "vore", "cannibalism", "feral", "trauma", "terminal_illness", "user_harm", "death", "body_horror", "eating_disorder", "amputation", "miscarriage"]);
+
+const TAG_CATEGORIES = ["Content Warnings", "Character Identity", "Point of View", "Sexual & Romantic Orientation", "Relationship Structure & Dynamics", "Plot Devices & Structure", "Story Genres & Styles", "Locations and Eras", "World-Building Concepts", "Character Archetypes & Personalities", "Professions", "Species/Being Types", "Kinks & Intimate Content", "Media Sources", "Other"];
+
+// ── Nationality Tool ─────────────────────────────────────
+
+const REGIONS = ['All',...[...new Set(NATIONALITIES.map(n=>n.region))].sort()];
+
+// ── Color Tool ────────────────────────────────────────────
+
+function hexToHsl(hex) {
+  let r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b); let h,s,l=(max+min)/2;
+  if(max===min){h=s=0;}else{const d=max-min;s=l>0.5?d/(2-max-min):d/(max+min);switch(max){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;case b:h=(r-g)/d+4;break;}h/=6;}
+  return [Math.round(h*360),Math.round(s*100),Math.round(l*100)];
+}
+
+function hslToHex(h,s,l) {
+  s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
+  return '#'+[f(0),f(8),f(4)].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('');
+}
+
+function genPalette(baseHex, mode) {
+  const [h,s,l]=hexToHsl(baseHex);
+  if(mode==='complementary') return [baseHex, hslToHex((h+180)%360,s,l)];
+  if(mode==='analogous') return [hslToHex((h-30+360)%360,s,l), baseHex, hslToHex((h+30)%360,s,l)];
+  if(mode==='triadic') return [baseHex, hslToHex((h+120)%360,s,l), hslToHex((h+240)%360,s,l)];
+  if(mode==='split') return [baseHex, hslToHex((h+150)%360,s,l), hslToHex((h+210)%360,s,l)];
+  if(mode==='tetradic') return [baseHex, hslToHex((h+90)%360,s,l), hslToHex((h+180)%360,s,l), hslToHex((h+270)%360,s,l)];
+  // shades
+  return [hslToHex(h,s,Math.max(10,l-30)), hslToHex(h,s,Math.max(10,l-15)), baseHex, hslToHex(h,s,Math.min(90,l+15)), hslToHex(h,s,Math.min(90,l+30))];
+}
+
+// Theme generation: derive a full dark+light theme pair from a single accent color.
+// The app's entire color system already runs through ~11 CSS custom properties (--bg,
+// --bg2, --bg3, --bg4, --accent, --accent2, --accent-dim, --text, --text2, --text3,
+// --border, --border2) consistently — unlike font-size (435 hardcoded px values, no
+// relative units), this means swapping these variables at the root genuinely re-themes
+// the whole app with no per-component rewrite needed.
+function generateTheme(accentHex) {
+  const [h, s] = hexToHsl(accentHex);
+  // Keep the accent's hue and saturation, but control lightness ourselves for contrast —
+  // a very light or very dark user-picked accent would otherwise produce unreadable text.
+  const accentSat = Math.max(45, Math.min(s, 85));
+
+  const dark = {
+    bg: hslToHex(h, Math.min(accentSat, 18), 7),
+    bg2: hslToHex(h, Math.min(accentSat, 16), 11),
+    bg3: hslToHex(h, Math.min(accentSat, 16), 15),
+    bg4: hslToHex(h, Math.min(accentSat, 14), 20),
+    accent: hslToHex(h, accentSat, 68),
+    accent2: hslToHex(h, accentSat, 53),
+    accentDim: hslToHex(h, Math.min(accentSat, 45), 27),
+    text: hslToHex(h, 12, 92),
+    text2: hslToHex(h, 10, 65),
+    text3: hslToHex(h, 8, 43),
+    border: "hsla(" + h + "," + accentSat + "%,68%,0.12)",
+    border2: "hsla(" + h + "," + accentSat + "%,68%,0.22)",
+  };
+
+  const light = {
+    bg: hslToHex(h, Math.min(accentSat, 20), 97),
+    bg2: hslToHex(h, Math.min(accentSat, 18), 94),
+    bg3: hslToHex(h, Math.min(accentSat, 16), 90),
+    bg4: hslToHex(h, Math.min(accentSat, 14), 85),
+    accent: hslToHex(h, accentSat, 42),
+    accent2: hslToHex(h, accentSat, 33),
+    accentDim: hslToHex(h, Math.min(accentSat, 35), 88),
+    text: hslToHex(h, 15, 12),
+    text2: hslToHex(h, 12, 32),
+    text3: hslToHex(h, 8, 52),
+    border: "hsla(" + h + "," + accentSat + "%,30%,0.14)",
+    border2: "hsla(" + h + "," + accentSat + "%,30%,0.24)",
+  };
+
+  return { dark, light };
+}
+
+function applyTheme(themeVars) {
+  const root = document.documentElement.style;
+  root.setProperty('--bg', themeVars.bg);
+  root.setProperty('--bg2', themeVars.bg2);
+  root.setProperty('--bg3', themeVars.bg3);
+  root.setProperty('--bg4', themeVars.bg4);
+  root.setProperty('--accent', themeVars.accent);
+  root.setProperty('--accent2', themeVars.accent2);
+  root.setProperty('--accent-dim', themeVars.accentDim);
+  root.setProperty('--text', themeVars.text);
+  root.setProperty('--text2', themeVars.text2);
+  root.setProperty('--text3', themeVars.text3);
+  root.setProperty('--border', themeVars.border);
+  root.setProperty('--border2', themeVars.border2);
+}
+
+// Returns display src from image object {data, path, relPath}
+function getImgSrc(imgObj) {
+  if(!imgObj) return null;
+  if(imgObj.data) return imgObj.data;
+  if(imgObj.relPath) return imgObj.relPath;
+  if(imgObj.path) return imgObj.path;
+  return null;
+}
+
+// Returns true if the currently-selected AI provider has an API key set.
+function hasActiveKey(settings) {
+  settings = settings || {};
+  const provider = settings.ai_provider || 'anthropic';
+  if (provider === 'anthropic') return !!settings.anthropic_api_key;
+  if (provider === 'openai') return !!settings.openai_api_key;
+  if (provider === 'google') return !!settings.google_api_key;
+  if (provider === 'openrouter') return !!settings.openrouter_api_key;
+  if (provider === 'lmstudio') return true; // local server, no key needed
+  return false;
+}
+
+// Shared multi-provider AI call helper — used by ClaudePanel chat and ImagePromptTool.
+// Returns {text} on success or {error} on failure. Never throws.
+async function callAI(data, systemPrompt, messages, maxTokens) {
+  const settings = data.settings || {};
+  const provider = settings.ai_provider || 'anthropic';
+
+  try {
+    if (provider === 'anthropic') {
+      const apiKey = settings.anthropic_api_key || '';
+      const model = settings.claude_model || 'claude-sonnet-4-6';
+      if (!apiKey) return { error: 'No Anthropic API key set — add one in Settings.' };
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'anthropic-version':'2023-06-01', 'x-api-key': apiKey },
+        body: JSON.stringify({ model, max_tokens: maxTokens, system: systemPrompt, messages })
+      });
+      const resp = await res.json();
+      if (resp.error) return { error: resp.error.message || 'Anthropic API error' };
+      const text = resp.content?.[0]?.text || '';
+      return text ? { text } : { error: 'No response from Anthropic.' };
+    }
+
+    if (provider === 'openai') {
+      const apiKey = settings.openai_api_key || '';
+      const model = settings.openai_model || 'gpt-4o';
+      if (!apiKey) return { error: 'No OpenAI API key set — add one in Settings.' };
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] })
+      });
+      const resp = await res.json();
+      if (resp.error) return { error: resp.error.message || 'OpenAI API error' };
+      const text = resp.choices?.[0]?.message?.content || '';
+      return text ? { text } : { error: 'No response from OpenAI.' };
+    }
+
+    if (provider === 'google') {
+      const apiKey = settings.google_api_key || '';
+      const model = settings.google_model || 'gemini-2.0-flash';
+      if (!apiKey) return { error: 'No Google API key set — add one in Settings.' };
+      const contents = messages.map(m => ({ role: m.role==='assistant'?'model':'user', parts:[{text:m.content}] }));
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ systemInstruction: { parts:[{text:systemPrompt}] }, contents, generationConfig:{maxOutputTokens:maxTokens} })
+      });
+      const resp = await res.json();
+      if (resp.error) return { error: resp.error.message || 'Google API error' };
+      const text = resp.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      return text ? { text } : { error: 'No response from Google.' };
+    }
+
+    if (provider === 'lmstudio') {
+      const baseUrl = (settings.lmstudio_base_url || 'http://localhost:1234/v1').replace(/\/+$/, '');
+      const model = settings.lmstudio_model || 'local-model';
+      const res = await fetch(baseUrl + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] })
+      });
+      const resp = await res.json();
+      if (resp.error) return { error: (resp.error.message || resp.error) + '' };
+      const text = resp.choices?.[0]?.message?.content || '';
+      return text ? { text } : { error: 'No response from LM Studio.' };
+    }
+
+    if (provider === 'openrouter') {
+      const apiKey = settings.openrouter_api_key || '';
+      const model = settings.openrouter_model || 'anthropic/claude-sonnet-4-6';
+      if (!apiKey) return { error: 'No OpenRouter API key set — add one in Settings.' };
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] })
+      });
+      const resp = await res.json();
+      if (resp.error) return { error: resp.error.message || 'OpenRouter API error' };
+      const text = resp.choices?.[0]?.message?.content || '';
+      return text ? { text } : { error: 'No response from OpenRouter.' };
+    }
+
+    return { error: 'Unknown AI provider.' };
+  } catch (e) {
+    if (provider === 'lmstudio') {
+      const u = (data.settings || {}).lmstudio_base_url || 'http://localhost:1234/v1';
+      return { error: 'Could not reach LM Studio at ' + u + ' — is the local server started and a model loaded?' };
+    }
+    return { error: 'Network error: ' + e.message };
+  }
+}
+
+// Required fields before a character can be published.
+function progressMissing(c) {
+  const m = [];
+  if (!c.name?.trim()) m.push('name');
+  if (!c.display_name?.trim()) m.push('display name');
+  if (!c.short_description?.trim()) m.push('short desc');
+  if (!c.full_description?.trim()) m.push('full desc');
+  if (!(c.card||'').trim() || c.card === ' ') m.push('card');
+  if ((c.tags||[]).length < 5) m.push('tags (' + (c.tags||[]).length + '/5)');
+  if (!c.image) m.push('portrait');
+  else if (!c.image.id) m.push('portrait UUID');
+  if (!(c.portraits||[]).length) m.push('portrait slots');
+  if (!(c.starting_scenarios||[]).length) m.push('scenarios');
+  return m;
+}
+
+function dueLabel(days, dueStr) {
+  if(days<=0) return ' is scheduled for today';
+  const p = dueStr.split('-');
+  return ' is scheduled for ' + MONTHS[+p[1]-1].slice(0,3) + ' ' + (+p[2]);
+}
+
+const CS = {
+  pickerThumb:{cursor:'pointer',borderRadius:4,overflow:'hidden',border:'2px solid var(--border)',width:56,height:56,flexShrink:0},
+  pickerImg:{width:'100%',height:'100%',objectFit:'cover'},
+  profilePicBlock:{padding:'10px 12px'},
+  profilePicRow:{display:'flex',gap:6,marginTop:4},
+  uuidInp:{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',fontFamily:'monospace',minWidth:0},
+  uuidInpSm:{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'3px 6px',borderRadius:'var(--r)',fontSize:9,outline:'none',fontFamily:'monospace',minWidth:0},
+  uuidLbl:{fontSize:9,color:'var(--text3)',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.05em'},
+  copyBtnSm:{padding:'4px 6px',fontSize:10,flexShrink:0},
+  copyBtnTiny:{padding:'3px 5px',fontSize:10,flexShrink:0},
+  gripIcon:{color:'var(--text3)',fontSize:16,cursor:'grab',flexShrink:0},
+  gripIconWhite:{color:'#fff',fontSize:13,opacity:0.8},
+  scenarioTitleInp:{background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none',flex:1},
+  addPortraitBtn:{aspectRatio:'3/4',width:'100%',flexDirection:'column',gap:6,justifyContent:'center',border:'1.5px dashed var(--border2)'},
+  portraitNameInp:{width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none'},
+  portraitDescInp:{width:'100%',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',marginTop:4},
+  loreImg:{width:32,height:32,borderRadius:4,objectFit:'cover',flexShrink:0},
+  loreBookIcon:{fontSize:18,flexShrink:0},
+  loreCheckIcon:{color:'var(--accent)',fontSize:16,flexShrink:0},
+  pillWorldSpan:{color:'var(--text3)',fontSize:11},
+  pillBookIcon:{fontSize:13},
+  dateInp:{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none',colorScheme:'dark'},
+  savesBanner:{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',fontSize:12},
+  savesName:{color:'var(--text)',fontWeight:500},
+  savesMeta:{color:'var(--text3)',marginLeft:'auto',fontSize:11},
+  helpBtn:{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:13,padding:'0 2px',lineHeight:1},
+  helpBox:{padding:'10px 12px',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',fontSize:12,color:'var(--text3)',lineHeight:1.7,marginBottom:10},
+  loreTextarea:{width:'100%',minHeight:500,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'10px 12px',borderRadius:'var(--r)',fontSize:12,outline:'none',resize:'vertical',fontFamily:'monospace',lineHeight:1.6},
+  templateSelect:{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none',width:'100%'},
+  titleInp:{fontWeight:600,fontFamily:'monospace',fontSize:13},
+  pasteArea:{width:'100%',minHeight:120,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px',borderRadius:'var(--r)',fontSize:11,fontFamily:'monospace',outline:'none',resize:'vertical'},
+  pasteLblRow:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4},
+  errHdr:{fontSize:12,fontWeight:600,color:'var(--red)',marginBottom:4},
+  errItem:{fontSize:11,color:'var(--red)',paddingLeft:8},
+};
+
+function buildMigrateLabel(linkCount, writeCount) {
+  const s = n => n===1 ? '' : 's';
+  if(linkCount && !writeCount) return 'Link ' + linkCount + ' image' + s(linkCount) + ' to existing file' + s(linkCount);
+  if(writeCount && !linkCount) return 'Write ' + writeCount + ' image' + s(writeCount) + ' out from base64';
+  return 'Apply ' + (linkCount+writeCount) + ' change' + s(linkCount+writeCount) + ' — ' + linkCount + ' linked, ' + writeCount + ' written';
+}
+
+// ── Backup merge helpers ─────────────────────────────────────────────────────
+const MERGE_TYPES = ['worlds','characters','lorebooks','collections','personas','templates','lorebook_templates','gallery'];
+
+const MERGE_TYPE_LABELS = {worlds:'World',characters:'Character',lorebooks:'Lorebook',collections:'Collection',personas:'Persona',templates:'Template',lorebook_templates:'Lorebook Template',gallery:'Gallery image'};
+
+function planMerge(local, backup) {
+  const toAdd=[], toUpdate=[], conflicts=[];
+  for(const type of MERGE_TYPES) {
+    const bItems = backup[type]||[], lItems = local[type]||[];
+    for(const bItem of bItems) {
+      const lItem = lItems.find(x=>x.id===bItem.id);
+      if(!lItem) {
+        toAdd.push({type,item:bItem});
+      } else {
+        const bms=parseTimestamp(bItem.updated_at)||0, lms=parseTimestamp(lItem.updated_at)||0;
+        if(bms>lms) toUpdate.push({type,item:bItem,localItem:lItem});
+        else if(bms===lms||!bms||!lms) conflicts.push({type,item:bItem,localItem:lItem});
+        // else local is newer — skip
+      }
+    }
+  }
+  return {toAdd,toUpdate,conflicts};
+}
+
+function applyMerge(local, backup, plan, resolutions) {
+  const merged = structuredClone(local);
+  // Content: add new items
+  for(const {type,item} of plan.toAdd) {
+    if(!merged[type]) merged[type]=[];
+    merged[type].push(item);
+  }
+  // Content: update where backup is newer
+  for(const {type,item} of plan.toUpdate) {
+    const idx = merged[type].findIndex(x=>x.id===item.id);
+    if(idx>=0) merged[type][idx]=item;
+  }
+  // Content: conflicts — user chose per-item (default: keep local)
+  for(const {type,item} of plan.conflicts) {
+    if((resolutions[item.id]||'local')==='backup') {
+      const idx = merged[type].findIndex(x=>x.id===item.id);
+      if(idx>=0) merged[type][idx]=item;
+    }
+  }
+  // schedule_notes: merge by date key; local takes priority on same date
+  if(backup.schedule_notes||local.schedule_notes) {
+    merged.schedule_notes = Object.assign({},backup.schedule_notes||{},local.schedule_notes||{});
+  }
+  // map_positions: merge by worldId/charId; local takes priority
+  const bPos=backup.map_positions||{}, lPos=local.map_positions||{};
+  const mPos=structuredClone(bPos);
+  for(const wid of Object.keys(lPos)) {
+    mPos[wid]=Object.assign({},mPos[wid]||{},lPos[wid]);
+  }
+  merged.map_positions=mPos;
+  // release_cycle: keep local order, append new world IDs from backup at end
+  const lCyc=local.release_cycle||[], bCyc=backup.release_cycle||[];
+  merged.release_cycle=[...lCyc,...bCyc.filter(id=>!lCyc.includes(id))];
+  // notes: Option 2 — empty->take backup; both->append; backup empty->keep local
+  const ln=(local.notes||'').trim(), bn=(backup.notes||'').trim();
+  if(!ln&&bn) merged.notes=bn;
+  else if(ln&&bn&&ln!==bn) {
+    const today=new Date().toISOString().split('T')[0];
+    merged.notes=ln+'\n\n--- Merged from backup '+today+' ---\n\n'+bn;
+  }
+  // settings: never touch — stays as local
+  return merged;
+}
+
+const TEMPLATE_FIELDS = [
+  ['display_name_format','Display Name Format','input','e.g. {{name}} · Title'],
+  ['short_description','Short Description','input'],
+  ['full_description','Full Description (public facing)','textarea'],
+  ['card','Character Card','textarea'],
+  ['formatting_instructions','Formatting Instructions','textarea'],
+  ['advanced_prompt','Advanced Prompt','textarea'],
+  ['access_level','Access Level','select',['private','unlisted','public']],
+  ['sus','Spicy','checkbox'],
+  ['very_sus','Extra Spicy','checkbox'],
+  ['temperature_offset_percentage','Temperature Offset %','number'],
+  ['locked_starting_message','Locked Starting Message','checkbox'],
+  ['open_definition','Open Definition','checkbox'],
+  ['tags','Tags (auto-applied)','tags'],
+  ['fandom_tags','Fandom Tags (max 3)','fandom_tags'],
+];
+</script>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
+
 
 function App() {
   const [data, setData] = useState(initData);
@@ -1136,6 +1660,26 @@ function App() {
       });
     }, debounceMs);
   }, [data]);
+
+  // Refs, not closure capture — the flush handler below registers once on mount and
+  // would otherwise save whatever `data` was on first render.
+  const dataRef = useRef(data);
+  const dataLoadedRef = useRef(false);
+  dataRef.current = data;
+  dataLoadedRef.current = dataLoaded;
+
+  // Shutdown flush: main holds the window open until this replies, so a pending
+  // debounced save is written instead of dying with the renderer.
+  useEffect(() => {
+    if (!window.lorekeeper.onFlushBeforeClose) return;
+    window.lorekeeper.onFlushBeforeClose(async () => {
+      clearTimeout(saveTimer.current);
+      try {
+        if (dataLoadedRef.current) await window.lorekeeper.saveData(dataRef.current);
+      } catch (e) {}
+      window.lorekeeper.flushComplete();
+    });
+  }, []);
 
   // keep selectedChar/World in sync after updates
   useEffect(() => {
@@ -1669,41 +2213,6 @@ function App() {
   );
 }
 
-// Displays an image from either base64 data or file path
-
-function renderMd(text) {
-  if(!text) return '';
-  // code blocks first
-  let html = text.replace(/```([\s\S]*?)```/g, (_,c)=>`<pre><code>${c.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code></pre>`);
-  // inline code
-  html = html.replace(/`([^`]+)`/g, (_,c)=>`<code>${c.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code>`);
-  // headings
-  html = html.replace(/^#### (.+)$/gm,'<h4>$1</h4>');
-  html = html.replace(/^### (.+)$/gm,'<h3>$1</h3>');
-  html = html.replace(/^## (.+)$/gm,'<h2>$1</h2>');
-  html = html.replace(/^# (.+)$/gm,'<h1>$1</h1>');
-  // hr
-  html = html.replace(/^---+$/gm,'<hr/>');
-  // bold+italic, bold, italic
-  html = html.replace(/\*\*\*([^*]+)\*\*\*/g,'<strong><em>$1</em></strong>');
-  html = html.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
-  html = html.replace(/\*([^*\n]+)\*/g,'<em>$1</em>');
-  // blockquote
-  html = html.replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>');
-  // ul
-  html = html.replace(/^[\-\*] (.+)$/gm,'<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
-  // ol
-  html = html.replace(/^\d+\. (.+)$/gm,'<li>$1</li>');
-  // paragraphs: wrap non-tag lines
-  html = html.split('\n').map(line=>{
-    const trimmed=line.trim();
-    if(!trimmed) return '<br/>';
-    if(/^<(h[1-4]|ul|ol|li|pre|hr|blockquote)/.test(trimmed)) return trimmed;
-    return `<p>${trimmed}</p>`;
-  }).join('');
-  return html;
-}
 
 function MdField({value, onChange, style, placeholder, monospace}) {
   const [preview, setPreview] = useState(false);
@@ -1775,20 +2284,6 @@ function MacroReference() {
 }
 
 
-const pick = arr => arr[Math.floor(Math.random()*arr.length)];const NAMES_NEUTRAL = ['Aiden','Alev','Ash','Avery','Blair','Cairo','Cameron','Cedar','Coda','Cypress','Dakota','Ember','Everest','Falco','Harbor','Haven','Indigo','Joss','Kai','Kendall','Lake','Lark','Lennon','Lumen','Maren','Marlowe','Morgan','Nova','Onyx','Pax','Quinn','Rayne','Reed','Remy','River','Roan','Rowan','Sage','Scout','Shiloh','Skye','Sol','Soren','Story','Storm','Sable','Theo','Vale','Winter','Zephyr'];
-const SURNAMES = ['Adeyemi','Alvarado','Ashford','Beaumont','Blackwell','Callahan','Castillo','Chen','Delacroix','Dimitriou','Espinoza','Ferreira','Fontaine','Gallagher','Hansson','Hayashi','Ibrahim','Johansson','Kaczmarek','Kaur','Khalil','Kim','Kowalski','Laurent','Lévesque','Malik','Marchetti','Mori','Nakamura','Navarro','Nguyen',"O'Brien",'Okafor','Osei','Park','Petrov','Qon','Reyes','Rosewood','Rousseau','Saito','Santos','Schmidt','Seo','Sharma','Tanaka','Thorne','Torres','Vance','Vasquez','Volkov','Walsh','Yamamoto','Yilmaz','Zhao'];
-
-const EYE_BASE = ['brown','dark brown','light brown','hazel','amber','green','light green','blue','light blue','steel blue','grey','dark grey','blue-grey','grey-green','violet','black'];
-const EYE_DETAILS = ['','','','with gold flecks','with amber flecks','with hazel specks','with green flecks','with silver flecks','with dark limbal ring','heterochromia — one slightly lighter','unusually pale','deep-set','heavy-lidded','slightly upturned','almond-shaped'];
-const HAIR_COLOR = ['black','jet black','dark brown','medium brown','light brown','chestnut','auburn','copper','red','strawberry blonde','dirty blonde','golden blonde','platinum blonde','silver','grey','white','dark grey','ash brown'];
-const HAIR_DETAIL = ['','','','with natural highlights','with subtle warm tones','slightly sun-bleached','with grey at the temples','with a few silver strands','with natural wave','coarse-textured','fine-textured','thick'];
-const HAIR_LENGTH = ['very short','short','ear-length','jaw-length','neck-length','shoulder-length','collarbone-length','mid-back','long','very long','down to the waist'];
-const HAIR_TEXTURE = ['straight','mostly straight','wavy','loosely wavy','curly','tightly curled','coily','with natural body'];
-const HAIR_STYLE = ['','worn loose','worn slicked back','worn in a bun','kept tied back','usually disheveled','neatly kept','often tucked behind one ear','undercut','with a side part','with a middle part','cropped close on the sides'];
-const BUILD_FRAME = ['lean','slender','slim','wiry','athletic','toned','average','stocky','broad-shouldered','heavyset','muscular','powerfully built'];
-const BUILD_HEIGHT = ['short for their gender','on the shorter side','average height','slightly above average','tall','very tall'];
-const BUILD_DETAIL = ['','','','with a long torso','with broad shoulders','with narrow shoulders','with a slight build despite height','carries weight in the chest and shoulders','long-limbed','compact','with visible muscle definition','with a soft build','with a naturally lean frame'];
-
 function GenResult({label, value, onCopy}) {
   return value ? (
     <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:'8px 10px',display:'flex',alignItems:'flex-start',gap:8}}>
@@ -1850,35 +2345,6 @@ function ChineseZodiacTool() {
   );
 }
 
-// ── Esper Powers Tool ────────────────────────────────────────────────────
-const ESPER_TYPES = [
-  "Telekinesis","Telepathy","Pyrokinesis","Cryokinesis","Electrokinesis",
-  "Biokinesis","Chronokinesis","Aerokinesis","Hydrokinesis","Geokinesis",
-  "Photokinesis","Umbrakinesis","Precognition","Postcognition","Astral Projection",
-  "Psychometry","Empathy","Technopathy","Ferrokinesis","Thermokinesis",
-  "Sonokinesis","Haemokinesis","Necromancy","Illusion","Force Field",
-];
-const ESPER_TIERS = ["F","E","D","C","B","A","S"];
-const ESPER_DRAWBACKS = [
-  "Nosebleeds with heavy use","Severe migraines after extended use",
-  "Temporary blindness when pushed","Emotional bleed — feels targets' feelings",
-  "Power bleeds during sleep or nightmares","Loses control under high stress",
-  "Physical exhaustion — needs 8+ hours recovery","Burns through calories fast; must eat constantly",
-  "Chronic low-grade pain","Shortened lifespan with each major exertion",
-  "Memory gaps after peak use","Heightened sensitivity to their own element",
-  "Random involuntary activation","Amplifies nearby espers uncontrollably",
-  "Requires physical contact to activate","Useless within 10 metres of suppression tech",
-  "Leaves a detectable psychic signature","Painful to suppress; constant low drain",
-  "Triggers strong animal fear responses","Power tied to emotional state — useless when calm",
-];
-const ESPER_NAMES_ADJ = [
-  "Crimson","Silver","Static","Hollow","Fractured","Neon","Ashen","Gilded",
-  "Ironclad","Phantom","Dusk","Solar","Null","Apex","Feral","Obsidian",
-];
-const ESPER_NAMES_NOUN = [
-  "Veil","Surge","Tide","Echo","Pulse","Edge","Storm","Ward",
-  "Void","Flame","Gale","Drift","Shard","Coil","Chain","Flux",
-];
 
 function EsperTool() {
   const [result, setResult] = useState(null);
@@ -1909,22 +2375,6 @@ function EsperTool() {
   );
 }
 
-// ── Hockey Positions Tool ─────────────────────────────────────────────────
-const HOCKEY_HANDEDNESS = ["Shoots left","Shoots right"];
-const HOCKEY_TRAITS = [
-  "Dangles past three defenders like they're pylons",
-  "Known for a devastating one-timer from the circle",
-  "Never misses a backcheck, somehow still leads the team in points",
-  "Plays hurt every game, never mentions it",
-  "Talks non-stop on the ice — opponents hate it, teammates love it",
-  "Fights clean — earns respect even from the guys they drop",
-  "Has a signature move the whole league knows is coming and still can't stop",
-  "Reads the play two seconds ahead of everyone else",
-  "Biggest hitter on the team, but never takes a penalty",
-  "Chirps are legendary — opposing bench is always distracted",
-  "Goes to the dirty areas everyone else avoids",
-  "Breakaway speed that makes everyone in the building stand up",
-];
 
 function HockeyTool() {
   const [result, setResult] = useState(null);
@@ -1951,19 +2401,6 @@ function HockeyTool() {
   );
 }
 
-// ── Swim Strokes Tool ─────────────────────────────────────────────────────
-const SWIM_ROLES = [
-  "The anchor on every relay — coaches don't trust anyone else in the water last",
-  "Technician. Form is flawless; every practice drill is done at race pace",
-  "Sprinter mentality — hates anything over 200m, gods gifted with fast-twitch muscle",
-  "Distance grinder. Goes out slow, comes back faster, beats everyone on the back half",
-  "The team's loudest cheerleader on the block, completely silent underwater",
-  "Obsessive about start and turn times — shaves tenths no one else bothers with",
-  "Came to swimming late; raw and improving every meet",
-  "Dual-sport athlete — the body is wrong for swimming, the results are not",
-  "Streaky. When it's on, it's terrifying. When it's off, it's a mystery",
-  "Team captain energy — knows everyone's best times, gives the warmup speech",
-];
 
 function SwimTool() {
   const [result, setResult] = useState(null);
@@ -1990,8 +2427,6 @@ function SwimTool() {
     </div>
   );
 }
-
-
 
 
 function CropTool() {
@@ -2623,8 +3058,6 @@ function ToolsPanel({data, currentChar}) {
   );
 }
 
-const CW_TAGS = new Set(["dead_dove", "noncon_dubcon", "abuse", "blackmail", "slur_usage", "self_harm_suicide", "violence", "gore", "drugs_addiction", "incest_stepcest", "vore", "cannibalism", "feral", "trauma", "terminal_illness", "user_harm", "death", "body_horror", "eating_disorder", "amputation", "miscarriage"]);
-const TAG_CATEGORIES = ["Content Warnings", "Character Identity", "Point of View", "Sexual & Romantic Orientation", "Relationship Structure & Dynamics", "Plot Devices & Structure", "Story Genres & Styles", "Locations and Eras", "World-Building Concepts", "Character Archetypes & Personalities", "Professions", "Species/Being Types", "Kinks & Intimate Content", "Media Sources", "Other"];
 
 function TagSelector({value, onChange, max, showCW, worldChars}) {
   const [search, setSearch] = useState('');
@@ -2826,7 +3259,6 @@ function ResolvedImg({src, alt, style, className, onDims}) {
 // ── Personality Tool ─────────────────────────────────────
 
 
-
 function LoreTplManager({worldId, data, update}) {
   const [editing, setEditing] = useState(null); // null | 'new' | template_id
   const [form, setForm] = useState({name:'',template_text:'',lorebook_id:''});
@@ -2939,10 +3371,6 @@ function PlotArchetypeInput({worldId, update}) {
 }
 
 
-// ── Nationality Tool ─────────────────────────────────────
-
-const REGIONS = ['All',...[...new Set(NATIONALITIES.map(n=>n.region))].sort()];
-
 function NationalityTool() {
   const [region, setRegion] = useState('All');
   const [result, setResult] = useState(null);
@@ -2977,89 +3405,6 @@ function NationalityTool() {
   );
 }
 
-// ── Color Tool ────────────────────────────────────────────
-
-function hexToHsl(hex) {
-  let r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
-  const max=Math.max(r,g,b), min=Math.min(r,g,b); let h,s,l=(max+min)/2;
-  if(max===min){h=s=0;}else{const d=max-min;s=l>0.5?d/(2-max-min):d/(max+min);switch(max){case r:h=(g-b)/d+(g<b?6:0);break;case g:h=(b-r)/d+2;break;case b:h=(r-g)/d+4;break;}h/=6;}
-  return [Math.round(h*360),Math.round(s*100),Math.round(l*100)];
-}
-function hslToHex(h,s,l) {
-  s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
-  return '#'+[f(0),f(8),f(4)].map(x=>Math.round(x*255).toString(16).padStart(2,'0')).join('');
-}
-function genPalette(baseHex, mode) {
-  const [h,s,l]=hexToHsl(baseHex);
-  if(mode==='complementary') return [baseHex, hslToHex((h+180)%360,s,l)];
-  if(mode==='analogous') return [hslToHex((h-30+360)%360,s,l), baseHex, hslToHex((h+30)%360,s,l)];
-  if(mode==='triadic') return [baseHex, hslToHex((h+120)%360,s,l), hslToHex((h+240)%360,s,l)];
-  if(mode==='split') return [baseHex, hslToHex((h+150)%360,s,l), hslToHex((h+210)%360,s,l)];
-  if(mode==='tetradic') return [baseHex, hslToHex((h+90)%360,s,l), hslToHex((h+180)%360,s,l), hslToHex((h+270)%360,s,l)];
-  // shades
-  return [hslToHex(h,s,Math.max(10,l-30)), hslToHex(h,s,Math.max(10,l-15)), baseHex, hslToHex(h,s,Math.min(90,l+15)), hslToHex(h,s,Math.min(90,l+30))];
-}
-
-// Theme generation: derive a full dark+light theme pair from a single accent color.
-// The app's entire color system already runs through ~11 CSS custom properties (--bg,
-// --bg2, --bg3, --bg4, --accent, --accent2, --accent-dim, --text, --text2, --text3,
-// --border, --border2) consistently — unlike font-size (435 hardcoded px values, no
-// relative units), this means swapping these variables at the root genuinely re-themes
-// the whole app with no per-component rewrite needed.
-function generateTheme(accentHex) {
-  const [h, s] = hexToHsl(accentHex);
-  // Keep the accent's hue and saturation, but control lightness ourselves for contrast —
-  // a very light or very dark user-picked accent would otherwise produce unreadable text.
-  const accentSat = Math.max(45, Math.min(s, 85));
-
-  const dark = {
-    bg: hslToHex(h, Math.min(accentSat, 18), 7),
-    bg2: hslToHex(h, Math.min(accentSat, 16), 11),
-    bg3: hslToHex(h, Math.min(accentSat, 16), 15),
-    bg4: hslToHex(h, Math.min(accentSat, 14), 20),
-    accent: hslToHex(h, accentSat, 68),
-    accent2: hslToHex(h, accentSat, 53),
-    accentDim: hslToHex(h, Math.min(accentSat, 45), 27),
-    text: hslToHex(h, 12, 92),
-    text2: hslToHex(h, 10, 65),
-    text3: hslToHex(h, 8, 43),
-    border: "hsla(" + h + "," + accentSat + "%,68%,0.12)",
-    border2: "hsla(" + h + "," + accentSat + "%,68%,0.22)",
-  };
-
-  const light = {
-    bg: hslToHex(h, Math.min(accentSat, 20), 97),
-    bg2: hslToHex(h, Math.min(accentSat, 18), 94),
-    bg3: hslToHex(h, Math.min(accentSat, 16), 90),
-    bg4: hslToHex(h, Math.min(accentSat, 14), 85),
-    accent: hslToHex(h, accentSat, 42),
-    accent2: hslToHex(h, accentSat, 33),
-    accentDim: hslToHex(h, Math.min(accentSat, 35), 88),
-    text: hslToHex(h, 15, 12),
-    text2: hslToHex(h, 12, 32),
-    text3: hslToHex(h, 8, 52),
-    border: "hsla(" + h + "," + accentSat + "%,30%,0.14)",
-    border2: "hsla(" + h + "," + accentSat + "%,30%,0.24)",
-  };
-
-  return { dark, light };
-}
-
-function applyTheme(themeVars) {
-  const root = document.documentElement.style;
-  root.setProperty('--bg', themeVars.bg);
-  root.setProperty('--bg2', themeVars.bg2);
-  root.setProperty('--bg3', themeVars.bg3);
-  root.setProperty('--bg4', themeVars.bg4);
-  root.setProperty('--accent', themeVars.accent);
-  root.setProperty('--accent2', themeVars.accent2);
-  root.setProperty('--accent-dim', themeVars.accentDim);
-  root.setProperty('--text', themeVars.text);
-  root.setProperty('--text2', themeVars.text2);
-  root.setProperty('--text3', themeVars.text3);
-  root.setProperty('--border', themeVars.border);
-  root.setProperty('--border2', themeVars.border2);
-}
 
 function ColorTool() {
   const [hue, setHue] = useState(262);
@@ -3329,119 +3674,6 @@ function ImgFromPath({src, alt, style, className, onClick}) {
   return <img src={resolved} alt={alt||''} style={style} className={className} onClick={onClick}/>;
 }
 
-// Returns display src from image object {data, path, relPath}
-function getImgSrc(imgObj) {
-  if(!imgObj) return null;
-  if(imgObj.data) return imgObj.data;
-  if(imgObj.relPath) return imgObj.relPath;
-  if(imgObj.path) return imgObj.path;
-  return null;
-}
-
-
-// Returns true if the currently-selected AI provider has an API key set.
-function hasActiveKey(settings) {
-  settings = settings || {};
-  const provider = settings.ai_provider || 'anthropic';
-  if (provider === 'anthropic') return !!settings.anthropic_api_key;
-  if (provider === 'openai') return !!settings.openai_api_key;
-  if (provider === 'google') return !!settings.google_api_key;
-  if (provider === 'openrouter') return !!settings.openrouter_api_key;
-  if (provider === 'lmstudio') return true; // local server, no key needed
-  return false;
-}
-
-// Shared multi-provider AI call helper — used by ClaudePanel chat and ImagePromptTool.
-// Returns {text} on success or {error} on failure. Never throws.
-async function callAI(data, systemPrompt, messages, maxTokens) {
-  const settings = data.settings || {};
-  const provider = settings.ai_provider || 'anthropic';
-
-  try {
-    if (provider === 'anthropic') {
-      const apiKey = settings.anthropic_api_key || '';
-      const model = settings.claude_model || 'claude-sonnet-4-6';
-      if (!apiKey) return { error: 'No Anthropic API key set — add one in Settings.' };
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', 'anthropic-version':'2023-06-01', 'x-api-key': apiKey },
-        body: JSON.stringify({ model, max_tokens: maxTokens, system: systemPrompt, messages })
-      });
-      const resp = await res.json();
-      if (resp.error) return { error: resp.error.message || 'Anthropic API error' };
-      const text = resp.content?.[0]?.text || '';
-      return text ? { text } : { error: 'No response from Anthropic.' };
-    }
-
-    if (provider === 'openai') {
-      const apiKey = settings.openai_api_key || '';
-      const model = settings.openai_model || 'gpt-4o';
-      if (!apiKey) return { error: 'No OpenAI API key set — add one in Settings.' };
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
-        body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] })
-      });
-      const resp = await res.json();
-      if (resp.error) return { error: resp.error.message || 'OpenAI API error' };
-      const text = resp.choices?.[0]?.message?.content || '';
-      return text ? { text } : { error: 'No response from OpenAI.' };
-    }
-
-    if (provider === 'google') {
-      const apiKey = settings.google_api_key || '';
-      const model = settings.google_model || 'gemini-2.0-flash';
-      if (!apiKey) return { error: 'No Google API key set — add one in Settings.' };
-      const contents = messages.map(m => ({ role: m.role==='assistant'?'model':'user', parts:[{text:m.content}] }));
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ systemInstruction: { parts:[{text:systemPrompt}] }, contents, generationConfig:{maxOutputTokens:maxTokens} })
-      });
-      const resp = await res.json();
-      if (resp.error) return { error: resp.error.message || 'Google API error' };
-      const text = resp.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      return text ? { text } : { error: 'No response from Google.' };
-    }
-
-    if (provider === 'lmstudio') {
-      const baseUrl = (settings.lmstudio_base_url || 'http://localhost:1234/v1').replace(/\/+$/, '');
-      const model = settings.lmstudio_model || 'local-model';
-      const res = await fetch(baseUrl + '/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] })
-      });
-      const resp = await res.json();
-      if (resp.error) return { error: (resp.error.message || resp.error) + '' };
-      const text = resp.choices?.[0]?.message?.content || '';
-      return text ? { text } : { error: 'No response from LM Studio.' };
-    }
-
-    if (provider === 'openrouter') {
-      const apiKey = settings.openrouter_api_key || '';
-      const model = settings.openrouter_model || 'anthropic/claude-sonnet-4-6';
-      if (!apiKey) return { error: 'No OpenRouter API key set — add one in Settings.' };
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
-        body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] })
-      });
-      const resp = await res.json();
-      if (resp.error) return { error: resp.error.message || 'OpenRouter API error' };
-      const text = resp.choices?.[0]?.message?.content || '';
-      return text ? { text } : { error: 'No response from OpenRouter.' };
-    }
-
-    return { error: 'Unknown AI provider.' };
-  } catch (e) {
-    if (provider === 'lmstudio') {
-      const u = (data.settings || {}).lmstudio_base_url || 'http://localhost:1234/v1';
-      return { error: 'Could not reach LM Studio at ' + u + ' — is the local server started and a model loaded?' };
-    }
-    return { error: 'Network error: ' + e.message };
-  }
-}
 
 function ChapterChip({lid, ci, ch, on, toggle}) {
   const tok = Math.round((ch.text||'').length / 4);
@@ -3889,21 +4121,6 @@ function LorebookDraftsPanel({data, openLore}) {
   );
 }
 
-// Required fields before a character can be published.
-function progressMissing(c) {
-  const m = [];
-  if (!c.name?.trim()) m.push('name');
-  if (!c.display_name?.trim()) m.push('display name');
-  if (!c.short_description?.trim()) m.push('short desc');
-  if (!c.full_description?.trim()) m.push('full desc');
-  if (!(c.card||'').trim() || c.card === ' ') m.push('card');
-  if ((c.tags||[]).length < 5) m.push('tags (' + (c.tags||[]).length + '/5)');
-  if (!c.image) m.push('portrait');
-  else if (!c.image.id) m.push('portrait UUID');
-  if (!(c.portraits||[]).length) m.push('portrait slots');
-  if (!(c.starting_scenarios||[]).length) m.push('scenarios');
-  return m;
-}
 
 function InProgressPanel({data, setSelectedChar}) {
   const [showAll, setShowAll] = useState(false);
@@ -3997,6 +4214,7 @@ function ReworkRow({c, gaps, data, openChar}) {
   );
 }
 
+
 function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOnDay,postedOnDay,calDate,setCalDate,upcoming,data,update,setSelectedChar,openChar,openLore,openColl,setSelectedWorld}) {
   const [schedPicker,setSchedPicker]=useState(null); // cellDateStr when open
   const [schedSearch,setSchedSearch]=useState('');
@@ -4004,7 +4222,28 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
   const todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
   const [dismissed,setDismissed]=useState([]);
   const [showCycle,setShowCycle]=useState(false);
-  const todayReady=data.characters.filter(c=>c.status==='ready'&&(c.schedule_dates||[]).some(d=>d.split('T')[0]===todayStr)&&!dismissed.includes(c.id));
+  // Banner keys off the scheduled date only — when the status was flipped to 'ready'
+  // is irrelevant, since scheduling happens on the site and posts run whether or not
+  // Lorekeeper was open that day. A date that has already passed is normal, not an error.
+  const pdsDash=s=>{const p=(s.split('T')[0]).split('-');return new Date(+p[0],+p[1]-1,+p[2]);};
+  const todayMid=new Date(today.getFullYear(),today.getMonth(),today.getDate());
+  const duePosts=data.characters.filter(c=>c.status==='ready'&&!dismissed.includes(c.id)).map(c=>{
+    const past=(c.schedule_dates||[]).map(s=>s.split('T')[0]).filter(s=>pdsDash(s)<=todayMid).sort();
+    if(!past.length) return null;
+    const dueStr=past[0];
+    return {char:c,dueStr:dueStr,days:Math.round((todayMid-pdsDash(dueStr))/86400000)};
+  }).filter(Boolean).sort((a,b)=>a.dueStr<b.dueStr?-1:1);
+  const markPosted=(c,dueStr)=>update(d=>{
+    const ch=d.characters.find(x=>x.id===c.id);
+    if(!ch) return;
+    ch.status='posted';
+    if(!ch.posted_dates)ch.posted_dates=[];
+    // Stamp the day it was scheduled for, not the day it was noticed — otherwise an
+    // overdue companion lands on the calendar a week away from when it actually went out.
+    const stamp=dueStr||todayStr;
+    if(!ch.posted_dates.includes(stamp))ch.posted_dates.push(stamp);
+    advanceCycleHeadInDraft(d,ch.world_id);
+  });
   const cycle=data.release_cycle||[];
   const getNextCycleWorld=()=>{
     if(cycle.length===0) return null;
@@ -4056,18 +4295,21 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
   const getNote=(charId,dateStr)=>(data.schedule_notes||{})[noteKey(charId,dateStr)]||'';
   return (
     <div onClick={()=>setSelDay(null)}>
-      {todayReady.map(c=>(
-        <div key={c.id} className="today-banner">
+      {duePosts.map(p=>{
+        const note=getNote(p.char.id,p.dueStr);
+        return (
+        <div key={p.char.id} className="today-banner">
           <i className="ti ti-bell" style={{color:'var(--accent)',fontSize:18,flexShrink:0}}></i>
           <div style={{flex:1,fontSize:13}}>
-            <strong>{c.display_name||c.name}</strong> is scheduled for today
-            {getNote(c.id,todayStr)&&<span style={{color:'var(--text3)',marginLeft:6}}>· {getNote(c.id,todayStr)}</span>}
+            <strong>{p.char.display_name||p.char.name}</strong>{dueLabel(p.days,p.dueStr)}
+            {note&&<span style={{color:'var(--text3)',marginLeft:6}}>· {note}</span>}
           </div>
-          <button className="btn primary" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch){ch.status='posted';if(!ch.posted_dates)ch.posted_dates=[];const t=new Date();const td=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');if(!ch.posted_dates.includes(td))ch.posted_dates.push(td);advanceCycleHeadInDraft(d,ch.world_id);}})}>Mark posted</button>
-          <button className="btn" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>setSelectedChar(c)}>Reschedule</button>
-          <button style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',padding:'0 4px',fontSize:16}} onClick={()=>setDismissed(d=>[...d,c.id])}>×</button>
+          <button className="btn primary" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>markPosted(p.char,p.dueStr)}>Mark posted</button>
+          <button className="btn" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>setSelectedChar(p.char)}>Reschedule</button>
+          <button style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',padding:'0 4px',fontSize:16}} onClick={()=>setDismissed(x=>[...x,p.char.id])}>×</button>
         </div>
-      ))}
+        );
+      })}
       <div className="dash-layout">
         <div>
           <div className="cal-header">
@@ -4195,11 +4437,11 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
               const world=data.worlds.find(w=>w.id===l.world_id);
               const issues=[];
               if(!l.image_id) issues.push('no image ID (upload to site first)');
-              if(!l.image_data) issues.push('no local image backup');
+              if(!l.image_data&&!l.image_relpath) issues.push('no local image backup');
               if(!(l.tags||[]).length) issues.push('no tags');
               if(!l.definition_protection||l.definition_protection==='open') issues.push('definition protection: open');
               if(issues.length===0) return;
-              items.push({key:'l-'+l.id,thumb:l.image_data?{data:l.image_data}:null,thumbIcon:'ti-book',thumbColor:'var(--amber)',name:l.name,sub:world?.name||'Standalone',issues,onClick:()=>openLore(l,'settings')});
+              items.push({key:'l-'+l.id,thumb:l.image_data?{data:l.image_data}:(l.image_relpath?{relPath:l.image_relpath}:null),thumbIcon:'ti-book',thumbColor:'var(--amber)',name:l.name,sub:world?.name||'Standalone',issues,onClick:()=>openLore(l,'settings')});
             });
             // Collections: only flag if public or has been public
             data.collections.forEach(col=>{
@@ -4208,11 +4450,11 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
               const world=data.worlds.find(w=>w.id===col.world_id);
               const issues=[];
               if(!col.image?.id) issues.push('no image ID (upload to site first)');
-              if(!col.image_data) issues.push('no local image backup');
+              if(!col.image_data&&!col.image_relpath) issues.push('no local image backup');
               if(!(col.tags||[]).length) issues.push('no tags');
               if(!col.definition) issues.push('no description');
               if(issues.length===0) return;
-              items.push({key:'col-'+col.id,thumb:col.image_data?{data:col.image_data}:null,thumbIcon:'ti-folders',thumbColor:'var(--accent)',name:col.name,sub:world?.name||'Standalone',issues,onClick:()=>openColl(col,'edit')});
+              items.push({key:'col-'+col.id,thumb:col.image_data?{data:col.image_data}:(col.image_relpath?{relPath:col.image_relpath}:null),thumbIcon:'ti-folders',thumbColor:'var(--accent)',name:col.name,sub:world?.name||'Standalone',issues,onClick:()=>openColl(col,'edit')});
             });
             if(items.length===0) return null;
             return <div style={{marginTop:16}}>
@@ -4311,9 +4553,10 @@ function WorldsPage({data,setSelectedWorld,setModal}) {
       {sortedWorlds(data).map(w=>{
         const chars=data.characters.filter(c=>c.world_id===w.id).length;
         const lores=data.lorebooks.filter(l=>l.world_id===w.id).length;
-        const banner=w.image||data.collections.find(c=>c.world_id===w.id&&c.image_data)?.image_data;
+        const collFb=data.collections.find(c=>c.world_id===w.id&&(c.image_data||c.image_relpath));
+        const banner=w.image||w.image_relpath||(collFb?(collFb.image_data||collFb.image_relpath):null);
         return <div key={w.id} className="world-card" onClick={()=>setSelectedWorld(w)}>
-          <div className="world-banner">{banner?<img src={banner} alt={w.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<i className="ti ti-planet"></i>}
+          <div className="world-banner">{banner?<ImgFromPath src={banner} alt={w.name} style={IMG_COVER}/>:<i className="ti ti-planet"></i>}
           </div>
           <div className="world-card-body"><h3>{w.name}</h3><p>{w.short_description||'No description.'}</p></div>
           <div className="world-card-footer">
@@ -4349,11 +4592,12 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
     if(initialCollId&&clearInitialCollId) clearInitialCollId();
   },[initialCollId]);
 
-  const worldBanner = world.image || world.image_relpath || worldColls.find(c=>c.image_data)?.image_data || null;
+  const wbFb = worldColls.find(c=>c.image_data||c.image_relpath);
+  const worldBanner = world.image || world.image_relpath || (wbFb?(wbFb.image_data||wbFb.image_relpath):null) || null;
   const lorebook=(selectedLore&&worldLores.find(x=>x.id===selectedLore.id))||worldLores[0]||null;
   return (
     <div>
-      {worldBanner&&<div style={{height:160,borderRadius:'var(--rl)',overflow:'hidden',marginBottom:16,position:'relative'}}><img src={worldBanner} alt={world.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/><div style={{position:'absolute',inset:0,background:'linear-gradient(to top, rgba(15,14,19,0.85) 0%, transparent 60%)'}}></div><h2 style={{position:'absolute',bottom:14,left:16,fontSize:22,fontWeight:700,color:'#fff',letterSpacing:'0.01em'}}>{world.name}</h2></div>}
+      {worldBanner&&<div style={{height:160,borderRadius:'var(--rl)',overflow:'hidden',marginBottom:16,position:'relative'}}><ImgFromPath src={worldBanner} alt={world.name} style={IMG_COVER}/><div style={{position:'absolute',inset:0,background:'linear-gradient(to top, rgba(15,14,19,0.85) 0%, transparent 60%)'}}></div><h2 style={{position:'absolute',bottom:14,left:16,fontSize:22,fontWeight:700,color:'#fff',letterSpacing:'0.01em'}}>{world.name}</h2></div>}
       <div className="breadcrumb" onClick={()=>setPage('worlds')}><i className="ti ti-arrow-left"></i><span>Worlds</span><i className="ti ti-chevron-right"></i><span>{world.name}</span></div>
       <div className="world-sub-nav">
         {tabs.map(([t,icon,label])=><div key={t} className={`sub-nav-item ${tab===t?'active':''}`} onClick={()=>setTab(t)}><i className={`ti ${icon}`}></i>{label}</div>)}
@@ -4386,11 +4630,11 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
         worldColls.length===0?<div className="empty"><i className="ti ti-folders"></i><h3>No collections yet</h3></div>:
         <div className="coll-grid">
           {worldColls.map(c=>{
-            const bannerImg=c.image_data||world.image||null;
+            const bannerImg=c.image_data||c.image_relpath||world.image||world.image_relpath||null;
             return (
               <div key={c.id} className="coll-card" onClick={()=>openColl(c)}>
-                <div className="coll-banner" style={{backgroundImage:bannerImg?'url('+bannerImg+')':'none',backgroundSize:'cover',backgroundPosition:'center'}}>
-                  {!bannerImg&&<i className="ti ti-folders" style={{fontSize:24,color:'var(--teal)',opacity:0.5}}></i>}
+                <div className="coll-banner">
+                  {bannerImg?<ImgFromPath src={bannerImg} alt={c.name} style={IMG_COVER}/>:<i className="ti ti-folders" style={COLL_FOLDER_ICON}></i>}
                 </div>
                 <div className="coll-card-body">
                   <h3>{c.name}</h3>
@@ -4427,8 +4671,8 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
               {(world.image||world.image_relpath)?<ImgFromPath src={world.image||world.image_relpath} alt="banner" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<div className="world-banner-placeholder"><i className="ti ti-photo" style={{fontSize:28,display:'block',marginBottom:6}}></i><span style={{fontSize:12}}>Click to upload banner</span></div>}
             </div>
             <div className="export-row">
-              <button className="btn" onClick={handleBannerUpload}><i className="ti ti-upload"></i>{world.image?'Change Image':'Upload Image'}</button>
-              {world.image?<button className="btn danger" onClick={()=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.image=null;})}><i className="ti ti-x"></i>Remove</button>:null}
+              <button className="btn" onClick={handleBannerUpload}><i className="ti ti-upload"></i>{(world.image||world.image_relpath)?'Change Image':'Upload Image'}</button>
+              {(world.image||world.image_relpath)?<button className="btn danger" onClick={()=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w){w.image=null;w.image_relpath=null;}})}><i className="ti ti-x"></i>Remove</button>:null}
             </div>
           </div>
           <div className="field-row">
@@ -4468,120 +4712,6 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
   );
 }
 
-function LoreboookEditor({lorebook,update,exportLore}) {
-  const [activeIdx,setActiveIdx]=useState(0);
-  const [loreTab,setLoreTab]=useState('edit');
-  const chapters=lorebook.content||[];
-  const chapter=chapters[activeIdx]||null;
-  const updLore=(fn)=>update(d=>{const l=d.lorebooks.find(x=>x.id===lorebook.id);if(l){fn(l);l.updated_at=new Date().toISOString();if(l.lorebook_filename){
-        const{world_id,image_data,lorebook_filename,...lrest}=l;
-        window.lorekeeper.saveLorebookJson(l.lorebook_filename,{...lrest,updated_at:l.updated_at});
-      }}});
-  const handleImage=async()=>{
-    const r=await window.lorekeeper.importImage();
-    if(!r) return;
-    if(lorebook.lorebook_filename){
-      const folder='Lorebooks';
-      const baseName=lorebook.lorebook_filename.replace(/\.json$/i,'');
-      const res=await window.lorekeeper.copyImageToFolder(r.srcPath,folder,baseName);
-      if(res) { updLore(l=>{l.image_data=res.base64;l.image_relpath=res.relPath;}); return; }
-    }
-    updLore(l=>{l.image_data=r.base64;});
-  };
-  const buildLoreMd = () => {
-    const lines = [];
-    lines.push("# " + (lorebook.name||"Lorebook"));
-    if(lorebook.short_description) { lines.push(""); lines.push(lorebook.short_description); }
-    (lorebook.content||[]).forEach(ch => {
-      lines.push(""); lines.push("## " + (ch.title||"Untitled"));
-      if(ch.text) lines.push(ch.text);
-    });
-    return lines.join("\n");
-  };
-  const exportLoreMd = () => {
-    const safeName = (lorebook.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");
-    window.lorekeeper.exportFile({defaultName: safeName + "-lorebook.md", content: buildLoreMd(), folder:"Lorebooks"});
-  };
-  const [loreMdPreview,setLoreMdPreview]=useState(false);
-  const loreTabBar = (
-    <div className="lore-tab-bar">
-      {[["edit","Edit"],["export","Export"]].map(([t,l])=>(
-        <button key={t} onClick={()=>setLoreTab(t)} className={"lore-tab-btn"+(loreTab===t?" active":"")}>{l}</button>
-      ))}
-    </div>
-  );
-  if(loreTab==="export") return (
-    <div>
-      {loreTabBar}
-      <LoreExportPanel lorebook={lorebook} exportLore={exportLore} exportLoreMd={exportLoreMd} loreMdPreview={loreMdPreview} setLoreMdPreview={setLoreMdPreview} buildLoreMd={buildLoreMd}/>
-    </div>
-  );
-  return (
-    <div>
-      {loreTabBar}
-    <div className="lore-layout">
-      <div className="lore-chapters">
-        <div style={{padding:'8px 10px',display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid var(--border)',marginBottom:4}}>
-          <span style={{fontSize:11,color:'var(--text3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em'}}>Chapters</span>
-          <button className="btn" style={{padding:'3px 8px',fontSize:11}} onClick={()=>{updLore(l=>{l.content.push({id:uuid(),title:'New Chapter',text:''});});setActiveIdx(chapters.length);}}><i className="ti ti-plus"></i></button>
-        </div>
-        {chapters.map((ch,i)=>(
-          <div key={ch.id} className={`chapter-item ${activeIdx===i?'active':''}`} onClick={()=>setActiveIdx(i)}>
-            <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',flex:1}}>{ch.title||'Untitled'}</span>
-            <button className="ch-del" onClick={e=>{e.stopPropagation();updLore(l=>{l.content.splice(i,1)});if(activeIdx>=i&&activeIdx>0)setActiveIdx(a=>a-1);}}><i className="ti ti-x"></i></button>
-          </div>
-        ))}
-        <hr className="divider" style={{margin:'8px 0'}}/>
-        <div style={{padding:'4px 6px',display:'flex',flexDirection:'column',gap:6}}>
-          <div style={{borderRadius:'var(--r)',overflow:'hidden',background:'var(--bg3)',border:'1px solid var(--border)',aspectRatio:'1',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:6,cursor:'pointer',position:'relative'}} onClick={handleImage}>
-            {(lorebook.image_data||lorebook.image_relpath) ? <ImgFromPath src={lorebook.image_data||lorebook.image_relpath} alt="cover" style={{width:'100%',height:'100%',objectFit:'cover',position:'absolute',inset:0}}/> : <><i className="ti ti-photo" style={{fontSize:24,color:'var(--text3)'}}></i><span style={{fontSize:10,color:'var(--text3)'}}>Cover image</span></>}
-          </div>
-          {lorebook.image_id && <div>
-            <div style={{fontSize:9,color:'var(--text3)',marginBottom:2,textTransform:'uppercase',letterSpacing:'0.05em'}}>Image ID</div>
-            <div style={{display:'flex',gap:4}}>
-              <input readOnly value={lorebook.image_id} style={{flex:1,background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text3)',padding:'3px 6px',borderRadius:'var(--r)',fontSize:9,outline:'none',fontFamily:'monospace',minWidth:0}}/>
-              <button className="btn" style={{padding:'3px 5px',fontSize:10,flexShrink:0}} onClick={()=>navigator.clipboard.writeText(lorebook.image_id)}><i className="ti ti-copy" style={{fontSize:11}}></i></button>
-            </div>
-          </div>}
-          <button className="btn" style={{width:'100%',justifyContent:'center',fontSize:12}} onClick={handleImage}><i className="ti ti-upload"></i>{(lorebook.image_data||lorebook.image_relpath)?'Change Image':'Upload Image'}</button>
-          {(lorebook.image_data||lorebook.image_relpath)&&<button className="btn danger" style={{width:'100%',justifyContent:'center',fontSize:12}} onClick={()=>updLore(l=>{l.image_data=null;l.image_relpath=null;})}><i className="ti ti-x"></i>Remove Image</button>}
-          <hr className="divider"/>
-          <input value={lorebook.short_description||''} onChange={e=>updLore(l=>{l.short_description=e.target.value;})} placeholder="Short description…" style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none',fontFamily:'inherit'}}/>
-          <div style={{marginTop:8}}>
-            <div style={{fontSize:9,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:3}}>Lorebooks filename (auto-save)</div>
-            <input value={lorebook.lorebook_filename||''} onChange={e=>updLore(l=>{l.lorebook_filename=e.target.value||null;})} placeholder="e.g. MyLorebook.json" style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',fontFamily:'inherit',width:'100%'}}/>
-            {lorebook.lorebook_filename?<div className="field-hint">{loreHint(lorebook.lorebook_filename)}</div>:null}
-          </div>
-          <TagSelector value={lorebook.tags||[]} onChange={v=>updLore(l=>{l.tags=v;})} max={25}/>
-          <div style={{marginTop:8}}>
-            <div style={{fontSize:9,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:3}}>Access Level</div>
-            <select value={lorebook.access_level||'private'} onChange={e=>updLore(l=>{l.access_level=e.target.value;})} style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none'}}>
-              <option value="private">Private</option>
-              <option value="public">Public</option>
-            </select>
-          </div>
-          <div style={{marginTop:8}}>
-            <div style={{fontSize:9,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:3}}>Definition Protection</div>
-            <select value={lorebook.definition_protection||'copy_protection'} onChange={e=>updLore(l=>{l.definition_protection=e.target.value;})} style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none'}}>
-              <option value="open">Open — anyone can read</option>
-              <option value="copy_protection">Copy Protection (recommended)</option>
-              <option value="hidden">Hidden — collaborators only</option>
-            </select>
-          </div>
-          <button className="btn" style={{width:'100%',justifyContent:'center',fontSize:12}} onClick={()=>exportLore(lorebook)}><i className="ti ti-download"></i>Export</button>
-          <button className="btn danger" style={{width:'100%',justifyContent:'center',fontSize:12}} onClick={()=>setModal({type:'confirm-delete-lore',lore:lorebook})}><i className="ti ti-trash"></i>Delete</button>
-        </div>
-      </div>
-      <div className="lore-editor">
-        {!chapter?<p className="text-muted">No chapters. Add one to start.</p>:<>
-          <input value={chapter.title} onChange={e=>updLore(l=>{l.content[activeIdx].title=e.target.value;})} placeholder="Chapter title"/>
-          <MdField value={chapter.text} onChange={e=>updLore(l=>{l.content[activeIdx].text=e.target.value;})} style={{minHeight:400}} placeholder="Write lore here... markdown supported"/>
-        </>}
-      </div>
-    </div>
-    </div>
-  );
-}
 
 function CollectionCharPicker({coll,data,update,setSelectedChar}) {
   const [search,setSearch]=useState('');
@@ -4640,7 +4770,7 @@ function CollectionCharPicker({coll,data,update,setSelectedChar}) {
         {groupByWorld(nonMembers).map(({world,chars})=>(
           <div key={world.id} style={{marginBottom:16}}>
             <div style={{fontSize:11,color:'var(--text3)',marginBottom:6,display:'flex',alignItems:'center',gap:6}}>
-              {world.image&&<img src={world.image} style={{width:16,height:16,borderRadius:2,objectFit:'cover'}}/>}{world.name}
+              {(world.image||world.image_relpath)&&<ImgFromPath src={world.image||world.image_relpath} style={IMG_ICON16}/>}{world.name}
             </div>
             <div className="chars-grid">
               {chars.map(c=>(
@@ -4696,7 +4826,7 @@ function CollectionPicker({charData,data,updChar,update}) {
             {grouped.map(({world,colls})=>(
               <div key={world.id} style={{marginBottom:12}}>
                 <div style={{fontSize:11,color:'var(--text3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6,display:'flex',alignItems:'center',gap:6}}>
-                  {world.image&&<img src={world.image} style={{width:16,height:16,borderRadius:2,objectFit:'cover'}}/>}{world.name}
+                  {(world.image||world.image_relpath)&&<ImgFromPath src={world.image||world.image_relpath} style={IMG_ICON16}/>}{world.name}
                 </div>
                 {colls.map(c=>{
                   const linked=isLinked(c);
@@ -5037,41 +5167,6 @@ function CharactersPage({data,setSelectedChar}) {
   );
 }
 
-const CS = {
-  pickerThumb:{cursor:'pointer',borderRadius:4,overflow:'hidden',border:'2px solid var(--border)',width:56,height:56,flexShrink:0},
-  pickerImg:{width:'100%',height:'100%',objectFit:'cover'},
-  profilePicBlock:{padding:'10px 12px'},
-  profilePicRow:{display:'flex',gap:6,marginTop:4},
-  uuidInp:{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',fontFamily:'monospace',minWidth:0},
-  uuidInpSm:{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'3px 6px',borderRadius:'var(--r)',fontSize:9,outline:'none',fontFamily:'monospace',minWidth:0},
-  uuidLbl:{fontSize:9,color:'var(--text3)',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.05em'},
-  copyBtnSm:{padding:'4px 6px',fontSize:10,flexShrink:0},
-  copyBtnTiny:{padding:'3px 5px',fontSize:10,flexShrink:0},
-  gripIcon:{color:'var(--text3)',fontSize:16,cursor:'grab',flexShrink:0},
-  gripIconWhite:{color:'#fff',fontSize:13,opacity:0.8},
-  scenarioTitleInp:{background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none',flex:1},
-  addPortraitBtn:{aspectRatio:'3/4',width:'100%',flexDirection:'column',gap:6,justifyContent:'center',border:'1.5px dashed var(--border2)'},
-  portraitNameInp:{width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none'},
-  portraitDescInp:{width:'100%',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',marginTop:4},
-  loreImg:{width:32,height:32,borderRadius:4,objectFit:'cover',flexShrink:0},
-  loreBookIcon:{fontSize:18,flexShrink:0},
-  loreCheckIcon:{color:'var(--accent)',fontSize:16,flexShrink:0},
-  pillWorldSpan:{color:'var(--text3)',fontSize:11},
-  pillBookIcon:{fontSize:13},
-  dateInp:{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none',colorScheme:'dark'},
-  savesBanner:{display:'flex',alignItems:'center',gap:8,padding:'8px 12px',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',fontSize:12},
-  savesName:{color:'var(--text)',fontWeight:500},
-  savesMeta:{color:'var(--text3)',marginLeft:'auto',fontSize:11},
-  helpBtn:{background:'none',border:'none',cursor:'pointer',color:'var(--text3)',fontSize:13,padding:'0 2px',lineHeight:1},
-  helpBox:{padding:'10px 12px',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',fontSize:12,color:'var(--text3)',lineHeight:1.7,marginBottom:10},
-  loreTextarea:{width:'100%',minHeight:500,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'10px 12px',borderRadius:'var(--r)',fontSize:12,outline:'none',resize:'vertical',fontFamily:'monospace',lineHeight:1.6},
-  templateSelect:{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none',width:'100%'},
-  titleInp:{fontWeight:600,fontFamily:'monospace',fontSize:13},
-  pasteArea:{width:'100%',minHeight:120,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'8px',borderRadius:'var(--r)',fontSize:11,fontFamily:'monospace',outline:'none',resize:'vertical'},
-  pasteLblRow:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4},
-  errHdr:{fontSize:12,fontWeight:600,color:'var(--red)',marginBottom:4},
-  errItem:{fontSize:11,color:'var(--red)',paddingLeft:8},
-};
 
 function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setModal,setLightboxSrc,onBack}) {
   const updChar=(fn)=>update(d=>{
@@ -5336,7 +5431,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                       {lores.map(l=>{
                         const linked=(charData.linked_lorebooks||[]).includes(l.id);
                         return <div key={l.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',background:linked?'var(--accent-dim)':'var(--bg3)',border:linked?'1px solid var(--accent2)':'1px solid var(--border)',borderRadius:'var(--r)',marginBottom:4,cursor:'pointer',transition:'all 0.15s'}} onClick={()=>updChar(c=>{if(!c.linked_lorebooks)c.linked_lorebooks=[];if(c.linked_lorebooks.includes(l.id)){c.linked_lorebooks=c.linked_lorebooks.filter(x=>x!==l.id);}else{c.linked_lorebooks.push(l.id);}})}>
-                          {l.image_data?<img src={l.image_data} alt={l.name} style={{width:32,height:32,borderRadius:4,objectFit:'cover',flexShrink:0}}/>:<i className="ti ti-book" style={{fontSize:18,color:linked?'var(--accent)':'var(--text3)',flexShrink:0}}></i>}
+                          {(l.image_data||l.image_relpath)?<ImgFromPath src={l.image_data||l.image_relpath} alt={l.name} style={IMG_ICON32}/>:<i className="ti ti-book" style={{fontSize:18,color:linked?'var(--accent)':'var(--text3)',flexShrink:0}}></i>}
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{fontSize:13,fontWeight:500,color:linked?'var(--accent)':'var(--text)'}}>{l.name}</div>
                             {l.short_description&&<div style={{fontSize:11,color:'var(--text3)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.short_description}</div>}
@@ -5717,7 +5812,7 @@ function CollPage({coll,data,update,exportColl,initialTab,importJSON,openChar,se
           <div className="char-portrait-lg" style={{cursor:'pointer'}} onClick={async()=>{const r=await window.lorekeeper.importImage();if(!r)return;if(col.collection_filename){const res=await window.lorekeeper.copyImageToFolder(r.srcPath,"Collections",col.collection_filename.replace(/\.json$/i,""));if(res){setCol(c=>{c.image_data=res.base64;c.image_relpath=res.relPath;});return;}}setCol(c=>{c.image_data=r.base64;});}}>
             {(col.image_data||col.image_relpath)
               ?<ImgFromPath src={col.image_data||col.image_relpath} alt={col.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
-              :(world&&world.image)?<img src={world.image} alt={col.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
+              :(world&&(world.image||world.image_relpath))?<ImgFromPath src={world.image||world.image_relpath} alt={col.name} style={IMG_COVER}/>
               :<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6}}><i className="ti ti-folders" style={{fontSize:40,color:'var(--teal)',opacity:0.5}}></i><span style={{fontSize:11,color:'var(--text3)'}}>Set cover</span></div>
             }
           </div>
@@ -5802,51 +5897,6 @@ function CollSettingsTab({col,setCol,data,world,update,openChar,setModal,onBack}
   );
 }
 
-function CollEditPanel({coll,data,update,setSelectedColl,world,exportColl}) {
-  const handleImg = async () => {
-    const r = await window.lorekeeper.importImage();
-    if(!r) return;
-    if(coll.collection_filename){
-      const res = await window.lorekeeper.copyImageToFolder(r.srcPath,"Collections",coll.collection_filename.replace(/\.json$/i,""));
-      if(res){update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c){c.image_data=res.base64;c.image_relpath=res.relPath;}});setSelectedColl(sc=>({...sc,image_data:res.base64,image_relpath:res.relPath}));return;}
-    }
-    update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c)c.image_data=r.base64;});
-    setSelectedColl(sc=>({...sc,image_data:r.base64}));
-  };
-  return (
-    <div>
-      {!coll.image_data&&!world.image&&<div style={{display:"flex",gap:8,marginBottom:16,alignItems:"center"}}>
-        <button className="btn" onClick={handleImg}><i className="ti ti-camera"></i>Set image</button>
-      </div>}
-      <div className="field-block" style={{marginBottom:12}}>
-        <label>Name</label>
-        <input value={coll.name||""} onChange={e=>{const v=e.target.value;update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c)c.name=v;});setSelectedColl(sc=>({...sc,name:v}));}}/>
-      </div>
-      <div className="field-block" style={{marginBottom:12}}>
-        <label>Description</label>
-        <textarea style={{minHeight:80}} value={coll.definition||""} onChange={e=>{const v=e.target.value;update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c)c.definition=v;});setSelectedColl(sc=>({...sc,definition:v}));}}/>
-      </div>
-      <div className="field-block" style={{marginBottom:12}}>
-        <label>Tags</label>
-        <TagSelector value={coll.tags||[]} onChange={v=>{update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c)c.tags=v;});setSelectedColl(sc=>({...sc,tags:v}));}} max={25}/>
-      </div>
-      <div className="field-block" style={{marginBottom:12}}>
-        <label>World</label>
-        <select value={coll.world_id||""} onChange={e=>{const v=e.target.value||null;update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c)c.world_id=v;});setSelectedColl(sc=>({...sc,world_id:v}));}}>
-          <option value="">No World (standalone)</option>
-          {sortedWorlds(data).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+" ":""}{w.name}</option>)}
-        </select>
-      </div>
-      <div className="field-block" style={{marginBottom:16}}>
-        <label>Auto-save filename</label>
-        <input value={coll.collection_filename||""} onChange={e=>{const v=e.target.value||null;update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(c)c.collection_filename=v;});setSelectedColl(sc=>({...sc,collection_filename:v}));}} placeholder="e.g. Guideverse.json"/>
-        {coll.collection_filename&&<div style={{fontSize:11,color:"var(--text3)",marginTop:4}}>{"I:\\Lorekeeper\\Collections\\"}{coll.collection_filename}</div>}
-      </div>
-      <button className="btn danger" style={{fontSize:12,marginBottom:16}} onClick={()=>setModal({type:'confirm-delete-coll',coll})}><i className="ti ti-trash"></i>Delete</button>
-      <CollectionCharPicker coll={coll} data={data} update={update} setSelectedChar={()=>{}}/>
-    </div>
-  );
-}
 
 function CollItemRestoreCard({coll, update}) {
   const [collPasteText, setCollPasteText] = React.useState('');
@@ -6380,101 +6430,6 @@ function PersonaDetailPage({persona,data,update,onBack}) {
 }
 
 
-
-function BackupRestorePanel({data, update}) {
-  const [status, setStatus] = useState(null);
-  const [msg, setMsg] = useState('');
-  const [lgInfo, setLgInfo] = React.useState(null);
-  React.useEffect(()=>{window.lorekeeper.getLastgoodInfo().then(i=>setLgInfo(i)).catch(()=>{});},[]);
-
-  const globalBackup = async () => {
-    setStatus('working'); setMsg('Creating backup…');
-    const res = await window.lorekeeper.exportBackup({});
-    if(res.cancelled) { setStatus(null); return; }
-    if(res.success) { setStatus('ok'); setMsg(`✓ Backup saved (${(res.size/1024).toFixed(0)} KB)`); }
-    else { setStatus('err'); setMsg('Error: ' + res.error); }
-  };
-
-  const worldBackup = async (world) => {
-    setStatus('working'); setMsg(`Exporting ${world.name}…`);
-    const res = await window.lorekeeper.exportBackup({worldId: world.id});
-    if(res.cancelled) { setStatus(null); return; }
-    if(res.success) { setStatus('ok'); setMsg(`✓ ${world.name} exported (${(res.size/1024).toFixed(0)} KB)`); }
-    else { setStatus('err'); setMsg('Error: ' + res.error); }
-  };
-
-  const restore = async () => {
-    if(!window.confirm('Restore from backup? This will overwrite your current data and copy all files. Make sure to back up first!')) return;
-    setStatus('working'); setMsg('Restoring…');
-    const res = await window.lorekeeper.restoreBackup();
-    if(res.cancelled) { setStatus(null); return; }
-    if(res.success) {
-      if(res.data._world_export) {
-        // Per-world restore — merge into existing data
-        update(d => {
-          res.data.worlds.forEach(w => { if(!d.worlds.find(x=>x.id===w.id)) d.worlds.push(w); else Object.assign(d.worlds.find(x=>x.id===w.id), w); });
-          res.data.characters.forEach(c => { if(!d.characters.find(x=>x.id===c.id)) d.characters.push(c); else Object.assign(d.characters.find(x=>x.id===c.id), c); });
-          res.data.lorebooks.forEach(l => { if(!d.lorebooks.find(x=>x.id===l.id)) d.lorebooks.push(l); else Object.assign(d.lorebooks.find(x=>x.id===l.id), l); });
-          res.data.collections.forEach(c => { if(!d.collections.find(x=>x.id===c.id)) d.collections.push(c); else Object.assign(d.collections.find(x=>x.id===c.id), c); });
-          (res.data.templates||[]).forEach(t => { if(!d.templates.find(x=>x.id===t.id)) d.templates.push(t); });
-          (res.data.lorebook_templates||[]).forEach(t => { if(!d.lorebook_templates) d.lorebook_templates=[]; if(!d.lorebook_templates.find(x=>x.id===t.id)) d.lorebook_templates.push(t); });
-          (res.data.relationships||[]).forEach(r => { if(!d.relationships) d.relationships=[]; if(!d.relationships.find(x=>x.id===r.id)) d.relationships.push(r); });
-        });
-        setStatus('ok'); setMsg('✓ World restored and merged into existing data.');
-      } else {
-        // Global restore — full replace
-        update(() => res.data);
-        setStatus('ok'); setMsg('✓ Full restore complete. Restart Lorekeeper to ensure everything is fresh.');
-      }
-    } else { setStatus('err'); setMsg('Error: ' + res.error); }
-  };
-
-  return (
-    <div style={{marginTop:24,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:16}}>
-      <div style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:12}}>Backup & Restore</div>
-      <div style={{display:'flex',flexDirection:'column',gap:10}}>
-        <div>
-          <div style={{fontSize:12,color:'var(--text3)',marginBottom:8}}>Global backup — everything: all worlds, characters, lorebooks, collections, personas, templates, images</div>
-          <button className="btn primary" style={{fontSize:12}} onClick={globalBackup} disabled={status==='working'}>
-            <i className="ti ti-archive"></i>Export full backup (.zip)
-          </button>
-        </div>
-        <div>
-          <div style={{fontSize:12,color:'var(--text3)',marginBottom:8}}>Per-world export — one world and all its content</div>
-          <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
-            {sortedWorlds(data).map(w=>(
-              <button key={w.id} className="btn" style={{fontSize:11}} onClick={()=>worldBackup(w)} disabled={status==='working'}>
-                {w.emoji?w.emoji+' ':''}{w.name}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div style={{borderTop:'1px solid var(--border)',paddingTop:10}}>
-          <div style={{fontSize:12,color:'var(--text3)',marginBottom:8}}>Restore from a previous backup zip. Copies all files and replaces data.</div>
-          <button className="btn danger" style={{fontSize:12}} onClick={restore} disabled={status==='working'}>
-            <i className="ti ti-restore"></i>Restore from backup…
-          </button>
-        </div>
-        <div style={{borderTop:'1px solid var(--border)',paddingTop:10}}>
-          <div style={{fontSize:12,color:'var(--text3)',marginBottom:4}}>Restore directly from the rolling last-good-backup file (no zip needed). Use this when your data file is corrupted or empty.</div>
-          {lgInfo&&<div style={{fontSize:11,color:'var(--text3)',marginBottom:8}}>Last saved: {lgInfo.mtime.split('T')[0]} {lgInfo.mtime.split('T')[1].slice(0,5)} — {(lgInfo.size/1024).toFixed(0)} KB</div>}
-          <button className="btn danger" style={{fontSize:12}} disabled={status==='working'||!lgInfo} onClick={async()=>{
-            if(!window.confirm('Restore from last good backup? This replaces all current data.')) return;
-            setStatus('working'); setMsg('Restoring from lastgood…');
-            const res = await window.lorekeeper.restoreLastgood();
-            if(res.success){ update(()=>res.data); setStatus('ok'); setMsg('✓ Restored from lastgood ('+Math.round(res.size/1024)+' KB). Restart recommended.'); }
-            else { setStatus('err'); setMsg('Error: '+res.error); }
-          }}>
-            <i className="ti ti-database-import"></i>Restore from last good backup
-          </button>
-        </div>
-        {status&&status!=='working'&&<div style={{fontSize:12,color:status==='ok'?'#6ee7b7':'var(--red)',marginTop:4}}>{msg}</div>}
-        {status==='working'&&<div style={{fontSize:12,color:'var(--text3)',marginTop:4}}><i className="ti ti-loader"></i> {msg}</div>}
-      </div>
-    </div>
-  );
-}
-
 function NotesBackupPanel({data}) {
   return (
     <div style={{marginTop:24,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:16}}>
@@ -6494,10 +6449,12 @@ function NotesBackupPanel({data}) {
   );
 }
 
+
 function ImageMigrationPanel({data, update}) {
   const [status, setStatus] = useState(null); // null | 'scanning' | 'scanned' | 'migrating' | 'done'
   const [report, setReport] = useState([]);
   const [migrated, setMigrated] = useState(0);
+  const [cleanupResult, setCleanupResult] = useState(null);
 
   const rescanImages = async () => {
     setStatus('scanning');
@@ -6525,19 +6482,35 @@ function ImageMigrationPanel({data, update}) {
   const scan = async () => {
     setStatus('scanning');
     const items = [];
-    const checkItem = async (type, id, name, imageData, imageRelpath, filename) => {
-      if(!imageData) return;
+    const checkItem = async (type, id, name, imageData, imageRelpath, filename, files) => {
+      if(!imageData && !imageRelpath) return;
       if(imageRelpath) {
         const ok = await window.lorekeeper.readImagePath(imageRelpath).then(r=>!!r).catch(()=>false);
-        items.push({type, id, name, status: ok?'relpath_ok':'relpath_broken', relpath:imageRelpath});
-      } else {
-        items.push({type, id, name, filename, status:'needs_migration'});
+        if(ok && imageData) {
+          items.push({type, id, name, status:'leftover_data', relpath:imageRelpath});
+        } else {
+          items.push({type, id, name, status: ok?'relpath_ok':'relpath_broken', relpath:imageRelpath});
+        }
+      } else if(imageData) {
+        items.push({type, id, name, filename, files, status:'needs_migration'});
       }
     };
-    for(const l of data.lorebooks) await checkItem('lorebook', l.id, l.name, l.image_data, l.image_relpath, l.lorebook_filename);
-    for(const c of data.collections) await checkItem('collection', c.id, c.name, c.image_data, c.image_relpath, c.collection_filename);
-    for(const w of data.worlds) await checkItem('world', w.id, w.name, w.image, w.image_relpath, w.name.replace(/[^a-zA-Z0-9_-]/g,'_'));
-    for(const p of (data.personas||[])) await checkItem('persona', p.id, p.name, p.image?.data, p.image_relpath, p.name.replace(/[^a-zA-Z0-9_-]/g,'_'));
+    // Same reasoning as the companion-folder scan below: check what's already sitting
+    // in each type's folder so needs_migration items can link instead of duplicate-write.
+    let byType = {lorebook:[], collection:[], world:[], persona:[]};
+    try {
+      const [loreFiles, collFiles, worldFiles, personaFiles] = await Promise.all([
+        window.lorekeeper.listFolderImages('Lorebooks'),
+        window.lorekeeper.listFolderImages('Collections'),
+        window.lorekeeper.listFolderImages('Worlds'),
+        window.lorekeeper.listFolderImages('Personas'),
+      ]);
+      byType = {lorebook:loreFiles||[], collection:collFiles||[], world:worldFiles||[], persona:personaFiles||[]};
+    } catch(e) {}
+    for(const l of data.lorebooks) await checkItem('lorebook', l.id, l.name, l.image_data, l.image_relpath, l.lorebook_filename, byType.lorebook);
+    for(const c of data.collections) await checkItem('collection', c.id, c.name, c.image_data, c.image_relpath, c.collection_filename, byType.collection);
+    for(const w of data.worlds) await checkItem('world', w.id, w.name, w.image, w.image_relpath, w.name.replace(/[^a-zA-Z0-9_-]/g,'_'), byType.world);
+    for(const p of (data.personas||[])) await checkItem('persona', p.id, p.name, p.image?.data, p.image_relpath, p.name.replace(/[^a-zA-Z0-9_-]/g,'_'), byType.persona);
     // Portraits and main images are the bulk of the base64. Match them against files
     // already present in each companion folder so nothing gets written twice.
     let folderImages = {};
@@ -6548,21 +6521,33 @@ function ImageMigrationPanel({data, update}) {
     for(const c of data.characters) {
       const files = c.companion_folder ? (folderImages[c.companion_folder] || []) : [];
       const safeCharName = (c.name||'image').replace(/[^a-zA-Z0-9_-]/g,'_');
-      if(c.companion_profile_banner_image?.data && !c.companion_profile_banner_image?.relPath) {
-        items.push({key:c.id+'-banner', type:'companion_banner', id:c.id, name:(c.display_name||c.name)+' (banner)', filename:(c.companion_folder||safeCharName)+'_banner', status:'needs_migration'});
+      if(c.companion_profile_banner_image?.data) {
+        if(c.companion_profile_banner_image?.relPath) {
+          items.push({key:c.id+'-banner', type:'companion_banner', id:c.id, name:(c.display_name||c.name)+' (banner)', status:'leftover_data', relpath:c.companion_profile_banner_image.relPath});
+        } else {
+          items.push({key:c.id+'-banner', type:'companion_banner', id:c.id, name:(c.display_name||c.name)+' (banner)', filename:(c.companion_folder||safeCharName)+'_banner', status:'needs_migration'});
+        }
       }
-      if(c.image?.data && !c.image?.relPath) {
-        // Exact matches only — guessing from leftover files picks the wrong picture when
-        // portrait numbering has gaps. Anything unmatched is chosen by hand below.
-        const m = files.find(f=>f.name===c.name)
-               || files.find(f=>f.name===safeCharName)
-               || files.find(f=>/profile[_-]?pic|main|cover/i.test(f.name));
-        items.push({key:c.id+'-image', type:'char_image', id:c.id, name:(c.display_name||c.name)+' — main image', match:m?m.relPath:null, files:files, filename:safeCharName, status:'needs_migration'});
+      if(c.image?.data) {
+        if(c.image?.relPath) {
+          items.push({key:c.id+'-image', type:'char_image', id:c.id, name:(c.display_name||c.name)+' — main image', status:'leftover_data', relpath:c.image.relPath});
+        } else {
+          // Exact matches only — guessing from leftover files picks the wrong picture when
+          // portrait numbering has gaps. Anything unmatched is chosen by hand below.
+          const m = files.find(f=>f.name===c.name)
+                 || files.find(f=>f.name===safeCharName)
+                 || files.find(f=>/profile[_-]?pic|main|cover/i.test(f.name));
+          items.push({key:c.id+'-image', type:'char_image', id:c.id, name:(c.display_name||c.name)+' — main image', match:m?m.relPath:null, files:files, filename:safeCharName, status:'needs_migration'});
+        }
       }
       (c.portraits||[]).forEach((p,idx)=>{
-        if(p.data && !p.relPath) {
-          const m = files.find(f=>f.name===p.name);
-          items.push({key:c.id+'-p'+idx, type:'portrait', id:c.id, idx:idx, name:(c.display_name||c.name)+' — '+(p.name||('portrait '+(idx+1))), match:m?m.relPath:null, files:files, filename:(p.name||('portrait'+(idx+1))).replace(/[^a-zA-Z0-9_-]/g,'_'), status:'needs_migration'});
+        if(p.data) {
+          if(p.relPath) {
+            items.push({key:c.id+'-p'+idx, type:'portrait', id:c.id, idx:idx, name:(c.display_name||c.name)+' — '+(p.name||('portrait '+(idx+1))), status:'leftover_data', relpath:p.relPath});
+          } else {
+            const m = files.find(f=>f.name===p.name);
+            items.push({key:c.id+'-p'+idx, type:'portrait', id:c.id, idx:idx, name:(c.display_name||c.name)+' — '+(p.name||('portrait '+(idx+1))), match:m?m.relPath:null, files:files, filename:(p.name||('portrait'+(idx+1))).replace(/[^a-zA-Z0-9_-]/g,'_'), status:'needs_migration'});
+          }
         }
       });
     }
@@ -6600,7 +6585,7 @@ function ImageMigrationPanel({data, update}) {
     }
     // One state write for the whole batch — updating per image would deep-clone the
     // entire dataset once per portrait, which is the very cost this migration removes.
-    if(resolved.length) update(d=>{
+    const applyMigration = (d) => {
       resolved.forEach(r=>{
         const item = r.item, rel = r.relPath;
         if(item.type==='lorebook'){ const o=d.lorebooks.find(x=>x.id===item.id); if(o){o.image_relpath=rel;o.image_data=null;} }
@@ -6615,15 +6600,55 @@ function ImageMigrationPanel({data, update}) {
           else if(item.type==='portrait'){ const p=(o.portraits||[])[item.idx]; if(p){p.relPath=rel;p.data=null;} }
         }
       });
-    });
+    };
+    if(resolved.length) {
+      update(applyMigration);
+      // Same shrink-guard problem as the leftover cleanup — force this one through too.
+      const nd = structuredClone(data);
+      applyMigration(nd);
+      await window.lorekeeper.saveDataAllowShrink(nd, 'migrate base64 to local files');
+    }
     setMigrated(resolved.length);
     setStatus('done');
   };
 
 
+  const cleanupLeftover = async () => {
+    const items = report.filter(r=>r.status==='leftover_data');
+    if(!items.length) return;
+    const applyCleanup = (d) => {
+      items.forEach(item=>{
+        if(item.type==='lorebook'){ const o=d.lorebooks.find(x=>x.id===item.id); if(o) o.image_data=null; }
+        else if(item.type==='collection'){ const o=d.collections.find(x=>x.id===item.id); if(o) o.image_data=null; }
+        else if(item.type==='world'){ const o=d.worlds.find(x=>x.id===item.id); if(o) o.image=null; }
+        else if(item.type==='persona'){ const o=(d.personas||[]).find(x=>x.id===item.id); if(o&&o.image) o.image.data=null; }
+        else {
+          const o=d.characters.find(x=>x.id===item.id);
+          if(!o) return;
+          if(item.type==='companion_banner' && o.companion_profile_banner_image) o.companion_profile_banner_image.data=null;
+          else if(item.type==='char_image' && o.image) o.image.data=null;
+          else if(item.type==='portrait') { const p=(o.portraits||[])[item.idx]; if(p) p.data=null; }
+        }
+      });
+    };
+    update(applyCleanup);
+    // The ordinary autosave measures this write against the pre-cleanup file size and
+    // refuses it as a suspicious shrink, so push it through the explicit path instead.
+    const nd = structuredClone(data);
+    applyCleanup(nd);
+    const res = await window.lorekeeper.saveDataAllowShrink(nd, 'clear leftover base64');
+    setCleanupResult(res && res.success ? {ok:true, count:items.length} : {ok:false, error:(res&&res.error)||'save failed'});
+    setReport(prev => prev.map(r => r.status==='leftover_data' ? {...r, status:'relpath_ok'} : r));
+  };
+
   const needsMigration = report.filter(r=>r.status==='needs_migration');
   const relpathOk = report.filter(r=>r.status==='relpath_ok');
   const relpathBroken = report.filter(r=>r.status==='relpath_broken');
+  const leftoverData = report.filter(r=>r.status==='leftover_data');
+  const linkCount = needsMigration.filter(r=>r.match).length;
+  const writeCount = needsMigration.length - linkCount;
+  const migrateLabel = buildMigrateLabel(linkCount, writeCount);
+  const migrateIcon = (linkCount && !writeCount) ? 'ti ti-link' : 'ti ti-file-export';
 
   const S = {
     box: {marginTop:24,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:16},
@@ -6660,6 +6685,17 @@ function ImageMigrationPanel({data, update}) {
             </div>)}
           </div>}
           {relpathBroken.length>0&&<div style={{fontSize:12,color:'var(--amber)'}}>⚠ {relpathBroken.length} have relpath but file not found: {relpathBroken.map(r=>r.name).join(', ')}</div>}
+          {leftoverData.length>0&&<div>
+            <div style={{fontSize:12,color:'var(--amber)',marginBottom:4}}>⚠ {leftoverData.length} item{leftoverData.length>1?'s':''} already {leftoverData.length>1?'have':'has'} a working local file but still carry leftover base64 in the data — safe to clear:</div>
+            {leftoverData.map(r=><div key={r.key||r.id} style={{fontSize:10,color:'var(--text3)',paddingLeft:12,padding:'1px 0 1px 12px'}}>
+              {r.name} → <span style={{fontFamily:'monospace'}}>{r.relpath}</span>
+            </div>)}
+            <button className="btn" style={{marginTop:8,fontSize:12}} onClick={cleanupLeftover}>
+              <i className="ti ti-eraser"></i>Clear {leftoverData.length} leftover base64 blob{leftoverData.length>1?'s':''}
+            </button>
+          </div>}
+          {cleanupResult&&cleanupResult.ok&&<div style={{fontSize:12,color:'#6ee7b7'}}>✓ Cleared {cleanupResult.count} leftover blob{cleanupResult.count!==1?'s':''} and written to disk. A pre-cleanup snapshot was saved alongside the data file.</div>}
+          {cleanupResult&&!cleanupResult.ok&&<div style={{fontSize:12,color:'var(--amber)'}}>⚠ Cleanup did not reach disk: {cleanupResult.error}</div>}
           {needsMigration.length>0&&(
             <div>
               <div style={{fontSize:12,color:'var(--amber)',marginBottom:8}}>
@@ -6681,7 +6717,7 @@ function ImageMigrationPanel({data, update}) {
                 </div>
               ))}
               <button className="btn primary" style={{marginTop:10,fontSize:12}} onClick={migrate}>
-                <i className="ti ti-file-export"></i>Migrate {needsMigration.length} image{needsMigration.length>1?'s':''} to local files
+                <i className={migrateIcon}></i>{migrateLabel}
               </button>
             </div>
           )}
@@ -6689,11 +6725,10 @@ function ImageMigrationPanel({data, update}) {
       )}
       {status==='migrating'&&<div style={{fontSize:12,color:'var(--text3)'}}><i className="ti ti-loader"></i> Migrating…</div>}
       {status==='rescan_done'&&<div style={{fontSize:12,color:'#6ee7b7'}}>✓ Linked {migrated} new image{migrated!==1?'s':''} from local folders.{migrated===0?' All already up to date.':''}</div>}
-      {status==='done'&&<div style={{fontSize:12,color:'#6ee7b7'}}>✓ Migrated {migrated} image{migrated!==1?'s':''} to local files. base64 cleared from data.</div>}
+      {status==='done'&&<div style={{fontSize:12,color:'#6ee7b7'}}>✓ Resolved {migrated} image{migrated!==1?'s':''} to local files. base64 cleared from data.</div>}
     </div>
   );
 }
-
 
 
 function ScanBadge({isNew, localNewer, upToDate}) {
@@ -6733,73 +6768,6 @@ function BatchImportHelp() {
   </div>;
 }
 
-
-// ── Backup merge helpers ─────────────────────────────────────────────────────
-const MERGE_TYPES = ['worlds','characters','lorebooks','collections','personas','templates','lorebook_templates','gallery'];
-const MERGE_TYPE_LABELS = {worlds:'World',characters:'Character',lorebooks:'Lorebook',collections:'Collection',personas:'Persona',templates:'Template',lorebook_templates:'Lorebook Template',gallery:'Gallery image'};
-
-function planMerge(local, backup) {
-  const toAdd=[], toUpdate=[], conflicts=[];
-  for(const type of MERGE_TYPES) {
-    const bItems = backup[type]||[], lItems = local[type]||[];
-    for(const bItem of bItems) {
-      const lItem = lItems.find(x=>x.id===bItem.id);
-      if(!lItem) {
-        toAdd.push({type,item:bItem});
-      } else {
-        const bms=parseTimestamp(bItem.updated_at)||0, lms=parseTimestamp(lItem.updated_at)||0;
-        if(bms>lms) toUpdate.push({type,item:bItem,localItem:lItem});
-        else if(bms===lms||!bms||!lms) conflicts.push({type,item:bItem,localItem:lItem});
-        // else local is newer — skip
-      }
-    }
-  }
-  return {toAdd,toUpdate,conflicts};
-}
-
-function applyMerge(local, backup, plan, resolutions) {
-  const merged = structuredClone(local);
-  // Content: add new items
-  for(const {type,item} of plan.toAdd) {
-    if(!merged[type]) merged[type]=[];
-    merged[type].push(item);
-  }
-  // Content: update where backup is newer
-  for(const {type,item} of plan.toUpdate) {
-    const idx = merged[type].findIndex(x=>x.id===item.id);
-    if(idx>=0) merged[type][idx]=item;
-  }
-  // Content: conflicts — user chose per-item (default: keep local)
-  for(const {type,item} of plan.conflicts) {
-    if((resolutions[item.id]||'local')==='backup') {
-      const idx = merged[type].findIndex(x=>x.id===item.id);
-      if(idx>=0) merged[type][idx]=item;
-    }
-  }
-  // schedule_notes: merge by date key; local takes priority on same date
-  if(backup.schedule_notes||local.schedule_notes) {
-    merged.schedule_notes = Object.assign({},backup.schedule_notes||{},local.schedule_notes||{});
-  }
-  // map_positions: merge by worldId/charId; local takes priority
-  const bPos=backup.map_positions||{}, lPos=local.map_positions||{};
-  const mPos=structuredClone(bPos);
-  for(const wid of Object.keys(lPos)) {
-    mPos[wid]=Object.assign({},mPos[wid]||{},lPos[wid]);
-  }
-  merged.map_positions=mPos;
-  // release_cycle: keep local order, append new world IDs from backup at end
-  const lCyc=local.release_cycle||[], bCyc=backup.release_cycle||[];
-  merged.release_cycle=[...lCyc,...bCyc.filter(id=>!lCyc.includes(id))];
-  // notes: Option 2 — empty->take backup; both->append; backup empty->keep local
-  const ln=(local.notes||'').trim(), bn=(backup.notes||'').trim();
-  if(!ln&&bn) merged.notes=bn;
-  else if(ln&&bn&&ln!==bn) {
-    const today=new Date().toISOString().split('T')[0];
-    merged.notes=ln+'\n\n--- Merged from backup '+today+' ---\n\n'+bn;
-  }
-  // settings: never touch — stays as local
-  return merged;
-}
 
 function MergePreviewModal({plan, onConfirm, onCancel}) {
   const [res,setRes]=React.useState({});
@@ -7381,22 +7349,6 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
   );
 }
 
-const TEMPLATE_FIELDS = [
-  ['display_name_format','Display Name Format','input','e.g. {{name}} · Title'],
-  ['short_description','Short Description','input'],
-  ['full_description','Full Description (public facing)','textarea'],
-  ['card','Character Card','textarea'],
-  ['formatting_instructions','Formatting Instructions','textarea'],
-  ['advanced_prompt','Advanced Prompt','textarea'],
-  ['access_level','Access Level','select',['private','unlisted','public']],
-  ['sus','Spicy','checkbox'],
-  ['very_sus','Extra Spicy','checkbox'],
-  ['temperature_offset_percentage','Temperature Offset %','number'],
-  ['locked_starting_message','Locked Starting Message','checkbox'],
-  ['open_definition','Open Definition','checkbox'],
-  ['tags','Tags (auto-applied)','tags'],
-  ['fandom_tags','Fandom Tags (max 3)','fandom_tags'],
-];
 
 function TemplatesPage({data,update,newTemplate,clearNew}) {
   const [editing,setEditing]=useState(null);
@@ -8084,11 +8036,11 @@ function AllCollectionsPage({data,update,openColl,exportColl}) {
         {collections.map(col=>{
           const w=data.worlds.find(x=>x.id===col.world_id);
           const charCount=data.characters.filter(c=>(c.collections||[]).includes(col.id)||(col.companions||[]).includes(c.id)).length;
-          const img=col.image_data||col.image_relpath||(w?.image)||null;
+          const img=col.image_data||col.image_relpath||(w?.image)||(w?.image_relpath)||null;
           return (
             <div key={col.id} className="coll-card" onClick={()=>openColl(col)}>
-              <div className="coll-banner" style={{backgroundImage:img?'url('+img+')':'none',backgroundSize:'cover',backgroundPosition:'center'}}>
-                {!img&&<i className="ti ti-folders" style={{fontSize:24,color:'var(--teal)',opacity:0.5}}></i>}
+              <div className="coll-banner">
+                {img?<ImgFromPath src={img} alt={col.name} style={IMG_COVER}/>:<i className="ti ti-folders" style={COLL_FOLDER_ICON}></i>}
               </div>
               <div className="coll-card-body">
                 <h3>{col.name}</h3>
@@ -8107,23 +8059,6 @@ function AllCollectionsPage({data,update,openColl,exportColl}) {
   );
 }
 
-function SchedulePage({data,setSelectedChar}) {
-  const entries=data.characters.filter(c=>c.schedule_dates&&c.schedule_dates.length>0).flatMap(c=>c.schedule_dates.map(d=>({char:c,date:new Date(d)}))).sort((a,b)=>a.date-b.date);
-  const today=new Date(); today.setHours(0,0,0,0);
-  const future=entries.filter(x=>x.date>=today);
-  const past=entries.filter(x=>x.date<today);
-  return (
-    <div style={{display:'flex',flexDirection:'column',gap:24}}>
-      {future.length>0&&<div><h3 style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:12}}>Upcoming</h3>
-        {future.map((x,i)=>{const w=data.worlds.find(w=>w.id===x.char.world_id); return <div key={i} className="upcoming-item" style={{cursor:'pointer'}} onClick={()=>setSelectedChar(x.char)}><div className="upcoming-date">{x.date.getDate()}<br/><span style={{fontSize:9}}>{MONTHS[x.date.getMonth()].slice(0,3)}</span></div><div className="upcoming-info flex-1"><div className="name">{x.char.display_name||x.char.name}</div><div className="world">{w?.name||'—'}</div></div><span className={`status-badge status-${x.char.status||'draft'}`}>{x.char.status||'draft'}</span></div>;})}
-      </div>}
-      {past.length>0&&<div style={{opacity:0.5}}><h3 style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:12}}>Past</h3>
-        {past.map((x,i)=>{const w=data.worlds.find(w=>w.id===x.char.world_id); return <div key={i} className="upcoming-item"><div className="upcoming-date">{x.date.getDate()}<br/><span style={{fontSize:9}}>{MONTHS[x.date.getMonth()].slice(0,3)}</span></div><div className="upcoming-info flex-1"><div className="name">{x.char.name}</div><div className="world">{w?.name||'—'}</div></div><span className={`status-badge status-${x.char.status||'draft'}`}>{x.char.status||'draft'}</span></div>;})}
-      </div>}
-      {entries.length===0&&<div className="empty"><i className="ti ti-calendar-event"></i><h3>No scheduled characters</h3><p>Open a character and add schedule dates to see them here.</p></div>}
-    </div>
-  );
-}
 
 function WorldSelectWithCreate({data,worldId,setWorldId,update}) {
   const [newName,setNewName]=useState('');
