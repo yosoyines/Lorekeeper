@@ -1,9 +1,9 @@
 # LOREKEEPER — Master Specification
-**Last updated: June 26, 2026 (session 30)**
+**Last updated: August 13, 2026 (session 33)**
 
 ---
 
-## Working Files (current as of session 29)
+## Working Files (current as of session 31)
 - Project files at `/mnt/project/` **are synced** — Ine uploads the spec each session. Source files (`index.html`, `main.js`, `preload.js`) are uploaded when a stable version is cleared.
 - Working files during a session live at `/home/claude/`. Claude works from those; never re-pull from `/mnt/project/` mid-session.
 - Test environment at `I:\Test` (`DATA_DIR = I:\Test` in `main.js`). Hint text still shows `I:\Lorekeeper` — cosmetically wrong, functionally harmless.
@@ -86,6 +86,10 @@ I:\Lorekeeper\
 | `exportBackup({worldId?})` | Create zip — full or per-world; returns `{success, size, path}` |
 | `exportPlatformZip({defaultName, files[], folder?})` | Save dialog -> zip pre-built JSON strings; returns `{success, size, path}`. `folder` (added session 18) defaults to `Worlds\` for the world Export ZIP. |
 | `restoreBackup()` | Open zip picker, extract files, return data for merge/replace |
+| `saveDataAllowShrink(data, reason)` | **Session 32.** Write the data file bypassing the Layer 2 shrink-refuse check, for legitimate bulk shrinks (base64 migration/cleanup). Copies the current file to `lorekeeper-data.preshrink-{ISO}.json` first, then writes, then **resets `lastgood` to the new content**. Returns `{success, snapshot}`. Only the image migration/cleanup paths may call this — see Data Safety Architecture. |
+| `importImage(opts?)` | **Changed session 33.** Now accepts `{defaultPath}` so the picker opens in the character's own companion folder. Relative paths resolve against `DATA_DIR`. `importImages` already had this; the single-image picker did not, which is why Set Portrait always opened wherever Windows last left off. |
+| `listFolderImages(subfolder)` | **Session 32.** List image files in any top-level data folder (`Lorebooks`/`Collections`/`Worlds`/`Personas`) -> `[{name, filename, relPath}]`. Added so the base64 audit can offer a link-existing-file picker for non-companion types, which previously only companions had. |
+| `onFlushBeforeClose(cb)` / `flushComplete()` | **Session 32.** Shutdown handshake. Main intercepts window `close`, sends `flush-before-close`, and holds the window open until the renderer replies with `flush-complete` (8s timeout). |
 
 ---
 
@@ -98,6 +102,8 @@ I:\Lorekeeper\
   release_cycle:[], schedule_notes:{}, lorebook_templates:[],
   relationships:[], settings:{} }
 ```
+
+**Root fields added since:** `world_order[]` (session 30 drag-to-reorder), `cycle_head_world_id` (session 31, release cycle position), `cycle_skipped[]` (session 31, world names skipped this cycle — stores names not IDs, matching the cycle's name-based matching).
 
 ### World
 - `id`, `name`, `short_description`, `tags[]`, `fandom_tags[]`
@@ -124,6 +130,9 @@ I:\Lorekeeper\
 - `temperature_offset_percentage` — default 0
 - `hide_on_owner_profile`, `suppress_companion_profile_banner`, `preserve_existing_chats`
 - `posted_at`, `created_at`, `updated_at`, `voice_catalog_id`, `author_id`, `author_handle`
+- **Local-only, stripped on export (12 fields, identical list in all four export paths):** `world_id`, `status`, `schedule_dates`, `posted_dates`, `collections`, `linked_lorebooks`, `companion_folder`, `site_last_synced_at`, `lorebook_entry_text`, `lorebook_entry_title`, `voice_catalog_id`, `reworked_at`
+- `voice_catalog_id` — Saucepan voice name (session 31). The platform has a voice catalogue but **does not export a voice field**, so this is tracked locally for reference only. Field already existed as a dormant `null`; reused rather than adding a second one.
+- `reworked_at` — ISO stamp set when the character's JSON is exported; removes it from the dashboard Rework queue
 - **App-only:** `status` (draft/ready/posted), `schedule_dates[]`, `posted_dates[]`, `collections[]`, `linked_lorebooks[]`, `world_id`, `companion_folder`, `site_last_synced_at`, `lorebook_entry_text`, `lorebook_entry_title`
 
 ### Lorebook
@@ -144,6 +153,7 @@ I:\Lorekeeper\
 - `companions[]` — platform IDs for auto-linking on import
 - `has_been_public`, `very_nsfw`, `lorebook_display`, `posted_at`, `updated_at`, `site_last_synced_at`
 - **App-only:** `collection_filename`
+- `is_community` — **local-only, stripped on export.** Saucepan shows a Community badge on collections but does not include any such field in the collection JSON (verified against a downloaded export), so it has to be set by hand here. Drives banner inheritance: a companion in a community collection inherits that collection's `image.id` as its profile banner.
 
 ### Persona
 - `id`, `name`, `pronouns`, `description`
@@ -354,15 +364,29 @@ See Data Safety Architecture section — independent `.md` backup per world plus
 - New items auto-get folder/filename from name (sanitized, no trailing underscores); clearable to opt out
 - `updated_at` stamped on every edit
 - Writes happen async (`fs.promises.writeFile`) and are debounced (default 600ms) to avoid disk thrashing during typing
+- A pending debounced save is flushed on window close (session 32) — main holds the window open until the renderer confirms the write. See Data Safety Architecture, Layer 5.
 
 ---
 
 ## Image System
 - All uploads copied to local folder via `copyImageToFolder`; stores `image_relpath`
+- **`copyImageToFolder` takes positional args** — `(srcPath, destFolder, filename)`. `preload.js` wraps them into the object the IPC handler expects. Passing a single object silently breaks it: `srcPath` receives an object, `path.normalize()` throws in main, the catch returns `null`, and callers fall through to their base64 fallback. This was the cause of the session-31 190 MB data file (see Performance Notes).
 - `ImgFromPath` component resolves both relPath (via `readImagePath` IPC) and base64 data URIs
 - `RelPortrait` (relationship map) does the same resolution for SVG `<image>` elements
 - Supported formats: jpg, jpeg, png, gif, webp, avif
 - Export strips all base64
+- **Image Storage Audit (Settings) buckets, corrected session 32.** The scan checks four states, not three: `relpath_ok` (path resolves, no stale data), `relpath_broken` (path set, file missing), `needs_migration` (base64 only, no path), and `leftover_data` (path resolves **and** base64 is still sitting in the JSON). The `leftover_data` case was invisible before session 32 — the scan returned early on anything that had a relpath, so 49 of 50 base64 blobs were being reported as clean. Clearing that bucket needs no file write, only nulling the stale field.
+- The link-existing-file picker is populated for lorebooks/collections/worlds/personas via `listFolderImages` (session 32). Before that only companions had their folder scanned, so every other type fell through to "write a new file" with no options, even when a matching image was already sitting in the folder.
+- Audit and migration both write through `saveDataAllowShrink` — an ordinary save is refused by the Layer 2 shrink guard.
+
+**Every image consumer must read `*_relpath`, not just the base64 field (session 32 regression).** Clearing the leftover base64 made world and collection images vanish across the app. The relpaths were correct and the files were on disk — the *views* were the problem. Several read the base64 field directly with no relpath fallback, so the base64 had been silently masking a pre-existing gap. Two distinct failures:
+
+1. **Missing fallback.** The Worlds card read `w.image` and fell back to another collection's `image_data`, never touching `w.image_relpath`. Same for the world detail header banner, the 16px world icons, the lorebook picker thumbnail, and the collection detail world fallback.
+2. **CSS `url()` cannot resolve a relpath.** The collection cards (both All Collections and the world detail Collections tab) rendered via `backgroundImage: url(...)`. A relpath resolves relative to `src/index.html`, not the data folder, so it could never load even where `image_relpath` *was* in the chain. Any image that might be a relpath must go through `ImgFromPath`, which resolves it via the `readImagePath` IPC — never through a raw `<img src>` or a CSS background.
+
+The Site Checklist was also affected: its "no local image backup" test was `if(!l.image_data)`, which would have flagged every migrated lorebook and collection, with blank thumbnails alongside.
+
+**Lesson:** before clearing a field made redundant by a replacement, audit every *consumer* of that field. Verifying that the replacement resolves is not sufficient — it proves the data is reachable, not that anything actually reads it. Grep for the old field name and check each hit.
 
 ---
 
@@ -411,8 +435,11 @@ Don't assume the strip lists above are exhaustive just because they're documente
 - Expanded day: scheduled chars + note input + Schedule button
 
 ### Today Banner
-- Fires for `ready` chars scheduled today; mark posted / reschedule / dismiss
+- Fires for any `ready` char whose schedule date is **on or before today** (corrected session 32); mark posted / reschedule / dismiss
 - Marking posted stamps `posted_dates` and sets `status = 'posted'`
+- **Trigger is the schedule date only — never the day the status was set.** Scheduling happens on Saucepan and posts run whether or not Lorekeeper was open, so a date that has already passed is the normal case, not an error. It gets no warning icon or overdue styling. The pre-session-32 filter matched on `d.split('T')[0]===todayStr` (exact day), so a companion whose scheduled day went by without the app being open sat at `ready` indefinitely with nothing ever prompting again. Marking a month of companions ready long after their dates must behave identically to marking them on the day.
+- Banner text reads `is scheduled for Jul 23` (short date, no year) for past dates and `is scheduled for today` for the current day. Sorted oldest scheduled date first. Dismiss (x) is session-only state, so dismissed items return on restart.
+- **`posted_dates` is stamped with the *scheduled* date, not the click date** (fixed session 32). The old handler always pushed today's date, so marking a companion late recorded it on the wrong calendar day. That value also feeds `getNextCycleWorld`'s head detection, so a wrong date skewed release-cycle ordering as well as the calendar.
 
 ### Site Checklist
 - Shows items edited since last export: characters (`status==='posted'`), lorebooks/collections (`has_been_public` **or** `access_level==='public'`)
@@ -434,6 +461,18 @@ Don't assume the strip lists above are exhaustive just because they're documente
 
 ### Upcoming Panel + Release Cycle
 - Next scheduled characters; configurable world posting order; drag to reorder
+
+### In Progress panel (session 31)
+- Renamed from "Drafts in progress". Filters `status !== 'posted'`, so **ready-but-unpublished** characters appear alongside drafts (previously only `status === 'draft'` showed).
+- Status badge per row uses the real status (`status-draft` / `status-ready`), not a hardcoded "draft".
+- Capped at 5 rows with a Show all / Show less toggle.
+- Extracted from an inline IIFE into `InProgressPanel` + `InProgressRow` — same Rules-of-Hooks constraint as SiteChecklistPanel: the toggle needs `useState`, which cannot live in an IIFE that early-returns.
+
+### Rework panel (session 31)
+- Queue of published companions to revisit and improve. Lists **every** `status === 'posted'` character that has no `reworked_at` stamp — deliberately *not* filtered by missing fields, since a posted character already has the required fields filled, which would leave the list permanently empty.
+- Each row shows all seven depth checks as a checklist (green ✓ = filled, amber = missing): full desc, personality (`card`), formatting, example dialogue, advanced prompt, intros (`starting_scenarios`), voice (`voice_catalog_id`).
+- Sorted by gap count desc, then oldest published first (`reworkPostedKey`) so the back catalogue is worked front to back.
+- **Exporting a character's JSON stamps `reworked_at`, which removes it from the queue permanently.** A new field was used rather than the existing `site_last_synced_at` because every posted character already has that stamped from past exports, which would have emptied the queue on day one.
 
 ---
 
@@ -468,9 +507,61 @@ Lives in the right panel's **Map** tab (panel expands to 640px while active).
 
 ---
 
-## Claude Integration
+## AI Integration (multi-provider since session 31)
 
-Right panel Claude tab — full AI chat with world-aware context.
+Right panel **Assistant** tab (renamed from "Claude" session 31) — full AI chat with world-aware context.
+
+### Providers
+All calls go through one shared helper, `callAI(data, systemPrompt, messages, maxTokens)`, which branches on `settings.ai_provider` and returns `{text}` or `{error}` — it never throws. Used by both the Assistant chat and the Image Prompt Generator.
+
+| Provider | Endpoint | Auth | Model setting |
+|---|---|---|---|
+| `anthropic` (default) | `api.anthropic.com/v1/messages` | `x-api-key` header | dropdown |
+| `openai` | `api.openai.com/v1/chat/completions` | `Authorization: Bearer` | dropdown |
+| `google` | `generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | key in query string | dropdown |
+| `openrouter` | `openrouter.ai/api/v1/chat/completions` | `Authorization: Bearer` | free-text model slug |
+| `lmstudio` | `{base_url}/chat/completions`, default `http://localhost:1234/v1` | none | free-text model id |
+
+Endpoints are hardcoded per provider — the user only ever pastes an API key. Google differs structurally (system prompt goes in `systemInstruction`, messages become `contents` with `role:'model'` for assistant turns), which is why the branch exists rather than one generic OpenAI-shaped call.
+
+Settings stores one key per provider (`anthropic_api_key`, `openai_api_key`, `google_api_key`, `openrouter_api_key`) so switching providers doesn't lose the others. `hasActiveKey(settings)` checks only the selected provider's key — used for the "no API key set" nudge in the Assistant panel.
+
+**Bug found session 31:** the Image Prompt Generator had been calling the Anthropic endpoint without ever sending the API key header, so it silently failed for everyone. Fixed by routing it through `callAI`.
+
+### Local models via LM Studio (session 31)
+
+LM Studio exposes an OpenAI-compatible server, so the branch reuses the same request shape with no auth header. Settings has a Server URL field, a Model field, and a **Test connection** button that hits `/v1/models` and renders each loaded model as a click-to-fill chip.
+
+**Two Content-Security-Policies have to be changed, not one.** `main.js` sets a CSP header at window creation, *and* `index.html` line 5 has a `<meta http-equiv="Content-Security-Policy">` tag with the same value. Browsers enforce both and the most restrictive wins, so fixing only `main.js` changes nothing and the console keeps quoting the old policy verbatim — which reads exactly like the file wasn't copied. Both now allow `http://localhost:*` and `http://127.0.0.1:*`.
+
+Note the CSP header is applied in the main process at window creation, so it needs a full app restart, not a reload.
+
+### Assistant context scope (session 31)
+
+The Assistant prompt sends world description, every lorebook with full chapter text, collections, sibling characters and the current character. Measured on Guideverse: **27,327 tokens**. Fine for cloud, impossible locally.
+
+`buildSystemPrompt(scope)` now takes a scope, persisted as `settings.assistant_context_scope`:
+
+| Scope | Contents | Measured (Guideverse) |
+|---|---|---|
+| `character` | current character only, world skipped entirely | ~1–2k |
+| `world` | world + lorebook names, short descriptions and chapter *titles*; chapter bodies only for chapters the user picks | 3,116 base |
+| `full` | everything, previous behaviour | 27,327 |
+
+**Selection is per-chapter, not per-lorebook.** Lorebook-level was built first and was useless — a single Guideverse lorebook is ~10k and Shinsengumi ~14k, so picking even one still overran an 8k window. Chapters are the right granularity: Guideverse's thirteen chapters run 1.1k–6.2k each, so Espers + Guides + Guiding is ~9.3k total. Unpicked chapters are still listed by title so the model knows they exist. Stored as `settings.assistant_chapters` with keys `loreId::chapterIndex`.
+
+The panel shows a live `≈N tok` estimate (`chars/4`) that turns amber past 7000, and each chapter chip carries its own token cost so the budget is visible while picking.
+
+**The world's template is injected as a HOUSE FORMAT block.** If a template exists for the current world, its `full_description`, `card` and `formatting_instructions` fields go into the prompt with an instruction to match the structure exactly and replace only placeholder text. Templates already supported these fields and per-world scoping — the only thing missing was the Assistant knowing they existed. Generated text now comes back already shaped to the catalogue's house style.
+
+### Reference hardware (Ine's machine)
+RTX 3060 Ti 8 GB, 32 GB RAM, i7-14700KF. **VRAM is the binding constraint, not RAM.**
+
+- `qwen-3-14b-instruct` Q4_K_M (9 GB) — the daily driver. Does not fit 8 GB fully; partial CPU offload.
+- `mistral-small-3.2-24b` (15.2 GB) — better prose, roughly half on CPU, noticeably slower.
+- `deepseek-r1-distill-qwen-14b` and `exaone-deep-7.8b` are **reasoning** models — they emit `<think>` blocks and are the wrong tool for prose. qwen3-instruct returns `reasoning_content: ""`, so no stripping is needed for it.
+
+Working LM Studio config: **context 16384, GPU offload 24 layers, K and V cache both Q8_0, Flash Attention on.** KV cache is ~160 KB/token at fp16, so 16k costs ~2.6 GB — Q8_0 halves it to ~1.3 GB, which is the difference between loading and not. Context length and offload are load-time settings; the model must be reloaded. The "Customized" badge only means the config differs from defaults, not that it is unapplied.
 
 ### System prompt includes
 - Current world: name, description, tags, notes
@@ -546,6 +637,40 @@ If any of these show up capped again, it is a sync/regression issue, not a desig
 
 ---
 
+## Portrait / main image rules (session 33)
+
+**The main image is not required to be one of the portrait slots.** `Set Portrait` imports a standalone file, so `char.image.relPath` pointing outside the gallery is a normal state. Nothing may re-derive it from the portraits — doing so silently replaced the chosen picture on every restart (see session 33). The load migration's only permitted repair is following a rename: if the path matches a portrait's file under name normalisation, update it; otherwise leave it alone, even if the file is missing.
+
+**`profile_pic` UUID mirroring is one-way.** A portrait slot named exactly `profile_pic` takes its `image.id` from `char.image.id`. The profile pic field is the source and the slot follows, on typing and on load. Never write the reverse direction.
+
+## Tools panel — Img UUID (session 33)
+
+Saucepan offers three copy formats per image — markdown, an `<img>` tag, and a CSS `background-image` rule — all carrying the same UUID, which is almost always the only part wanted. `extractUuids()` (plain JS block) regex-matches the UUID shape anywhere in pasted text and deduplicates, so pasting all three formats yields one result. Includes a clipboard Paste button so the common path is two clicks.
+
+## Ctrl+F find (session 33)
+
+`FindBar` takes `fields: [{tab, label, text}]`; each page supplies its own list via `charFindFields` / `loreFindFields` / `collFindFields` (all in the plain JS block). Renders per-field match counts as buttons that switch tabs.
+
+**This cannot be Electron's `findInPage`.** That searches rendered DOM text and cannot see inside `<textarea>` values, which is where descriptions, cards, chapters and intros all live. Any future "search the current page" feature has the same constraint.
+
+## Babel Block Budget (session 32)
+
+**Current: 458.4 KB babel / ~152 KB plain, ~42 KB headroom under the ~500 KB ceiling.** (439.3 KB after the session-32 reclaim; session 33 added the FindBar, Img UUID tool and Help entries.)
+
+The ceiling is real and its failure mode is silent — past ~500 KB Babel deoptimises and click handlers stop working app-wide with no console error (session 23). Two things bought the room back:
+
+**1. Babel only needs to see JSX.** Any top-level declaration with no JSX and no hooks can live in the plain `<script type="text/javascript">` block, which is not just for data arrays — pure helper *functions* belong there too. 77 declarations (34.1 KB) moved in session 32: `callAI`, `CS`, `applyMerge`, `planMerge`, `generateTheme`, `renderMd`, `parseTimestamp`, the theme/colour helpers, the rework helpers, and the remaining data constants.
+
+Cross-block references work in both directions because classic scripts share one global lexical environment, and every call happens during render, after both blocks have evaluated. The one hard constraint: **a moved `const` initialiser must not reference anything left in the Babel block**, since the plain block evaluates first. Verify this before moving, not after.
+
+**2. Dead components.** 20.1 KB of never-rendered code was still being transpiled: `LoreboookEditor` (superseded session 11), `CollEditPanel` (session 12), `BackupRestorePanel` (session 25), `SchedulePage`. Two of them contained free `setModal` references that would have thrown `ReferenceError` had they ever been mounted — a latent bug hidden by the fact that they were unreachable.
+
+**Verification procedure — do not skip.** Session 26 removed 9 arrays from Babel and silently failed to append them to the plain block; they had to be recovered from the test environment. Any future extraction must be checked by parsing both blocks and diffing the *set* of top-level declaration names before and after. Name-set equality is the check, not byte counts and not `useState` counts — removing dead components legitimately lowers the raw `useState` count (5, in session 32) while every unique state name survives, so compare unique names.
+
+**Next levers if headroom is needed again:** 1068 inline `style={{...}}` objects remain, 77.1 KB total, densest in `CharDetailPage` (7.2 KB), `BatchImportPage` (5.8 KB), `SettingsPage` (5.3 KB), `DashboardPage` (5.2 KB). The session-28 sweep only covered CharDetailPage/LorebookEntryTab/LoreItemRestoreCard. Do **not** reach for stripping comments (16.2 KB) or indentation (48.9 KB) — the file is hand-edited and manually deployed, so readability is worth more than the bytes.
+
+---
+
 ## Babel Standalone Gotchas (hard-won, do not relitigate)
 These caused repeated regressions across sessions — treat as fixed rules:
 - **Never** put `style={{...}}` inside a ternary or `&&` conditional's JSX consequent — Babel standalone reliably fails to parse it. Use a CSS class instead, or extract the conditional content to its own component.
@@ -555,6 +680,9 @@ These caused repeated regressions across sessions — treat as fixed rules:
 - Double-curly-brace syntax appearing in literal JSX text (e.g. documentation about macro syntax) must be wrapped as a string literal expression, not typed directly into JSX text.
 - Use `if(tab==='x') return (...)` pattern instead of nesting deep ternaries when a component has 2+ mutually exclusive views — more reliable than ternaries with multi-line JSX.
 
+- **A complex nested closure in an `onClick` can make the element vanish entirely** — no error, no warning, the button simply never renders. Session 31: a Skip button with `onClick={()=>{const n=x.name;update(d=>{...})}}` produced nothing. Extracting it to a named handler (`onClick={skipNext}`) fixed it. If an element you just added doesn't appear and the syntax looks fine, suspect the handler before anything else.
+- **Verify by compiling, not by reading.** Extracting the `<script type="text/babel">` block and running it through `@babel/core` with `preset-react` catches parse errors in seconds and is far more reliable than eyeballing bracket counts. Worth doing before every handoff.
+- **Data arrays belong in the plain-JS block** (lines ~348–897), not the Babel block. `SAUCEPAN_VOICES` (3.3 KB) went there alongside `SAUCEPAN_TAGS` for this reason. Babel block is at 474 KB of a ~500 KB working ceiling.
 ---
 
 ## Theme System (added session 20)
@@ -605,11 +733,22 @@ A `dataLoaded` state flag starts `false`. The autosave `useEffect` (which writes
 ### Layer 2 — main process shrink-refuse check (`main.js`)
 `save-data` compares the byte size of the incoming write against the existing file on disk. If the existing file is non-trivial (>5KB) and the new write would be less than 50% of that size (`SHRINK_REFUSE_RATIO`), the write is **refused**. Instead of overwriting, the would-be content is written to `lorekeeper-data.SUSPICIOUS.json` for manual review, and the real file is left untouched.
 
+**Session 32 — the legitimate-shrink escape hatch.** This guard cannot distinguish a catastrophic empty-state write from an intentional bulk shrink. Clearing base64 out of a 134 MB data file produces a ~95% shrink, so the migration write was refused and silently landed in `SUSPICIOUS.json` while the real file stayed bloated — the change looked applied in the UI and was gone on restart. `saveDataAllowShrink()` exists for exactly this case. It is **not** a blind bypass: it snapshots the current file to `lorekeeper-data.preshrink-{ISO}.json` first, and it **resets `lastgood` to the new content**. That reset is required, not cosmetic — `lastgood` is the second half of this check, so leaving it at the old size would cause the *next ordinary autosave* to be refused for being under 50% of a stale baseline. Only the image migration/cleanup paths call this; do not reach for it to work around any other refusal.
+
 ### Layer 3 — rolling last-known-good backup (`main.js`)
 Every write that passes the Layer 2 check also writes a copy to `lorekeeper-data.lastgood.json`. This is a second, independent fallback file separate from the main save, useful as a manual recovery point if something Layers 1–2 didn't anticipate ever happens.
 
 ### Layer 4 — standalone notes backup (`main.js` + `index.html`)
 Notes (global scratchpad and per-world) previously had **no** independent backup — they only ever lived inside the single big data file, unlike characters/lorebooks/collections which each already auto-save to their own JSON. Every world's notes (and the global scratchpad) now also debounce-write to a plain-text file at `Notes\{WorldName}.md` / `Notes\_global.md`, completely independent of the main data file write. A "Notes Backups" panel on the Batch Import page explains this and has an "Open Notes folder" button. Wired from both the right-panel Notes tab and the World Info tab's Notes field (same backend file, same backup).
+
+### Layer 5 — shutdown flush (`main.js` + `preload.js` + `index.html`, session 32)
+Autosave is a debounced timer in the renderer, and `window-all-closed` previously quit the app immediately. Closing the window inside the debounce killed the pending timer, and any write already in progress died with the process — on a large data file the `JSON.stringify` plus disk write is not instant, so the exposure window was wider than the debounce alone. There was no `before-quit` handler and no `beforeunload` flush anywhere.
+
+Now `mainWindow.on('close')` calls `preventDefault()`, sends `flush-before-close`, and waits. The renderer clears its debounce timer, awaits a final `saveData()` (still behind the `dataLoaded` guard from Layer 1), and replies `flush-complete`. Main then awaits `saveInFlight` — a module-level handle on the current write, added so shutdown can wait for a write rather than sever it — before setting `allowClose` and closing for real. An 8-second timeout ensures a hung or crashed renderer can never trap the window open.
+
+The renderer handler registers once on mount, so it reads `dataRef`/`dataLoadedRef` rather than closing over `data` — capturing state from first render would have made the flush write stale data, which is worse than not flushing at all.
+
+**Provenance note:** this was found while investigating a companion that stayed at `ready` after an apparent mark-posted. It was **not** established as the cause of that — the record had no `posted_dates` key at all, and under the pre-session-32 banner logic there was no banner to click on the day in question. Recorded here as an independent defect that was real on its own terms, not as the explanation for that symptom.
 
 ### `parseTimestamp()` — Saucepan date format
 Saucepan exports timestamps like `"2026-06-18 03:01:00.455294 +00:00:00"`, which native `Date()` cannot parse (silently returns `NaN`). This broke every "local newer" comparison in batch import for any item that had ever been touched by a site export. A `parseTimestamp()` helper near the top of `index.html` normalizes the format (space→T, truncate microseconds, fix the `+00:00:00`→`+00:00` offset) before handing off to `Date()`. All `pts`/`parseTs` local helpers throughout the file now alias to this single function — do not reintroduce inline duplicate date parsers.
@@ -621,6 +760,49 @@ Saucepan exports timestamps like `"2026-06-18 03:01:00.455294 +00:00:00"`, which
 - `saveData` in `main.js` switched from `fs.writeFileSync` (synchronous, blocks the main process) with pretty-printed JSON to `fs.promises.writeFile` (async) with compact JSON (no `null, 2`).
 - If typing lag returns as the dataset keeps growing, the next lever is restructuring `update()` to avoid cloning the *entire* tree for small, localized field changes (e.g. per-collection update functions instead of one global clone-and-mutate).
 
+### Session 31: the 190 MB data file
+Typing lag returned, identical in every field regardless of which one. Root cause was **not** the save — it was data size interacting with `update()`:
+
+- The data file had grown to ~190 MB. `update()` runs `structuredClone` over the whole tree on **every keystroke**, so each character typed deep-cloned 190 MB. Autosave then `JSON.stringify`d and wrote all 190 MB, and main wrote a second 190 MB copy as `lastgood`.
+- The 190 MB was character portraits stored as base64 **inside** the JSON, from two separate bugs:
+  1. `handlePortrait` (Set Portrait) never called `copyImageToFolder` at all — it wrote `{data: base64}` unconditionally.
+  2. The Add-portraits handler called `copyImageToFolder({srcPath, destFolder})` — an object, when preload takes positional args. The call threw in main, returned `null`, and the code fell through to storing base64.
+- The existing "Audit base64" tool only scanned lorebooks and collections, so it had never flagged the actual offender.
+
+**Fixes:** both write paths corrected; the audit extended to cover character main images, portraits, and banners; migration now **links** to files already present in the companion folder (matched by filename) instead of writing duplicates, and applies all changes in **one** `update()` call — the original per-item loop would have deep-cloned 190 MB once per portrait.
+
+**Lesson:** any per-keystroke path is multiplied by total dataset size. Keeping binary data out of `lorekeeper-data.json` is a performance requirement, not just tidiness.
+
+---
+
+## Windows Installer (session 31)
+
+`package.json` at the repo root (alongside `src/`) with an `electron-builder` NSIS config.
+
+```
+npm install
+npm run build      ->  dist/Lorekeeper Setup 1.0.0.exe
+```
+
+- `allowToChangeInstallationDirectory: true` — the user picks the install folder, and **data lives next to the exe**, so app and data end up on the same drive. This was a deliberate choice over `Documents\Lorekeeper`: a system-drive default gets wiped on a reformat.
+- `DATA_DIR` is dynamic: `app.isPackaged ? path.dirname(process.execPath) : 'I:\\Lorekeeper'`.
+- **Use `process.execPath`, not `app.getPath('exe')`.** `app.getPath` cannot be called before the app is ready; calling it at module scope to set `DATA_DIR` kills the process before any window opens, with no error and nothing in Task Manager.
+- On startup main creates all eight standard folders if missing: root, Companions, Lorebooks, Collections, Worlds, Personas, Templates, Notes.
+- Icons: `assets/icon.ico` (installer + shortcuts), `assets/icon.png` (window). Both already existed.
+- `dist/` is gitignored; the installer ships as a **GitHub Release asset**, not committed to the repo.
+
+### Environment gotcha (Ine's machine)
+Electron's post-install binary download fails silently — `node_modules/electron/dist/` ends up containing only `locales/`, and `npx electron` reports "Electron failed to install correctly". Neither `npm install` nor running `install.js` directly produces any error output.
+
+Workaround: extract the cached zip manually and write the path file.
+```powershell
+Expand-Archive "$env:LOCALAPPDATA\electron\Cache\electron-v29.4.6-win32-x64.zip" -DestinationPath "I:\Lorekeeper\node_modules\electron\dist" -Force
+Copy-Item "I:\Lorekeeper\node_modules\electron\dist\path.txt" "I:\Lorekeeper\node_modules\electron\path.txt"
+```
+`path.txt` must sit at `node_modules/electron/path.txt` (next to `index.js`), **not** inside `dist/` — `getElectronPath()` reads it from `__dirname`.
+
+Also: `npm run build` needs an **Administrator** PowerShell. The winCodeSign package contains macOS symlinks that Windows refuses to create without elevation, and the build retries four times and dies.
+
 ---
 
 ## Long-term Vision
@@ -629,6 +811,19 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 ---
 
 ## What's Next (Priority Order)
+
+~~### 0. Babel headroom~~ ✓ **done session 32** — 493.5 KB -> **439.3 KB**, ~61 KB headroom. See "Babel Block Budget" below.
+
+~~### 0b. Image Prompt Generator sends content-warning tags~~ ✓ **done session 32**
+CW tags plus a new `IMG_SKIP_TAGS` set (POV/format/genre metadata) are now stripped before building the prompt — `dead_dove, violence, male, any_pov, male_pov, jock, athlete` becomes `male, jock, athlete`. Tags still export to Saucepan normally; this only affects what reaches the image model.
+
+Two further fixes found while testing against local models:
+- **The character's name is no longer sent at all.** Every model wrote it into the prompt verbatim. An image model cannot render "Jamal Ferret", so it is dead tokens at best, and a surname like Ferret actively biases the composition.
+- **The no-character branch was sending the literal string `(character)` as a name.** Exaone took that at face value and invented a fully-specified character — silver hair, blue eyes, a library — and presented it as the answer. The branch now states plainly that no character was provided and asks for a generic prompt from style/mood/notes alone.
+- Output is passed through `stripWrappingQuotes()`; all three local models wrapped the prompt in quotes despite being told not to.
+
+### 0c. LM Studio model switching ✓ **done session 32**
+The Model field is a dropdown of everything currently loaded in LM Studio, auto-populated on opening Settings with LM Studio selected (`/v1/models`). Loading several models in LM Studio means switching between them is one click, with no restart. Falls back to a text input when the server is unreachable so a saved model name is never lost, and warns when the saved model is not among those loaded.
 
 ~~1. CharDetailPage UI cleanup~~ ✓ **done session 28**
 
@@ -640,8 +835,33 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 
 ~~5. Help page update~~ ✓ **done session 30** — all sections updated (11 tabs, image tools, Import/Export, Data Safety, drag-to-reorder tip, GitHub backup removed)
 
-### 6. Standalone / Public Version
-Configurable data path, strip Saucepan-specific fields, packaged `.exe`, optional rename/theming, README.md.
+~~6. Packaged `.exe` / installer~~ ✓ **done session 31** — NSIS installer, data next to exe, see Windows Installer section
+
+### Character completeness unified ✓ **done session 32**
+The dashboard ran three separate definitions of "complete". **In progress** (`progressMissing`) checked 10 fields; **Rework** (`reworkChecks` over `REWORK_FIELDS`) checked 7; they overlapped on only 3. A draft could therefore display `✓ ready to post` while missing formatting instructions, example dialogue, advanced prompt and voice — the four fields only Rework looked at. Nothing gated the status dropdown either, so draft → ready was always allowed regardless.
+
+Replaced with a single `CHAR_CHECKS` list of 14 `[label, predicate]` pairs in the plain JS block. `progressMissing`, `reworkChecks` and the new `charIsComplete` all derive from it, so the three panels can no longer drift apart. Setting status to ready or posted with anything missing now opens an `incomplete-status` modal listing the gaps, with an explicit "Set anyway" override rather than a hard block.
+
+**Design note:** the union treats `advanced_prompt` and `voice_catalog_id` as required, since Rework already counted them as gaps. If that proves too strict in practice, demote them by splitting `CHAR_CHECKS` into required and recommended groups and having `charIsComplete` consult only the required group — the panels can keep rendering both.
+
+### Help page audit ✓ **done session 32**
+Verified section by section against the code rather than read for plausibility. Nine corrections, most predating session 32:
+- **Characters** claimed 11 tabs and documented 8. Full Description, Lorebooks and Collections were missing entirely.
+- **Lorebooks** described an "Edit tab" and "Export tab". The actual tabs are Chapters / Settings / Export — the Edit tab has not existed since the chapters refactor.
+- **Dashboard Today Banner** still described the old today-only behaviour and did not mention that mark-posted stamps the scheduled date.
+- **Data Safety** said "three layers" and listed three. There are five (flush-on-close and the pre-shrink snapshot were undocumented, so nobody would know the snapshot files are safe to delete).
+- **AI assistant** listed four providers, omitted LM Studio, and still claimed the Assistant always sends the full world — the context scope selector was undocumented.
+- The API-key warning stated a key is required, with no exception noted for LM Studio.
+- Cost estimate did not mention that local models are free per message.
+
+**Lesson:** Help drifts silently because nothing links it to the code. Tab lists and layer counts are the parts that rot first, since they are stated as totals ("11 tabs", "three layers") that stay plausible after the underlying list changes. Check counts against the actual arrays.
+
+### 7. Standalone / Public Version
+Remaining for a shareable build: README, and a decision on whether to strip Saucepan-specific UI.
+
+**Resolved session 31 — author IDs are not a blocker.** Concern was that exports would carry Ine's `author_id`. In practice: characters created in Lorekeeper default `author_id` to `''`, lorebooks and collections have no such field, and Saucepan sets authorship from the authenticated session on upload. Ine has been uploading Lorekeeper-created companions for months with no author field and they attribute correctly. So exports are already clean.
+
+**Open question:** whether to strip Saucepan-specific fields (tags, platform export, image UUIDs, voice catalogue) for a general-purpose build, or leave them. Current lean is to leave them — the intended audience is Saucepan friends, for whom those fields are the point.
 
 **Before shipping to other users — backup/restore model needs rethinking:**
 
@@ -653,9 +873,9 @@ Current behavior: full backup restore is a **total replace** (wipes everything, 
 
 For now: the UI already warns clearly that full restore replaces all data. Keep Option C and D noted here for the standalone build.
 
-### Import/Export — remaining gaps to verify
-- `importJSON` still handles full data restore silently if a full-backup JSON is picked — consider blocking or routing to Restore explicitly.
-- World topbar Export ZIP: verify it still matches individual export paths for all three content types.
+~~### Import/Export — remaining gaps to verify~~ ✓ **done session 32**
+- **`importJSON` full-backup footgun fixed.** `if(json.worlds !== undefined) { setData(json); return; }` replaced the entire dataset with no prompt and no undo, bypassing `update()` so it went straight to state and autosaved. Now routed through a `confirm-full-restore` modal that shows the file's contents (worlds/characters/lorebooks/collections counts) against the current data's, marks the action destructive, and points at Import & merge from backup as the non-destructive path.
+- **Export path parity verified — one real discrepancy found and fixed.** Strip lists were diffed mechanically across all three content types. Characters matched. Lorebooks and collections did not: the world ZIP stripped `site_last_synced_at` but the individual `exportLore`/`exportColl` paths did not, leaking an app-only sync marker into files uploaded to Saucepan. Individual paths now match the ZIP.
 
 ### Won't do
 - Per-world color theming
@@ -681,6 +901,7 @@ For now: the UI already warns clearly that full restore replaces all data. Keep 
 lorekeeper-data.json
 lorekeeper-data.lastgood.json
 lorekeeper-data.SUSPICIOUS.json
+lorekeeper-data.preshrink-*.json
 Companions/
 Lorebooks/
 Collections/
@@ -694,7 +915,7 @@ assets/
 *.png
 *.svg
 ```
-Note: `Templates\` and `Notes\` were added June 19 (new auto-save folders). `lorekeeper-data.lastgood.json` and `*.SUSPICIOUS.json` are the safety-net files from the Data Safety Architecture section — also personal data, also excluded.
+Note: `Templates\` and `Notes\` were added June 19 (new auto-save folders). `lorekeeper-data.lastgood.json` and `*.SUSPICIOUS.json` are the safety-net files from the Data Safety Architecture section — also personal data, also excluded. `lorekeeper-data.preshrink-*.json` (session 32, from `saveDataAllowShrink`'s pre-write snapshot) added the same way — full character data, same as the others.
 
 ### Reliable update workflow — run every session, in this exact order
 
@@ -796,4 +1017,6 @@ This has happened multiple times this project: a chat session's fixes only exist
 | 28 | Jun 24 | **CharDetailPage inline style cleanup.** All 49 Babel-risky inline styles (inside `&&`/ternary JSX) eliminated from CharDetailPage, LorebookEntryTab, and LoreItemRestoreCard. Added 57 CSS utility classes (`.cd-col12`, `.cd-portrait-card`, `.cd-lorebook-row.linked`, `.cd-flag-label`, `.cd-restore-drop`, etc.) to the style block. Added `CS` pre-defined style object (32 entries) before CharDetailPage for complex one-off styles. Tab bar, portrait grid, lorebook linked state, flags checkboxes, scenario drag handles, settings/schedule tab wrappers, banner preview, gallery picker — all now use CSS classes. LorebookEntryTab and LoreItemRestoreCard cleaned to use `CS.*` references and new classes. 117 remaining inline styles in component are in always-rendered JSX (no Babel risk). Babel: 430KB. |
 | 29 | Jun 26 | **Import from backup (merge); delete confirmations; CS object restore; bug fixes.** Built `planMerge` + `applyMerge` + `MergePreviewModal` — the full "Import & merge from backup" flow on the Import/Export page. Preview modal shows adds/updates/conflicts before committing; per-item Keep Local / Take Backup for conflicts; workspace fields merged silently. Removed destructive "Restore from backup zip" — merge is now the primary restore path; lastgood restore remains for emergencies. Fixed `bt.getTime is not a function` in `planMerge` (`parseTimestamp` returns a number, not a Date). Fixed `world is not defined` in `main.js` `exportBackup` — `const world` was block-scoped to first `if(worldId)` block but referenced in second; hoisted to module-level `let`. Delete world confirmation modal added — warning covers all cascading deletes (characters, lorebooks, collections, lorebook_templates, gallery); `deleteWorld` helper defined in App scope and passed as prop to Modal component (direct inline callback in JSX caused Babel syntax error). CS style object was missing from the file (lost during data array recovery session) — restored before CharDetailPage. Delete lorebook and delete collection converted from `window.confirm` to app modal — `deleteLore` and `deleteColl` helpers added to App; `setModal` threaded through LorePage → LoreSettingsTab and CollPage → CollSettingsTab. Test environment icon generated (lime green book with T badge) as SVG + PNG 512/256 + ICO. Babel: 444KB. |
 | 30 | Jun 26 | **World order drag-to-reorder; help page update; export filename standardisation; bug fixes.** Removed right-click context menu (Pin to top) from sidebar worlds. Added `world_order: []` to initData; `sortedWorlds(data)` module-level helper replaces all 12 pinned sorts throughout app. Migration effect on first load: builds `world_order` from pinned-first → alpha. Sidebar world drag-to-reorder implemented with `setPointerCapture` on grip icon — multiple approaches tried (HTML5 DnD does not work in sidebar container); final approach: `onPointerDown`/`onPointerMove`/`onPointerUp` with `elementFromPoint` + `data-sw-idx` attributes. Bug: refs and migration effect were placed inside `CharDetailPage` instead of `App` (wrong anchor — `scenarioDragIdx` lives in CharDetailPage); fixed by moving to App. Bug: `const sortedWorlds=sortedWorlds(data)` self-reference in BatchImportPage from general replacement; fixed to `swWorlds`. Help page updated: 11-tab character section, image tools section added, Import/Export section updated for 3-card layout and merge flow, Backup & Restore → Data Safety, GitHub backup section removed, drag-to-reorder tip in Worlds section. Export filename standardisation: all exports now follow `{name}-{type}.{ext}` — character.json/.md, lorebook.json/.md, collection.json/.md, persona.md. Removed -companion, -sheet, -backup suffixes. Babel: 446KB. |
-
+| 31 | Jul 30 | **Multi-provider AI; Windows installer; dashboard rework queue; the 190 MB data file; voice catalogue.** Multi-provider AI via shared `callAI()` (Anthropic/OpenAI/Google/OpenRouter), per-provider keys in Settings, "Claude" tab renamed **Assistant**; fixed Image Prompt Generator never sending its API key. NSIS installer via `electron-builder`, `DATA_DIR` next to the exe using `process.execPath` (**not** `app.getPath('exe')` — kills the process pre-ready), all 8 folders created on first run; documented Ine's silent Electron-download failure and its manual workaround. **Performance:** diagnosed typing lag as a ~190 MB data file being `structuredClone`d on every keystroke; root cause was portraits stored as base64 from two bugs — `handlePortrait` never calling `copyImageToFolder`, and the Add-portraits handler passing an object where preload takes positional args. Extended Audit base64 to characters/portraits/banners, migration now **links** existing folder files rather than writing duplicates, with a per-item dropdown to choose the file or write a new one (auto-guessing from unclaimed files was rejected — portrait numbering has gaps). Batched migration into one `update()`. **Dashboard:** "Drafts in progress" → **In progress** (now includes `ready`, real status badges, show-all toggle); new **Rework** queue of posted characters with a 7-point depth checklist, cleared by exporting (`reworked_at`). **Release cycle:** after several failed date-window and head-tracking approaches, settled on matching characters to cycle slots by **world name** (`worldIdToName` + `cycleNames.indexOf`) to bypass systemic world-ID mismatches; added Skip button (`cycle_skipped`). **Collections:** local-only `is_community` flag + collection image UUID field; companions in a community collection now inherit its banner automatically via `resolveBannerId()` at export time. Banner UUID input added (the banner had never been exportable — nothing ever set `.id`). **Back navigation:** `navStack` replaces inferring from `selectedWorld`, so Back returns where you actually came from. **Naming:** auto-save and export both use `companion.json` (Saucepan's name). **Export hygiene:** all four character export paths now strip an identical 12-field list; `reworked_at`, `voice_catalog_id`, `posted_dates`, `site_last_synced_at` and `lorebook_entry_*` had been leaking from two of them. Added `SAUCEPAN_VOICES` (33 voices, plain-JS block) + voice picker, wired into the rework checklist. Bug fixes: `sortedWorlds` self-reference in BatchImportPage, `dataLoaded`/refs in the wrong component scope, `updateLoreFromJSON` parameter shadowed by an inner `const existing`, TagSelector needing 3–4 clicks (fixed with `onMouseDown`+`preventDefault`), collection image cache returning the deleted image, temperature field clamping. **Local LLM support:** added LM Studio as a fifth provider (OpenAI-compatible, no auth) with a Test connection button; discovered the CSP exists in *two* places — `main.js` header and an `index.html` `<meta>` tag — and both must allow `http://localhost` or the fetch is blocked with the old policy quoted. Measured the Assistant prompt at 27,327 tokens against an 8192 local window and built a three-tier context scope selector with **per-chapter** lorebook inclusion (lorebook-level was tried first and was useless — one lorebook is 10–14k on its own), live token estimates per chapter and in total, and injection of the world's template as a HOUSE FORMAT block so output comes back pre-shaped. Babel: 484 KB. |
+| 32 | Jul 31 | **Base64 migration actually completed (134 MB -> 7 MB); audit blind spot; shrink-guard escape hatch; banner scheduling fix; shutdown flush.** The session-31 migration had never run to completion, and the audit was reporting the data file as clean when it was not. Two separate causes. **(1) Audit blind spot:** `checkItem` returned early on anything holding a relpath, so an item with a working local file *and* a stale base64 blob still in the JSON was bucketed `relpath_ok`. 49 of 50 blobs were invisible to the tool meant to find them. Added a fourth `leftover_data` bucket plus a one-click clear (no file write needed, only nulling the stale field). **(2) Shrink guard:** clearing those blobs is a ~95% shrink, so Layer 2 refused the write and dropped it in `SUSPICIOUS.json` while the real file stayed bloated — the UI showed it applied and it was gone on restart. Added `saveDataAllowShrink`, which snapshots to `lorekeeper-data.preshrink-{ISO}.json` and **resets `lastgood`**; without that reset the next ordinary autosave would itself be refused against a stale 134 MB baseline. Also fixed the picker gap: only companions ever had their folder scanned, so lorebooks/collections/worlds/personas always fell through to "write a new file" even with a matching image sitting in the folder — added `listFolderImages` IPC. Migrate button now states what it will actually do (`Link 1 image to existing file` vs `Write N images out from base64`) instead of always saying "Migrate". **Dashboard banner:** was matching the scheduled day exactly, so missing that one day left a companion at `ready` forever; now fires for any `ready` char scheduled on or before today, with no overdue/warning treatment — a passed date is normal, since scheduling happens on the site and posts run regardless of whether Lorekeeper was open. Mark-posted now stamps the **scheduled** date into `posted_dates` rather than the click date, which also fed cycle head detection. **Shutdown flush (Layer 5):** no `before-quit` handler or `beforeunload` flush existed anywhere; closing the window killed the debounced save timer and any in-flight write. Main now intercepts `close`, waits for a renderer flush handshake and for `saveInFlight`, with an 8s timeout. Found while investigating a companion stuck at `ready`; **not** established as the cause of that (the record had no `posted_dates` key at all, and under the old banner logic there was no banner to click that day) — logged as an independent defect. **Process note:** two rounds of changes this session were made on assumptions that were not checked with Ine first (banner wording, and a timing story invented to link the flush bug to the stuck companion). Confirm intent before changing behaviour, and do not build causal narratives past the evidence. **Post-cleanup image regression (same session).** Clearing the leftover base64 blanked world and collection images app-wide — display only, no data lost. Nine sites were reading base64 fields with no `*_relpath` fallback, plus two rendering banners via CSS `url()`, which cannot resolve a relpath at all. All routed through `ImgFromPath`; Site Checklist warnings and thumbnails fixed too. See Image System for the full list and the lesson. **Measurement note:** Windows PowerShell 5.1 `Get-Content -Raw` decodes as CP1252, inflating the Babel byte count by ~3 KB on this file (1,978 non-ASCII bytes from Japanese world names, arrows, em-dashes). Always pass `-Encoding UTF8`, or the ceiling looks closer than it is. Babel: 493.5 KB of ~500 at the point the feature work stopped; then reduced to **439.3 KB** by moving 77 non-JSX/non-hook declarations (34.1 KB) to the plain JS block and deleting 20.1 KB of never-rendered components (`LoreboookEditor`, `CollEditPanel`, `BackupRestorePanel`, `SchedulePage` — two of which held free `setModal` references that would have thrown if ever mounted). Name-set diff before/after confirms only those four were removed. See Babel Block Budget. |
+| 33 | Aug 13 | **Portrait revert bug, spell check, Ctrl+F, Img UUID tool, LM Studio model switching, image-prompt fixes.** **Portrait revert (took three attempts — read this before touching the load migration).** Setting a character's main portrait reverted on every app restart, for some characters and not others. The load-time migration recomputed `char.image.relPath` from a portrait named `profile_pic`, or failing that the *first* portrait, and overwrote whenever it differed. First fix narrowed it to "only when the current path is not among the portraits" — still wrong, because **the main image does not have to be a portrait at all**: Set Portrait imports a standalone file, so `image.relPath` outside the gallery is a normal state. Chris Mori proved it: `image.relPath` was `chris1.png` with a single portrait named `chris2`, so the narrowed condition still fired and still fell back. The fallback is now gone entirely — the migration only follows renames (path matches a portrait's file under name normalisation), and otherwise leaves the value alone. A genuinely missing main image now shows blank rather than being silently replaced, which is the right trade. **Diagnosis note:** the decisive evidence was dumping the character's `image` and `portraits` from the data file *while the app was closed*, which separated "save path is wrong" from "load path is wrong". Do that first next time instead of reasoning about which branch might fire. **profile_pic UUID is one-way.** A portrait named exactly `profile_pic` mirrors `char.image.id`; the profile pic field is the source, the slot follows. The reverse write (editing the slot's UUID pushed back up to the profile pic) was removed, and a load-time sync makes existing data converge. **Spell check** — Electron flags misspellings by default but ships no context menu, so right-clicking a red-underlined word did nothing. Added a `context-menu` handler with `dictionarySuggestions`, `replaceMisspelling`, add-to-dictionary, and the usual edit actions. **Ctrl+F** — a `FindBar` component taking a `[{tab,label,text}]` field list, wired into characters (description, card, formatting, each intro), lorebooks (short description, each chapter) and collections (definition, lorebook display). Custom rather than Electron's `findInPage`, which cannot see inside textarea values — where all this content lives. **Img UUID tool** — extracts the UUID from any of Saucepan's three image copy formats, deduplicated. **Also:** the `Quick find… (Ctrl+K)` placeholder advertised a shortcut that was never bound; label removed. Import/Export full-backup footgun, export parity, Help audit, and `CHAR_CHECKS` unification all landed this session too — documented in their own sections above. Babel: 439.3 -> 458.4 KB (~42 KB headroom). |

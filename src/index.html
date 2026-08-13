@@ -944,14 +944,25 @@ const initData = () => ({ worlds:[], characters:[], lorebooks:[], collections:[]
 // Depth fields — a character with all of these filled in is fully developed.
 // Used by the dashboard "Needs rework" list to surface published companions
 // that were made before these fields were part of the workflow.
-const REWORK_FIELDS = [
-  ["full desc", "full_description"],
-  ["personality", "card"],
-  ["formatting", "formatting_instructions"],
-  ["example dialogue", "example_dialogue"],
-  ["advanced prompt", "advanced_prompt"],
-  ["intros", "starting_scenarios"],
-  ["voice", "voice_catalog_id"]
+// One list, used by the In progress panel, the Rework panel, and the draft -> ready
+// gate. These were three separate lists before: In progress checked 10 fields, Rework
+// checked 7, and they only overlapped on 3 — so a draft could show "ready to post"
+// while missing the four things Rework counts as gaps.
+const CHAR_CHECKS = [
+  ["name",           c => !!(c.name||"").trim()],
+  ["display name",   c => !!(c.display_name||"").trim()],
+  ["short desc",     c => !!(c.short_description||"").trim()],
+  ["full desc",      c => !!(c.full_description||"").trim()],
+  ["personality",    c => !!(c.card||"").trim() && c.card !== " "],
+  ["formatting",     c => !!(c.formatting_instructions||"").trim()],
+  ["example dialogue", c => !!(c.example_dialogue||"").trim()],
+  ["advanced prompt", c => !!(c.advanced_prompt||"").trim()],
+  ["tags",           c => (c.tags||[]).length >= 5],
+  ["portrait",       c => !!c.image],
+  ["portrait UUID",  c => !!(c.image && c.image.id)],
+  ["portrait slots", c => (c.portraits||[]).length > 0],
+  ["intros",         c => (c.starting_scenarios||[]).length > 0],
+  ["voice",          c => !!String(c.voice_catalog_id||"").trim()]
 ];
 
 // Banner UUID actually used on export. A manually pasted id always wins; otherwise the
@@ -980,6 +991,7 @@ const CTX_OK_STYLE = {fontSize:10,color:'#6ee7b7',flexShrink:0,fontVariantNumeri
 const CTX_WARN_STYLE = {fontSize:10,color:'var(--amber)',flexShrink:0,fontVariantNumeric:'tabular-nums'};
 
 const LM_OK_STYLE = {fontSize:11,color:'#6ee7b7'};
+const LM_SELECT_STYLE = {width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',fontFamily:'monospace',boxSizing:'border-box'};
 
 const LM_WARN_STYLE = {fontSize:11,color:'var(--amber)'};
 
@@ -1010,14 +1022,12 @@ const RW_GAP_STYLE = {fontSize:9,padding:'1px 5px',borderRadius:3,background:'rg
 // Returns every depth field with whether it's filled, so the row shows a full checklist
 // rather than only the gaps.
 function reworkChecks(c) {
-  const out = [];
-  for (let i = 0; i < REWORK_FIELDS.length; i++) {
-    const label = REWORK_FIELDS[i][0], key = REWORK_FIELDS[i][1];
-    const v = c[key];
-    const ok = key === "starting_scenarios" ? (v || []).length > 0 : String(v || "").trim().length > 0;
-    out.push({label: label, ok: ok});
-  }
-  return out;
+  return CHAR_CHECKS.map(function (f) { return {label: f[0], ok: !!f[1](c)}; });
+}
+
+// True when every field is present — the condition for allowing draft -> ready.
+function charIsComplete(c) {
+  return CHAR_CHECKS.every(function (f) { return !!f[1](c); });
 }
 
 function reworkPostedKey(c) {
@@ -1183,6 +1193,61 @@ const SWIM_ROLES = [
   "Streaky. When it's on, it's terrifying. When it's off, it's a mystery",
   "Team captain energy — knows everyone's best times, gives the warmup speech",
 ];
+
+// Non-visual tags stripped before building an image prompt: POV/format metadata and
+// audience/relationship framing that describe the roleplay, not the character's look.
+// Saucepan gives three copy formats for every image — markdown, an <img> tag, and a CSS
+// background rule — and the UUID is almost always the only part wanted. Pull it out of any
+// of them, or out of all three pasted together.
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+function extractUuids(text) {
+  const found = String(text || '').match(UUID_RE) || [];
+  const seen = {}, out = [];
+  for (let i = 0; i < found.length; i++) {
+    const v = found[i].toLowerCase();
+    if (!seen[v]) { seen[v] = 1; out.push(v); }
+  }
+  return out;
+}
+
+function scenarioText(sc) {
+  return typeof sc === 'string' ? sc : ((sc && (sc.text || sc.content || sc.body)) || '');
+}
+function charFindFields(c) {
+  const f = [
+    {tab:'description', label:'Full Description', text:c.full_description},
+    {tab:'card',        label:'Character Card',   text:c.card},
+    {tab:'formatting',  label:'Formatting',       text:c.formatting_instructions}
+  ];
+  (c.starting_scenarios||[]).forEach(function (sc, i) {
+    f.push({tab:'scenarios', label:'Intro '+(i+1)+(sc&&sc.title?' \u00b7 '+sc.title:''), text:scenarioText(sc)});
+  });
+  return f;
+}
+function loreFindFields(l) {
+  const f = [{tab:'settings', label:'Short Description', text:l.short_description}];
+  (l.content||[]).forEach(function (ch, i) {
+    f.push({tab:'chapters', label:(ch&&ch.title)?ch.title:('Chapter '+(i+1)), text:(ch&&ch.text)||''});
+  });
+  return f;
+}
+function collFindFields(c) {
+  return [
+    {tab:'edit', label:'Definition',        text:c.definition},
+    {tab:'edit', label:'Lorebook Display',  text:c.lorebook_display}
+  ];
+}
+
+// Models routinely wrap the whole prompt in quotes despite being told not to.
+function stripWrappingQuotes(t) {
+  let r = (t||'').trim();
+  while(r.length>1 && ((r[0]==='"'&&r[r.length-1]==='"') || (r[0]==="'"&&r[r.length-1]==="'"))) {
+    r = r.slice(1,-1).trim();
+  }
+  return r;
+}
+
+const IMG_SKIP_TAGS = new Set(["any_pov","male_pov","female_pov","third_person_pov","first_person_pov","second_person_pov","scenario","ensemble_cast","multiple_characters","chatbot","community","oc","canon","au","crossover","nsfw","sfw","spicy","fluff","comedy","angst","slow_burn","enemies_to_lovers","childhood_friend","teammate","roommate"]);
 
 const CW_TAGS = new Set(["dead_dove", "noncon_dubcon", "abuse", "blackmail", "slur_usage", "self_harm_suicide", "violence", "gore", "drugs_addiction", "incest_stepcest", "vore", "cannibalism", "feral", "trauma", "terminal_illness", "user_harm", "death", "body_horror", "eating_disorder", "amputation", "miscarriage"]);
 
@@ -1394,16 +1459,11 @@ async function callAI(data, systemPrompt, messages, maxTokens) {
 // Required fields before a character can be published.
 function progressMissing(c) {
   const m = [];
-  if (!c.name?.trim()) m.push('name');
-  if (!c.display_name?.trim()) m.push('display name');
-  if (!c.short_description?.trim()) m.push('short desc');
-  if (!c.full_description?.trim()) m.push('full desc');
-  if (!(c.card||'').trim() || c.card === ' ') m.push('card');
-  if ((c.tags||[]).length < 5) m.push('tags (' + (c.tags||[]).length + '/5)');
-  if (!c.image) m.push('portrait');
-  else if (!c.image.id) m.push('portrait UUID');
-  if (!(c.portraits||[]).length) m.push('portrait slots');
-  if (!(c.starting_scenarios||[]).length) m.push('scenarios');
+  CHAR_CHECKS.forEach(function (f) {
+    if (f[1](c)) return;
+    // Tag count is the one case where the number is more useful than the label.
+    m.push(f[0] === "tags" ? "tags (" + (c.tags||[]).length + "/5)" : f[0]);
+  });
   return m;
 }
 
@@ -1596,9 +1656,32 @@ function App() {
           allRel.forEach(rp => { const k=_norm(rp.replace(/\\/g,'/').split('/').pop().replace(/\.[^.]+$/,'')); if(!fm[k])fm[k]=rp; });
           char.portraits.forEach(p => { const k=_norm(p.name); if(fm[k]&&p.relPath!==fm[k])p.relPath=fm[k]; });
           char.portraits = char.portraits.filter(p => (p.image&&p.image.id)||!!fm[_norm(p.name)]);
-          const pp=char.portraits.find(p=>p.name==='profile_pic');
-          const nr=pp?.relPath||char.portraits.find(p=>p.relPath)?.relPath||null;
-          if(nr&&char.image&&char.image.relPath!==nr) char.image={...char.image,relPath:nr};
+          // Repair the main image ONLY when it points at something that no longer exists.
+          // This used to overwrite image.relPath whenever it differed from profile_pic (or,
+          // failing that, the first portrait), which silently reverted the chosen portrait on
+          // every startup for any character with no portrait literally named 'profile_pic'.
+          // Which portrait is the main image is a user choice, not something to re-derive.
+          // The main image is NOT required to be one of the portraits — Set Portrait imports a
+          // standalone file, so an image.relPath outside the gallery is a normal state, not
+          // damage. The only safe automatic repair is following a rename: if the path matches a
+          // portrait's file under name normalisation, update it. Otherwise leave it alone.
+          // Falling back to profile_pic or the first portrait is what silently replaced the
+          // chosen picture on every startup.
+          // A portrait literally named profile_pic mirrors the site's profile-pic UUID.
+          // One direction only: the profile pic field is the source, the portrait follows.
+          const ppSync = char.portraits.find(p=>p.name==='profile_pic');
+          if(ppSync && char.image && char.image.id) {
+            if(!ppSync.image) ppSync.image = {};
+            if(ppSync.image.id !== char.image.id) ppSync.image.id = char.image.id;
+          }
+          if(char.image && char.image.relPath) {
+            const live = char.portraits.map(p=>p.relPath).filter(Boolean);
+            if(live.indexOf(char.image.relPath) === -1) {
+              const key = _norm(char.image.relPath.replace(/\\/g,'/').split('/').pop().replace(/\.[^.]+$/,''));
+              const remapped = fm[key];
+              if(remapped && live.indexOf(remapped) !== -1) char.image = {...char.image, relPath: remapped};
+            }
+          }
         });
         setData(d);
         if(res.usedLastgood) setLastgoodWarning(true);
@@ -1715,7 +1798,18 @@ function App() {
     if (!content) return;
     try {
       const json = JSON.parse(content);
-      if(json.worlds !== undefined) { setData(json); return; }
+      // A full backup used to be applied here silently — one mis-picked file replaced
+      // the entire dataset with no prompt and no undo. Route it through a confirmation.
+      if(json.worlds !== undefined) {
+        const counts = {
+          worlds:(json.worlds||[]).length,
+          characters:(json.characters||[]).length,
+          lorebooks:(json.lorebooks||[]).length,
+          collections:(json.collections||[]).length
+        };
+        setModal({type:'confirm-full-restore', obj:json, counts});
+        return;
+      }
       if(json.content && Array.isArray(json.content)) {
         const existing = (json.id ? data.lorebooks.find(l=>l.id===json.id) : null) || selectedLore;
         if(existing) { setModal({type:'confirm-update-lore', obj:json, existing}); }
@@ -1861,7 +1955,7 @@ function App() {
     if (res && res.success) { const mb=(res.size/1048576).toFixed(1); alert("Backup saved ("+mb+" MB)"); }
   };
   const exportColl = (c) => {
-    const {world_id,image_data,image_relpath,collection_filename,definition,is_community,...rest}=c;
+    const {world_id,image_data,image_relpath,collection_filename,site_last_synced_at,definition,is_community,...rest}=c;
     // The platform's field for this text is "description", not "definition" — Lorekeeper's
     // internal data model uses "definition" but that name was leaking straight through to
     // the export, so Saucepan never actually received the collection's description text.
@@ -1914,7 +2008,7 @@ function App() {
     update(d=>{const ch=d.characters.find(x=>x.id===c.id);if(ch){ch.site_last_synced_at=new Date().toISOString();ch.reworked_at=new Date().toISOString();}});
   };
   const exportLore = (l) => {
-    const {world_id,lorebook_filename,image_data,image_relpath,collaboration_type,status,...rest}=l;
+    const {world_id,lorebook_filename,image_data,image_relpath,site_last_synced_at,collaboration_type,status,...rest}=l;
     // collaboration_type: derive fresh from access_level (local value may be stale).
     // selected_chapter_index: Saucepan requires this on import — include it.
     const safe = {...rest, selected_chapter_index: l.selected_chapter_index||0, collaboration_type: l.access_level==='public' ? 'public' : 'private'};
@@ -2156,7 +2250,7 @@ function App() {
 
           <div className="search-wrap" style={{marginLeft:8}}>
             <i className="ti ti-search"></i>
-            <input placeholder="Quick find… (Ctrl+K)" value={searchQ} onChange={e=>{setSearchQ(e.target.value);setShowSearch(true);}} onFocus={()=>setShowSearch(true)} onBlur={()=>setTimeout(()=>setShowSearch(false),180)} />
+            <input placeholder="Quick find…" value={searchQ} onChange={e=>{setSearchQ(e.target.value);setShowSearch(true);}} onFocus={()=>setShowSearch(true)} onBlur={()=>setTimeout(()=>setShowSearch(false),180)} />
             {showSearch&&searchResults.length>0&&(
               <div className="search-results">
                 {searchResults.map(r=>(
@@ -2208,7 +2302,7 @@ function App() {
         </div>
       </div>
 
-      {modal&&<Modal modal={modal} setModal={setModal} data={data} update={update} assignLore={assignLore} assignChar={assignChar} assignColl={assignColl} updateCharFromJSON={updateCharFromJSON} updateLoreFromJSON={updateLoreFromJSON} updateCollFromJSON={updateCollFromJSON} deleteChar={deleteChar} deleteWorld={deleteWorld} deleteLore={deleteLore} deleteColl={deleteColl} selectedWorld={selectedWorld} />}
+      {modal&&<Modal modal={modal} setModal={setModal} data={data} update={update} setData={setData} assignLore={assignLore} assignChar={assignChar} assignColl={assignColl} updateCharFromJSON={updateCharFromJSON} updateLoreFromJSON={updateLoreFromJSON} updateCollFromJSON={updateCollFromJSON} deleteChar={deleteChar} deleteWorld={deleteWorld} deleteLore={deleteLore} deleteColl={deleteColl} selectedWorld={selectedWorld} />}
     </div>
   );
 }
@@ -2831,30 +2925,42 @@ function ImagePromptTool({currentChar, data}) {
 
   const generate = async () => {
     setLoading(true); setStatus(''); setResult('');
-    const name = currentChar ? currentChar.name : '(character)';
     const desc = currentChar ? (currentChar.short_description||'') : '';
-    const tags = currentChar ? (currentChar.tags||[]).slice(0,20).join(', ') : '';
+    // Content warnings describe what the story contains, not what the picture looks like —
+    // sending 'violence' or 'dead_dove' to an image model just skews the composition.
+    // POV/format tags are metadata about the chat, equally irrelevant to an image.
+    const tags = currentChar ? (currentChar.tags||[]).filter(t=>!CW_TAGS.has(t)&&!IMG_SKIP_TAGS.has(t)).slice(0,20).join(', ') : '';
     const card = currentChar ? (currentChar.card||'').slice(0,500) : '';
     const nl = '\n';
+    // The name is deliberately never sent. An image model cannot render "Jamal Ferret",
+    // so it is dead tokens at best, and a surname like Ferret actively biases the picture.
     const parts = [
       'You are an expert at writing image generation prompts for AI art tools.',
-      '',
-      'Character:',
-      'Name: ' + name
+      ''
     ];
-    if(desc) parts.push('Description: ' + desc);
-    if(tags) parts.push('Tags: ' + tags);
-    if(card) parts.push('Appearance/card notes: ' + card);
+    if(currentChar) {
+      parts.push('Subject:');
+      if(desc) parts.push('Description: ' + desc);
+      if(tags) parts.push('Tags: ' + tags);
+      if(card) parts.push('Appearance/card notes: ' + card);
+    }
     if(notes) parts.push('Extra context: ' + notes);
     parts.push('');
-    parts.push('Write a single detailed image generation prompt for this character.');
+    if(currentChar) {
+      parts.push('Write a single detailed image generation prompt for the subject above.');
+    } else {
+      // Without a character, an unconstrained model invents one and presents it as fact —
+      // Exaone produced a full description of a character that did not exist. Make the
+      // absence explicit so any invention is at least clearly generic.
+      parts.push('No specific character has been provided. Write a single detailed generic character image generation prompt based only on the style, mood and extra context below.');
+    }
     parts.push('Art style: ' + artStyle);
     parts.push('Mood/lighting: ' + mood);
     parts.push('');
-    parts.push('Rules: Return ONLY the prompt text, no preamble. Be specific about appearance, clothing, pose, setting, lighting, and composition. End with quality tags (high detail, sharp focus). Under 200 words.');
+    parts.push('Rules: Return ONLY the prompt text, no preamble, no surrounding quotation marks. Never state or invent a name for the subject — refer to them only by visual description, since image models cannot render names. Be specific about appearance, clothing, pose, setting, lighting, and composition. End with quality tags (high detail, sharp focus). Under 200 words.');
     const prompt = parts.join(nl);
     const result = await callAI(data, 'You are an expert at writing image generation prompts for AI art tools.', [{role:'user', content:prompt}], 400);
-    if(result.error) { setStatus(result.error); } else { setResult(result.text.trim()); }
+    if(result.error) { setStatus(result.error); } else { setResult(stripWrappingQuotes(result.text)); }
     setLoading(false);
   };
 
@@ -2914,6 +3020,45 @@ function ImagePromptTool({currentChar, data}) {
   );
 }
 
+function UuidExtractTool() {
+  const S2 = {box:{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:12},label:{fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:6,display:'block'}};
+  const [raw, setRaw] = useState('');
+  const [copied, setCopied] = useState(null);
+  const found = extractUuids(raw);
+  const copy = (v) => { navigator.clipboard.writeText(v); setCopied(v); setTimeout(()=>setCopied(null), 1200); };
+  const paste = async () => {
+    try { const t = await navigator.clipboard.readText(); setRaw(t); } catch(e) {}
+  };
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:10}}>
+      <div style={S2.box}>
+        <span style={S2.label}>Paste from Saucepan</span>
+        <textarea value={raw} onChange={e=>setRaw(e.target.value)} placeholder="Paste the markdown, img tag, or CSS rule…"
+          style={{width:'100%',minHeight:80,background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 9px',borderRadius:'var(--r)',fontSize:11,outline:'none',fontFamily:'monospace',boxSizing:'border-box',resize:'vertical'}}/>
+        <div style={{display:'flex',gap:6,marginTop:8}}>
+          <button className="btn" style={{fontSize:11,padding:'3px 9px'}} onClick={paste}><i className="ti ti-clipboard"></i>Paste</button>
+          {raw&&<button className="btn" style={{fontSize:11,padding:'3px 9px'}} onClick={()=>{setRaw('');setCopied(null);}}>Clear</button>}
+        </div>
+      </div>
+      {raw.trim()&&found.length===0&&<div style={{fontSize:11,color:'var(--amber)'}}>No UUID found in that text.</div>}
+      {found.length>0&&<div style={S2.box}>
+        <span style={S2.label}>{found.length===1?'UUID':found.length+' UUIDs'}</span>
+        {found.map(u=>(
+          <div key={u} style={{display:'flex',gap:6,alignItems:'center',marginBottom:6}}>
+            <code style={{flex:1,fontSize:11,fontFamily:'monospace',color:'var(--text)',background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:'5px 8px',overflowX:'auto',whiteSpace:'nowrap'}}>{u}</code>
+            <button className="btn" style={{fontSize:11,padding:'3px 9px',flexShrink:0}} onClick={()=>copy(u)}>
+              <i className={copied===u?'ti ti-check':'ti ti-copy'}></i>{copied===u?'Copied':'Copy'}
+            </button>
+          </div>
+        ))}
+        {found.length>1&&<button className="btn" style={{fontSize:11,padding:'3px 9px',marginTop:2}} onClick={()=>copy(found.join('\n'))}>
+          <i className="ti ti-copy"></i>Copy all
+        </button>}
+      </div>}
+    </div>
+  );
+}
+
 function ToolsPanel({data, currentChar}) {
   const [tool, setTool] = useState(null);
   const [cm, setCm] = useState('');
@@ -2963,6 +3108,7 @@ function ToolsPanel({data, currentChar}) {
     {id:'paste-save',icon:'ti-clipboard-copy',label:'Paste & Save'},
     {id:'crop',icon:'ti-crop',label:'Crop'},
     {id:'img-prompt',icon:'ti-sparkles',label:'Img Prompt'},
+    {id:'uuid',icon:'ti-id',label:'Img UUID'},
   ];
 
   const S={box:{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:12},label:{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10,display:'block'},input:{width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none'}};
@@ -3050,6 +3196,7 @@ function ToolsPanel({data, currentChar}) {
       {tool==='paste-save'&&<PasteAndSaveTool/>}
       {tool==='crop'&&<CropTool/>}
       {tool==='img-prompt'&&<ImagePromptTool currentChar={currentChar} data={data}/>}
+      {tool==='uuid'&&<UuidExtractTool/>}
 
       {tool==='chinese-zodiac'&&<ChineseZodiacTool/>}
       {tool==='hockey'&&<HockeyTool/>}
@@ -4882,6 +5029,16 @@ function CharCard({char,onClick}) {
 function LorePage({lorebook,data,update,exportLore,initialTab,importJSON,setModal,onBack}) {
   const [loreTab, setLoreTab] = useState(initialTab||'chapters');
   const [loreMdPreview, setLoreMdPreview] = useState(false);
+  const [loreFindOpen,setLoreFindOpen]=useState(false);
+  const [loreFindQ,setLoreFindQ]=useState('');
+  useEffect(()=>{
+    const h=(e)=>{
+      if((e.ctrlKey||e.metaKey)&&e.key==='f'){ e.preventDefault(); setLoreFindOpen(true); }
+      else if(e.key==='Escape'&&loreFindOpen){ setLoreFindOpen(false); setLoreFindQ(''); }
+    };
+    window.addEventListener('keydown',h);
+    return ()=>window.removeEventListener('keydown',h);
+  },[loreFindOpen]);
   const lore = (data.lorebooks.find(x=>x.id===lorebook.id))||lorebook;
   const world = data.worlds.find(w=>w.id===lore.world_id);
 
@@ -4946,6 +5103,7 @@ function LorePage({lorebook,data,update,exportLore,initialTab,importJSON,setModa
           <div style={{display:'flex',gap:4,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:4,flexWrap:'wrap'}}>
             {tabs.map(([t,l])=><div key={t} className={"sub-nav-item "+(loreTab===t?'active':'')} onClick={()=>setLoreTab(t)} style={{fontSize:12,padding:'5px 10px'}}>{l}</div>)}
           </div>
+          {loreFindOpen&&<FindBar fields={loreFindFields(lore)} q={loreFindQ} setQ={setLoreFindQ} setTab={setLoreTab} placeholder="Find in chapters…" onClose={()=>{setLoreFindOpen(false);setLoreFindQ('');}}/>}
           {loreTab==='chapters'&&<LoreChaptersTab lore={lore} updLore={updLore}/>}
           {loreTab==='settings'&&<LoreSettingsTab lore={lore} updLore={updLore} data={data} onBack={onBack} update={update} setModal={setModal}/>}
           {loreTab==='export'&&<LoreExportPanel lorebook={lore} exportLore={exportLore} exportLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];if(lore.short_description){lines.push("");lines.push(lore.short_description);}(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});const safeName=(lore.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g,"_");window.lorekeeper.exportFile({defaultName:safeName+"-lorebook.md",content:lines.join("\n"),folder:"Lorebooks"});}} loreMdPreview={loreMdPreview} setLoreMdPreview={setLoreMdPreview} buildLoreMd={()=>{const lines=["# "+(lore.name||"Lorebook")];(lore.content||[]).forEach(ch=>{lines.push("");lines.push("## "+(ch.title||"Untitled"));if(ch.text)lines.push(ch.text);});return lines.join("\n");}} importJSON={async()=>{const content=await window.lorekeeper.importFile();if(!content)return;try{const json=JSON.parse(content);setModal({type:'confirm-update-lore',obj:json,existing:lore});}catch{alert('Invalid JSON file.');}}} update={update}/>}
@@ -5168,6 +5326,37 @@ function CharactersPage({data,setSelectedChar}) {
 }
 
 
+// fields: [{tab, label, text}] — the caller decides what is searchable on its page.
+function FindBar({fields, q, setQ, onClose, setTab, placeholder}) {
+  const needle = q.trim().toLowerCase();
+  const hits = [];
+  if(needle) {
+    const count = (text) => {
+      if(!text) return 0;
+      let n=0, i=0; const h=String(text).toLowerCase();
+      while((i=h.indexOf(needle,i))!==-1){ n++; i+=needle.length; }
+      return n;
+    };
+    fields.forEach(f=>{ const n=count(f.text); if(n) hits.push({tab:f.tab, label:f.label, n:n}); });
+  }
+  const total = hits.reduce((a,h)=>a+h.n,0);
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:6,padding:'8px 10px',marginBottom:10,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r)'}}>
+      <div style={{display:'flex',gap:8,alignItems:'center'}}>
+        <i className="ti ti-search" style={{color:'var(--text3)',fontSize:14}}></i>
+        <input autoFocus value={q} onChange={e=>setQ(e.target.value)} placeholder={placeholder}
+          style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none',minWidth:0}}/>
+        <span style={{fontSize:11,color:'var(--text3)',whiteSpace:'nowrap'}}>{needle?(total+' match'+(total===1?'':'es')):''}</span>
+        <button className="btn" style={{fontSize:11,padding:'2px 8px'}} onClick={onClose}>Close</button>
+      </div>
+      {needle&&total===0&&<div style={{fontSize:11,color:'var(--text3)'}}>No matches.</div>}
+      {hits.length>0&&<div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+        {hits.map(h=><button key={h.label} className="btn" style={{fontSize:11,padding:'2px 8px'}} onClick={()=>setTab(h.tab)}>{h.label} · {h.n}</button>)}
+      </div>}
+    </div>
+  );
+}
+
 function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setModal,setLightboxSrc,onBack}) {
   const updChar=(fn)=>update(d=>{
     const c=d.characters.find(x=>x.id===char.id);
@@ -5183,22 +5372,34 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
   });
   const [tab,setTab]=useState(initialTab||'identity');
   const [showPortraitPicker,setShowPortraitPicker]=useState(false);
+  const [findOpen,setFindOpen]=useState(false);
+  const [findQ,setFindQ]=useState('');
+  // Ctrl+F searches this character's long-form text. Electron's own find-in-page cannot
+  // see inside textarea values, which is where the description and intros actually live.
+  useEffect(()=>{
+    const h=(e)=>{
+      if((e.ctrlKey||e.metaKey)&&e.key==='f'){ e.preventDefault(); setFindOpen(true); }
+      else if(e.key==='Escape'&&findOpen){ setFindOpen(false); setFindQ(''); }
+    };
+    window.addEventListener('keydown',h);
+    return ()=>window.removeEventListener('keydown',h);
+  },[findOpen]);
   const scenarioDragIdx=useRef(null);
   const scenarioDragOverIdx=useRef(null);
   const portraitDragIdx=useRef(null);
   const portraitDragOverIdx=useRef(null);
   const handlePortrait=async()=>{
-    const r=await window.lorekeeper.importImage();
-    if(!r) return;
     const folder=charData.companion_folder?'Companions/'+charData.companion_folder:'Companions';
+    const r=await window.lorekeeper.importImage({defaultPath:folder});
+    if(!r) return;
     const res=await window.lorekeeper.copyImageToFolder(r.srcPath,folder);
     if(res) updChar(c=>{c.image={...(c.image||{}),data:null,relPath:res.relPath};});
     else updChar(c=>{c.image={...(c.image||{}),data:r.base64};});
   };
   const handleBanner=async()=>{
-    const r=await window.lorekeeper.importImage();
-    if(!r) return;
     const folder=charData.companion_folder?'Companions/'+charData.companion_folder:'Companions';
+    const r=await window.lorekeeper.importImage({defaultPath:folder});
+    if(!r) return;
     const safeName=(charData.name||'banner').replace(/[^a-zA-Z0-9_-]/g,'_')+'-banner';
     const res=await window.lorekeeper.copyImageToFolder(r.srcPath,folder,safeName);
     if(res) updChar(c=>{c.companion_profile_banner_image={...(c.companion_profile_banner_image||{}),data:res.base64,relPath:res.relPath};});
@@ -5227,6 +5428,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
   return (
     <div>
       <div className="breadcrumb" onClick={onBack}><i className="ti ti-arrow-left"></i><span>Back</span><i className="ti ti-chevron-right"></i><span>{charData.name}</span></div>
+      {findOpen&&<FindBar fields={charFindFields(charData)} q={findQ} setQ={setFindQ} setTab={setTab} placeholder="Find in description, card and intros…" onClose={()=>{setFindOpen(false);setFindQ('');}}/>}
       <div className="char-detail">
         <div className="char-sidebar">
           <div className="char-portrait-lg">{getImgSrc(charData.image)?<ImgFromPath src={getImgSrc(charData.image)} alt={charData.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<i className="ti ti-user"></i>}</div>
@@ -5360,7 +5562,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                     <div style={{padding:'4px 8px',background:'var(--bg2)',borderTop:'1px solid var(--border)'}}>
                       <div style={{fontSize:9,color:'var(--text3)',marginBottom:3,textTransform:'uppercase',letterSpacing:'0.05em'}}>Image ID (from site)</div>
                       <div style={{display:'flex',gap:4}}>
-                        <input value={p.image?.id||''} onChange={e=>updChar(c=>{const v=e.target.value;if(!c.portraits[i].image)c.portraits[i].image={};c.portraits[i].image.id=v||undefined;if(c.portraits[i].name==='profile_pic'){if(!c.image)c.image={};c.image.id=v;}})} placeholder="paste UUID..." style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'3px 6px',borderRadius:'var(--r)',fontSize:9,outline:'none',fontFamily:'monospace',minWidth:0}}/>
+                        <input value={p.image?.id||''} onChange={e=>updChar(c=>{const v=e.target.value;if(!c.portraits[i].image)c.portraits[i].image={};c.portraits[i].image.id=v||undefined;})} placeholder="paste UUID..." style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'3px 6px',borderRadius:'var(--r)',fontSize:9,outline:'none',fontFamily:'monospace',minWidth:0}}/>
                         {p.image?.id?<button className="btn" style={{padding:'3px 5px',fontSize:10,flexShrink:0}} onClick={()=>navigator.clipboard.writeText(p.image.id)} title="Copy ID"><i className="ti ti-copy" style={{fontSize:12}}></i></button>:null}
                       </div>
                     </div>
@@ -5504,7 +5706,14 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
           )}
           {tab==='schedule'&&(
             <div style={{display:'flex',flexDirection:'column',gap:12}}>
-              <div className="field-block"><label>Status</label><select value={charData.status||'draft'} onChange={e=>{const newStatus=e.target.value;update(d=>{const c=d.characters.find(x=>x.id===charData.id);if(!c)return;c.status=newStatus;
+              <div className="field-block"><label>Status</label><select value={charData.status||'draft'} onChange={e=>{const newStatus=e.target.value;
+                // Ready means ready to post. Allowing it with fields still missing is how a
+                // draft ended up displaying "ready to post" on the dashboard.
+                if((newStatus==='ready'||newStatus==='posted')&&!charIsComplete(charData)){
+                  setModal({type:'incomplete-status',target:newStatus,missing:progressMissing(charData),charId:charData.id});
+                  return;
+                }
+                update(d=>{const c=d.characters.find(x=>x.id===charData.id);if(!c)return;c.status=newStatus;
                 if(newStatus==='posted'&&(!c.posted_dates||c.posted_dates.length===0)){
                   const t=new Date();
                   const td=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
@@ -5794,6 +6003,16 @@ function LoreExportPanel({lorebook,exportLore,exportLoreMd,loreMdPreview,setLore
 
 function CollPage({coll,data,update,exportColl,initialTab,importJSON,openChar,setModal,onBack}) {
   const [collTab,setCollTab]=useState(initialTab||'edit');
+  const [collFindOpen,setCollFindOpen]=useState(false);
+  const [collFindQ,setCollFindQ]=useState('');
+  useEffect(()=>{
+    const h=(e)=>{
+      if((e.ctrlKey||e.metaKey)&&e.key==='f'){ e.preventDefault(); setCollFindOpen(true); }
+      else if(e.key==='Escape'&&collFindOpen){ setCollFindOpen(false); setCollFindQ(''); }
+    };
+    window.addEventListener('keydown',h);
+    return ()=>window.removeEventListener('keydown',h);
+  },[collFindOpen]);
   const col=(data.collections.find(x=>x.id===coll.id))||coll;
   const world=data.worlds.find(w=>w.id===col.world_id);
   const setCol=(fn)=>update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(!c)return;fn(c);c.updated_at=new Date().toISOString();if(c.collection_filename){const{world_id,image_data,collection_filename,...rest}=c;window.lorekeeper.saveCollectionJson(c.collection_filename,{...rest,updated_at:c.updated_at});}});
@@ -5839,6 +6058,7 @@ function CollPage({coll,data,update,exportColl,initialTab,importJSON,openChar,se
           <div style={{display:'flex',gap:4,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:4,flexWrap:'wrap'}}>
             {tabs.map(([t,l])=><div key={t} className={"sub-nav-item "+(collTab===t?'active':'')} onClick={()=>setCollTab(t)} style={{fontSize:12,padding:'5px 10px'}}>{l}</div>)}
           </div>
+          {collFindOpen&&<FindBar fields={collFindFields(col)} q={collFindQ} setQ={setCollFindQ} setTab={setCollTab} placeholder="Find in definition…" onClose={()=>{setCollFindOpen(false);setCollFindQ('');}}/>}
           {collTab==='edit'?<CollSettingsTab col={col} setCol={setCol} data={data} world={world} update={update} openChar={openChar} setModal={setModal} onBack={onBack}/>:null}
           {collTab==='export'?<CollExportPanel coll={col} data={data} exportColl={exportColl} importJSON={importJSON} update={update}/>:null}
         </div>
@@ -6449,6 +6669,33 @@ function NotesBackupPanel({data}) {
   );
 }
 
+
+function LmModelPicker({models, value, onPick, onRefresh}) {
+  // models: null = not yet checked, [] = server unreachable or nothing loaded.
+  // Falls back to a plain text input so a saved model name is never lost or unsettable
+  // just because the server happens to be down while Settings is open.
+  if(models === null) {
+    return <div style={{fontSize:11,color:'var(--text3)',padding:'7px 0'}}>Checking LM Studio for loaded models…</div>;
+  }
+  if(!models.length) {
+    return <React.Fragment>
+      <input type="text" value={value} onChange={e=>onPick(e.target.value)} placeholder="qwen3-14b-instruct" style={LM_SELECT_STYLE}/>
+      <div style={{fontSize:11,color:'var(--amber)',marginTop:6}}>
+        No models loaded — start the server in LM Studio and load at least one, then press Test connection.
+      </div>
+    </React.Fragment>;
+  }
+  const known = models.indexOf(value) !== -1;
+  return <React.Fragment>
+    <select value={known?value:''} onChange={e=>onPick(e.target.value)} style={LM_SELECT_STYLE}>
+      <option value="">— pick a loaded model —</option>
+      {models.map(id=><option key={id} value={id}>{id}</option>)}
+    </select>
+    {!known&&value&&<div style={{fontSize:11,color:'var(--amber)',marginTop:6}}>
+      Saved model "{value}" is not currently loaded in LM Studio. Pick one above, or load it there and refresh.
+    </div>}
+  </React.Fragment>;
+}
 
 function ImageMigrationPanel({data, update}) {
   const [status, setStatus] = useState(null); // null | 'scanning' | 'scanned' | 'migrating' | 'done'
@@ -7598,11 +7845,25 @@ function SettingsPage({data, update, dataPath}) {
       const j = await res.json();
       const ids = (j.data||[]).map(m=>m.id);
       if(!ids.length) { setLmTest({state:'warn', msg:'Connected, but no model is loaded in LM Studio.'}); return; }
+      setLmModels(ids);
       setLmTest({state:'ok', msg:'Connected. Loaded: ' + ids.join(', '), ids:ids});
     } catch(e) {
       setLmTest({state:'err', msg:'No response from ' + base + '. Start the server in LM Studio (Developer tab) and load a model.'});
     }
   };
+  const [lmModels, setLmModels] = React.useState(null);
+  // Pull the loaded-model list as soon as the LM Studio panel is visible, so the model
+  // dropdown is populated without having to press Test first.
+  const lmBase = ((data.settings||{}).lmstudio_base_url || 'http://localhost:1234/v1').replace(/\/+$/, '');
+  React.useEffect(() => {
+    if((data.settings||{}).ai_provider !== 'lmstudio') return;
+    let cancelled = false;
+    fetch(lmBase + '/models').then(r=>r.json()).then(j=>{
+      if(!cancelled) setLmModels((j.data||[]).map(m=>m.id));
+    }).catch(()=>{ if(!cancelled) setLmModels([]); });
+    return () => { cancelled = true; };
+  }, [(data.settings||{}).ai_provider, lmBase]);
+
   const [apiKeySaved, setApiKeySaved] = React.useState(false);
 
   const saveApiKey = (field, val) => {
@@ -7755,19 +8016,15 @@ function SettingsPage({data, update, dataPath}) {
             <input type="text" value={settings.lmstudio_base_url||''} onChange={e=>set('lmstudio_base_url',e.target.value)} placeholder="http://localhost:1234/v1"
               style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',fontFamily:'monospace',boxSizing:'border-box'}}/>
           </Field>
-          <Field label="Model" hint="The model identifier as LM Studio lists it. Run the test below to see what is loaded.">
-            <input type="text" value={settings.lmstudio_model||''} onChange={e=>set('lmstudio_model',e.target.value)} placeholder="qwen3-14b-instruct"
-              style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',fontFamily:'monospace',boxSizing:'border-box'}}/>
+          <Field label="Model" hint="Every model currently loaded in LM Studio. Load more than one to switch between them from here without leaving Lorekeeper.">
+            <LmModelPicker models={lmModels} value={settings.lmstudio_model||''} onPick={v=>set('lmstudio_model',v)} onRefresh={testLmStudio}/>
           </Field>
           <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
             <button className="btn" onClick={testLmStudio}><i className="ti ti-plug-connected"></i>Test connection</button>
             {lmTest&&<span style={lmTest.state==='ok'?LM_OK_STYLE:lmTest.state==='warn'?LM_WARN_STYLE:LM_ERR_STYLE}>{lmTest.msg}</span>}
           </div>
-          {lmTest&&lmTest.state==='ok'&&lmTest.ids&&<div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:8}}>
-            {lmTest.ids.map(id=><button key={id} className="btn" style={{fontSize:10,padding:'2px 8px'}} onClick={()=>set('lmstudio_model',id)}>use {id}</button>)}
-          </div>}
           <div style={{fontSize:11,color:'var(--text3)',marginTop:10,lineHeight:1.6}}>
-            Local models have far less context room than the cloud providers. Until the context scope selector lands, the Assistant still sends the whole world — for large worlds use the Image Prompt Generator here and keep the Assistant on a cloud provider.
+            Local models have far less context room than the cloud providers — often 8k tokens against 200k. Use the Assistant's context scope selector to narrow what gets sent; sending a whole large world will overflow the window.
           </div>
         </React.Fragment>}
       </Section>
@@ -7849,7 +8106,7 @@ function HelpPage() {
       <HelpSection title="Dashboard" icon="ti-layout-dashboard">
         <P>The dashboard is your daily workflow hub.</P>
         <P><B>Calendar</B> — Shows scheduled characters (purple chips) and posted dates (green ✓). Click any day to expand it and see what is scheduled. Click a day to open the scheduler and add characters.</P>
-        <P><B>Today Banner</B> — Characters scheduled for today with a Mark Posted button. Marking posted stamps the posted date and moves them off the calendar.</P>
+        <P><B>Today Banner</B> — Any character marked ready whose scheduled date has arrived or already passed, with a Mark Posted button. It keys off the scheduled date, not the day you set the status, so scheduling a month ahead and marking them later behaves the same. Marking posted stamps the <I>scheduled</I> date, not the day you clicked, so a late-marked character still lands on the right calendar day.</P>
         <P><B>Upcoming</B> — Next 5 scheduled characters with their dates and readiness status.</P>
         <P><B>Release Cycle</B> — A rotating world queue. Set the order in which you cycle through worlds. The next world up is shown here.</P>
         <P><B>Site Checklist</B> — Characters, lorebooks, and collections edited since last export. Clear an item by exporting it and uploading it to the site.</P>
@@ -7861,10 +8118,15 @@ function HelpPage() {
       <HelpSection title="Characters" icon="ti-users">
         <P>Each character has 11 tabs:</P>
         <P><B>Identity</B> — Name, display name, short description (max 140 chars), world, tags (max 25; content warning tags don't count), fandom tags (max 3).</P>
+        <P><B>Full Description</B> — The long-form public description shown on the character's site profile. Separate from the Character Card, which the model sees but readers do not.</P>
         <P><B>Character Card</B> — The system prompt. Supports markdown. Use the macro reference panel for Saucepan macros like {'{{user}}'} and {'{{char}}'}.</P>
         <P><B>Formatting</B> — Formatting instructions, advanced prompt, and example dialogue.</P>
         <P><B>Scenarios</B> — Up to 7500 characters. Drag the grip handle to reorder scenarios.</P>
+        <P><B>Main portrait vs portrait slots.</B> The large image on the left is the character's main picture. It does not have to be one of the portrait slots — Set Portrait can import any image. Lorekeeper never reassigns it on its own; the only automatic change is following a file rename.</P>
+        <P>A portrait slot named exactly <Code>profile_pic</Code> mirrors the Profile Pic UUID from the site. That copying is one-way: the Profile Pic field is the source and the slot follows it, so editing the slot's own UUID will not change the profile pic.</P>
         <P><B>Portraits</B> — Up to 10 portrait slots. Each needs a platform Image ID (UUID). Drag to reorder portraits.</P>
+        <P><B>Lorebooks</B> — Link this character to lorebooks. Linked lorebooks are what the Assistant reads for world context.</P>
+        <P><B>Collections</B> — Which collections this character belongs to. A character can be in collections across several worlds.</P>
         <P><B>Schedule</B> — Set status (draft / ready / posted), schedule dates, and posted dates. Setting status to Posted auto-stamps today as the posted date.</P>
         <P><B>Lorebook Entry</B> — If a lorebook template is set up for the world, fill in the character's entry and save it directly to the world lorebook.</P>
         <P><B>Settings</B> — Access level, temperature, spicy flags, companion folder (for auto-save). Also contains <B>Update from JSON</B>, <B>Export JSON</B>, and <B>Export MD</B>.</P>
@@ -7882,7 +8144,8 @@ function HelpPage() {
 
       <HelpSection title="Lorebooks" icon="ti-book">
         <P>Lorebooks hold world lore as chapters. Each chapter is a titled text entry.</P>
-        <P><B>Edit tab</B> — Add, reorder, and edit chapters. Set access level, definition protection, image ID, and auto-save filename.</P>
+        <P><B>Chapters tab</B> — Add, reorder, and edit chapters.</P>
+        <P><B>Settings tab</B> — Access level, definition protection, image ID, tags, and auto-save filename.</P>
         <P><B>Export tab</B> — Export as platform-ready JSON or as a Markdown document (all chapters as ## headings).</P>
         <P><B>Access level</B> — Set to Public when ready to upload. Private lorebooks are excluded from the Site Checklist and world Export ZIP.</P>
         <P><B>Definition protection</B> — Copy Protection is recommended. Avoid Open.</P>
@@ -7947,7 +8210,9 @@ function HelpPage() {
         <P><B>Swim</B> — Rolls a stroke, event distance, stroke description, and swimmer archetype.</P>
         <P><B>Western Zodiac</B> — Rolls a sun sign with element, modality, traits, shadow side, and vibe.</P>
         <P><B>Chinese Zodiac</B> — Rolls a sign with element, reference years, traits, shadow side, and vibe.</P>
-        <P><B>Image Prompt Generator</B> — Calls the Claude API to generate an image generation prompt for the current character. Art style and mood dropdowns; optional extra notes; copy button. Requires an API key in Settings.</P>
+        <P><B>Img UUID</B> — Saucepan offers three copy formats for every image (markdown, an img tag, a CSS background rule) and the UUID is usually the only part you want. Paste any of them — or all three at once — and this pulls the UUID out. Results are deduplicated, so pasting all three formats of the same image gives one UUID, not three.</P>
+        <P><B>Image Prompt Generator</B> — Generates an image generation prompt for the current character using whichever AI provider is set in Settings, including a local model via LM Studio. Art style and mood dropdowns; optional extra notes; copy button.</P>
+        <P>Content warnings and POV/format tags are stripped before the prompt is built — they describe what the story contains, not what the picture looks like, and sending them skews the composition. Tags still export to Saucepan normally. The character's name is also never sent, since image models cannot render a name and a surname can bias the result.</P>
       </HelpSection>
 
       <HelpSection title="Image Tools" icon="ti-photo">
@@ -7958,12 +8223,19 @@ function HelpPage() {
         <P><B>Image Prompt Generator</B> — See Tools panel section above.</P>
       </HelpSection>
 
+      <HelpSection title="Editing conveniences" icon="ti-keyboard">
+        <P><B>Ctrl+F — find in long text.</B> On a character, searches Full Description, Character Card, Formatting, and every intro. On a lorebook, searches the short description and every chapter. On a collection, the definition and lorebook display. Matches appear as buttons showing the count per field; clicking one jumps to that tab. Esc closes.</P>
+        <HelpTip text="This is a Lorekeeper search, not the browser's. It has to be, because the browser's find cannot see text inside editable fields — which is where all of this content lives." />
+        <P><B>Spell check</B> — Misspellings are underlined in every text field. Right-click one for suggestions, or to add the word to your dictionary. The same menu carries cut, copy, and paste.</P>
+      </HelpSection>
+
       <HelpSection title="Import / Export" icon="ti-file-import">
         <P>The Import/Export page has three sections: <B>Backup</B>, <B>Restore</B>, and <B>Import</B>.</P>
         <P><B>Backup</B> — Export a full ZIP of everything (data + all images), or export a single world as a ZIP. Store backups somewhere safe outside the Lorekeeper folder.</P>
         <P><B>Restore</B> — Two options: <B>Import &amp; merge from backup</B> reads a ZIP and shows a preview of adds, updates, and conflicts — nothing is deleted, local-only data is preserved, and you choose Keep Local or Take Backup per conflict. <B>Restore from last good backup</B> is the emergency option: replaces all data with the auto-saved lastgood file (no zip needed).</P>
         <P><B>Import (single items or batch)</B> — Paste a JSON directly, or click Scan Folders to scan <Code>Companions\</Code>, <Code>Lorebooks\</Code>, and <Code>Collections\</Code>. Each item shows a badge: new / update ↓ / local newer ↑ / up to date. Assign worlds and click Import.</P>
         <HelpTip text="Items marked 'local newer' are skipped by default. Click 'Import anyway' on that item, or check 'Force import all', to override. Images alongside JSONs are automatically linked as image_relpath." />
+        <P>If the JSON you pick turns out to be a full Lorekeeper backup rather than a single item, Lorekeeper now stops and says so, showing what the file holds against what you currently have. Confirming replaces everything — use Restore → Import &amp; merge from backup instead if you only wanted part of it.</P>
       </HelpSection>
 
       <HelpSection title="Auto-save to disk" icon="ti-device-floppy">
@@ -7978,35 +8250,40 @@ function HelpPage() {
       <HelpSection title="Image Storage Audit" icon="ti-photo-scan">
         <P>Keeps images stored as local files instead of base64 blobs in the data JSON.</P>
         <P><B>Rescan images</B> — Scans folders for image files and links them to existing items. Use after dropping images into <Code>Lorebooks\</Code> or <Code>Collections\</Code> manually.</P>
-        <P><B>Audit base64</B> — Finds items still storing images as base64 and shows what file they would be written to.</P>
-        <P><B>Migrate</B> — Writes base64 images to local files, sets image_relpath, clears the base64. Will not create duplicates.</P>
+        <P><B>Audit base64</B> — Sorts every image into four states: already using a local file; has a path but the file is missing; still base64 with no file yet; and has a working file but is <I>also</I> still carrying leftover base64 in the data.</P>
+        <P><B>Clear leftover base64</B> — For that last group. No file is written, since the image is already on disk — this only drops the redundant copy out of the JSON. This is usually where the bulk of a large data file goes.</P>
+        <P><B>Link / Write</B> — For items with no file yet. Where a matching image is already sitting in the folder, the button offers to link it rather than write a duplicate; the button text says which it will do.</P>
       </HelpSection>
 
       <HelpSection title="Data Safety" icon="ti-shield-check">
-        <P>Lorekeeper protects your data with three layers:</P>
+        <P>Lorekeeper protects your data with several layers:</P>
         <P><B>Auto-save</B> — Data is written after every change (600ms debounce). A load guard prevents saving until data is fully loaded.</P>
         <P><B>Shrink-refuse</B> — If a save would shrink the data file beyond a safety threshold, it is refused. Prevents runaway autosaves from overwriting real data with an empty shape.</P>
         <P><B>Last-good backup</B> — On every successful save, the previous file is copied to <Code>lorekeeper-data.lastgood.json</Code>. Use Restore → Restore from last good backup to recover it without a zip.</P>
+        <P><B>Flush on close</B> — Closing the window used to kill a pending save mid-write. Lorekeeper now holds the window open until the last change has actually reached disk.</P>
+        <P><B>Pre-shrink snapshot</B> — Operations that legitimately shrink the data file a lot, such as clearing base64 images, copy the old file to <Code>lorekeeper-data.preshrink-{'{date}'}.json</Code> first. These are safe to delete once you have confirmed everything looks right; nothing removes them automatically.</P>
         <P><B>Export ZIP (world topbar)</B> — Platform-ready zip for upload to Saucepan. Not the same as a backup — only includes posted characters, public lorebooks, and public collections.</P>
         <HelpTip text="Do a full backup before any restore. Full backup zips are the safest recovery option; the lastgood file is for quick recovery from recent corruption." />
       </HelpSection>
 
       <HelpSection title="Settings" icon="ti-settings">
         <P><B>Font size</B> — Changes the base font size across the whole app immediately.</P>
-        <P><B>AI provider &amp; API key</B> — Required for the chat panel and Image Prompt Generator. Choose Anthropic, OpenAI, Google, or OpenRouter, then paste the matching key. See the AI Assistant section below.</P>
+        <P><B>AI provider &amp; API key</B> — Used by the Assistant and the Image Prompt Generator. Choose Anthropic, OpenAI, Google, OpenRouter, or LM Studio, then paste the matching key. LM Studio runs locally and needs no key — start its server, load one or more models, and pick from the Model dropdown, which lists whatever is currently loaded. Loading several means switching between them without leaving Lorekeeper.</P>
         <P><B>Autosave debounce</B> — How long to wait after a keystroke before saving. Default 600ms.</P>
         <P><B>Data file</B> — Shows where data is stored. Click to open the folder.</P>
         <P><B>Theme and colorblind mode</B> — Settings → Appearance. Pick an accent color to generate a full dark/light theme. Colorblind mode adjusts red/green or blue/yellow pairs: Red-Green mode (deuteranopia/protanopia) swaps red→orange and green→blue; Blue-Yellow mode (tritanopia) swaps amber→red-orange and teal→pink.</P>
       </HelpSection>
 
       <HelpSection title="AI assistant" icon="ti-sparkles">
-        <P>The Assistant tab in the right panel gives you an AI writing assistant that knows your full world context. Powered by whichever provider you choose in Settings: Anthropic, OpenAI, Google, or OpenRouter.</P>
-        <P><B>What it knows:</B> the current world's lorebooks (full chapter text), collections, all characters in the world, and all filled fields of the character you're editing.</P>
+        <P>The Assistant tab in the right panel gives you an AI writing assistant that knows your world context. Powered by whichever provider you choose in Settings: Anthropic, OpenAI, Google, OpenRouter, or a local model via LM Studio.</P>
+        <P><B>What it knows</B> depends on the context scope selector at the top of the Assistant panel:</P>
+        <P><B>Character</B> — only the character you are editing. <B>World</B> — the world, its characters and collections, and lorebook summaries without the chapter text. <B>Full</B> — everything, including full chapter text.</P>
+        <P>Chapter text is what overruns a local model's context window: a mature world runs to roughly 27k tokens against the ~8k many local models allow. On a local model, start at Character or World.</P>
         <P><B>Chat resets</B> when you switch to a different character or world. Copy anything useful before switching.</P>
         <HelpTip text="Click any suggested prompt on the empty chat screen to pre-fill it. Or just type — 'write a short description for this character', 'suggest scenarios based on the card', etc." />
         <div style={{marginTop:8,padding:'10px 12px',background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.25)',borderRadius:'var(--r)',fontSize:12,color:'var(--amber)',lineHeight:1.7}}>
-          <strong style={{display:'block',marginBottom:4}}>⚠ API key required — separate from any chat subscription</strong>
-          Each provider's consumer chat app (claude.ai, chatgpt.com, gemini.google.com) is billed separately from its developer API. You need an API key with credits, not just a subscription.
+          <strong style={{display:'block',marginBottom:4}}>⚠ Cloud providers need an API key — separate from any chat subscription</strong>
+          Each provider's consumer chat app (claude.ai, chatgpt.com, gemini.google.com) is billed separately from its developer API. You need an API key with credits, not just a subscription. LM Studio is the exception: it runs on your own machine, needs no key, and costs nothing per message.
         </div>
         <div style={{marginTop:8,fontSize:12,color:'var(--text3)',lineHeight:1.8}}>
           <strong style={{color:'var(--text)',display:'block',marginBottom:4}}>Setup (Anthropic example):</strong>
@@ -8016,7 +8293,7 @@ function HelpPage() {
           <HelpStep n={4} text="In Lorekeeper → Settings → AI Provider → select Anthropic → paste the key → Save."/>
         </div>
         <P>Other providers follow the same pattern: create an account at the provider's developer console (platform.openai.com, aistudio.google.com, or openrouter.ai), add credits, generate a key, and paste it in the matching Settings field.</P>
-        <P><B>Cost estimate:</B> roughly $0.05–0.15 per conversation with a capable model, depending on world size. Lighter/faster models (Haiku, GPT-4o mini, Gemini Flash) are cheaper but less capable.</P>
+        <P><B>Cost estimate:</B> roughly $0.05–0.15 per conversation with a capable cloud model, depending on world size. Lighter models (Haiku, GPT-4o mini, Gemini Flash) are cheaper but less capable. A local model through LM Studio costs nothing per message, at the price of a much smaller context window.</P>
       </HelpSection>
     </div>
   );
@@ -8086,7 +8363,7 @@ function WorldSelectWithCreate({data,worldId,setWorldId,update}) {
   );
 }
 
-function Modal({modal,setModal,data,update,assignLore,assignChar,assignColl,updateCharFromJSON,updateLoreFromJSON,updateCollFromJSON,deleteChar,deleteWorld,deleteLore,deleteColl,selectedWorld}) {
+function Modal({modal,setModal,data,update,setData,assignLore,assignChar,assignColl,updateCharFromJSON,updateLoreFromJSON,updateCollFromJSON,deleteChar,deleteWorld,deleteLore,deleteColl,selectedWorld}) {
   const [form,setForm]=useState({});
   const defaultWorld = modal.worldId || selectedWorld?.id || '';
   const [worldId,setWorldId]=useState(defaultWorld);
@@ -8107,6 +8384,36 @@ function Modal({modal,setModal,data,update,assignLore,assignChar,assignColl,upda
       <button className="btn" onClick={()=>setModal(null)}>Cancel</button>
       <button className="btn" onClick={()=>assignChar(modal.existing.world_id||'')}>Import as New</button>
       <button className="btn primary" onClick={()=>updateCharFromJSON(modal.obj)}>Update Existing</button>
+    </div>
+  </div></div>;
+
+  if(modal.type==='incomplete-status') return <div className="modal-bg"><div className="modal">
+    <h2>Not ready yet</h2>
+    <p style={{fontSize:13,color:'var(--text3)',marginBottom:12}}>
+      {modal.missing.length} field{modal.missing.length===1?' is':'s are'} still missing, so this character can't be marked {modal.target}:
+    </p>
+    <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:20}}>
+      {modal.missing.map(m=><span key={m} style={{fontSize:11,padding:'2px 7px',borderRadius:3,background:'rgba(251,191,36,0.12)',color:'var(--amber)',border:'1px solid rgba(251,191,36,0.25)'}}>{m}</span>)}
+    </div>
+    <div className="modal-footer">
+      <button className="btn" onClick={()=>setModal(null)}>Close</button>
+      <button className="btn danger" onClick={()=>{update(d=>{const c=d.characters.find(x=>x.id===modal.charId);if(c)c.status=modal.target;});setModal(null);}}>Set {modal.target} anyway</button>
+    </div>
+  </div></div>;
+
+  if(modal.type==='confirm-full-restore') return <div className="modal-bg"><div className="modal">
+    <h2>This is a full backup, not a single item</h2>
+    <p style={{fontSize:13,color:'var(--text3)',marginBottom:12}}>The file you picked contains an entire Lorekeeper dataset:</p>
+    <p style={{fontSize:13,color:'var(--text)',marginBottom:12}}>
+      {modal.counts.worlds} worlds · {modal.counts.characters} characters · {modal.counts.lorebooks} lorebooks · {modal.counts.collections} collections
+    </p>
+    <p style={{fontSize:13,color:'var(--red)',marginBottom:8}}><strong>Importing it replaces everything you currently have.</strong></p>
+    <p style={{fontSize:13,color:'var(--text3)',marginBottom:20}}>
+      Your current data — {(data.worlds||[]).length} worlds, {(data.characters||[]).length} characters, {(data.lorebooks||[]).length} lorebooks, {(data.collections||[]).length} collections — would be discarded. If you only wanted to bring in some of it, cancel and use Import from backup on the Import/Export page instead, which merges rather than replaces.
+    </p>
+    <div className="modal-footer">
+      <button className="btn" onClick={()=>setModal(null)}>Cancel</button>
+      <button className="btn danger" onClick={()=>{setData(modal.obj);setModal(null);}}>Replace everything</button>
     </div>
   </div></div>;
 

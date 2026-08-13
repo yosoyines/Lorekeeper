@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, session, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, session, clipboard, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const AdmZip = require('adm-zip');
@@ -29,6 +29,7 @@ function createWindow() {
     frame: true, backgroundColor: '#0f0e13',
     webPreferences: {
       nodeIntegration: false, contextIsolation: true,
+      spellcheck: true,
       preload: path.join(__dirname, 'preload.js')
     },
     icon: path.join(__dirname, '../assets/icon.png'),
@@ -36,6 +37,43 @@ function createWindow() {
   });
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
   mainWindow.setMenuBarVisibility(false);
+
+  // Electron flags misspellings out of the box but ships no context menu, so right-clicking
+  // a red-underlined word did nothing. Build one: suggestions first, then dictionary and
+  // the usual edit actions.
+  mainWindow.webContents.on('context-menu', (event, params) => {
+    const template = [];
+
+    if (params.misspelledWord) {
+      for (const suggestion of params.dictionarySuggestions) {
+        template.push({
+          label: suggestion,
+          click: () => mainWindow.webContents.replaceMisspelling(suggestion)
+        });
+      }
+      if (params.dictionarySuggestions.length === 0) {
+        template.push({ label: 'No suggestions', enabled: false });
+      }
+      template.push({ type: 'separator' });
+      template.push({
+        label: 'Add to dictionary',
+        click: () => mainWindow.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord)
+      });
+      template.push({ type: 'separator' });
+    }
+
+    const canEdit = params.isEditable;
+    const hasSelection = params.selectionText && params.selectionText.trim().length > 0;
+    template.push({ label: 'Cut', role: 'cut', enabled: canEdit && hasSelection });
+    template.push({ label: 'Copy', role: 'copy', enabled: hasSelection });
+    template.push({ label: 'Paste', role: 'paste', enabled: canEdit });
+    if (canEdit) {
+      template.push({ type: 'separator' });
+      template.push({ label: 'Select all', role: 'selectAll' });
+    }
+
+    Menu.buildFromTemplate(template).popup({ window: mainWindow });
+  });
 
   // Autosave is debounced in the renderer, and a large data file takes real time to
   // stringify and write. Quitting used to kill both the pending timer and any in-flight
@@ -273,11 +311,18 @@ function readImageAsPath(filePath) {
 }
 
 // ── Import image (single, returns base64) ───────────────
-ipcMain.handle('import-image', async () => {
-  const { filePaths } = await dialog.showOpenDialog(mainWindow, {
+ipcMain.handle('import-image', async (event, opts) => {
+  const dialogOpts = {
     filters: [{ name: 'Images', extensions: IMAGE_EXTS }],
     properties: ['openFile']
-  });
+  };
+  // Open in the character's own companion folder when there is one — otherwise the picker
+  // starts wherever Windows last left it, which is rarely where the portraits live.
+  if (opts && opts.defaultPath) {
+    const abs = path.isAbsolute(opts.defaultPath) ? opts.defaultPath : path.join(DATA_DIR, opts.defaultPath);
+    if (fs.existsSync(abs)) dialogOpts.defaultPath = abs;
+  }
+  const { filePaths } = await dialog.showOpenDialog(mainWindow, dialogOpts);
   if (!filePaths || !filePaths[0]) return null;
   return { base64: readImageAsBase64(filePaths[0]), srcPath: filePaths[0] };
 });
@@ -288,7 +333,10 @@ ipcMain.handle('import-images', async (event, opts) => {
     filters: [{ name: 'Images', extensions: IMAGE_EXTS }],
     properties: ['openFile', 'multiSelections']
   };
-  if (opts && opts.defaultPath && fs.existsSync(opts.defaultPath)) dialogOpts.defaultPath = opts.defaultPath;
+  if (opts && opts.defaultPath) {
+    const abs2 = path.isAbsolute(opts.defaultPath) ? opts.defaultPath : path.join(DATA_DIR, opts.defaultPath);
+    if (fs.existsSync(abs2)) dialogOpts.defaultPath = abs2;
+  }
   const { filePaths } = await dialog.showOpenDialog(mainWindow, dialogOpts);
   if (!filePaths || filePaths.length === 0) return [];
   return filePaths.slice(0, 10).map(fp => ({

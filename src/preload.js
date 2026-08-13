@@ -10,7 +10,7 @@ contextBridge.exposeInMainWorld('lorekeeper', {
   saveImage: (opts) => ipcRenderer.invoke('save-image', opts),
   pasteImage: () => ipcRenderer.invoke('paste-image'),
   importFile: () => ipcRenderer.invoke('import-file'),
-  importImage: () => ipcRenderer.invoke('import-image'),
+  importImage: (opts) => ipcRenderer.invoke('import-image', opts),
   importImages: (opts) => ipcRenderer.invoke('import-images', opts),
   readImagePath: (relPath) => ipcRenderer.invoke('read-image-path', relPath),
   scanCompanions: () => ipcRenderer.invoke('scan-companions'),
