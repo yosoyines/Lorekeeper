@@ -31,4 +31,7 @@ contextBridge.exposeInMainWorld('lorekeeper', {
   restoreBackup: () => ipcRenderer.invoke('restore-backup'),
   restoreLastgood: () => ipcRenderer.invoke('restore-lastgood'),
   getLastgoodInfo: () => ipcRenderer.invoke('get-lastgood-info'),
+  syncToGit: () => ipcRenderer.invoke('sync-to-git'),
+  getSyncInfo: () => ipcRenderer.invoke('get-sync-info'),
+  openBackupFolder: () => ipcRenderer.invoke('open-backup-folder'),
 });

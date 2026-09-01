@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const AdmZip = require('adm-zip');
 const os = require('os');
+const { spawn } = require('child_process');
 
 // In production: data lives next to the exe (user chose location at install)
 // In dev: hardcoded to I:\Lorekeeper
@@ -12,11 +13,61 @@ const DATA_DIR = app.isPackaged
 const DATA_FILE = path.join(DATA_DIR, 'lorekeeper-data.json');
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
 
+// ── Git backup sync ──────────────────────────────────────
+// The backup repo is a SEPARATE folder from DATA_DIR, because DATA_DIR is
+// already the source repo's working tree and two repos cannot share one.
+// A sync script there mirrors text-only data in and pushes it.
+const BACKUP_DIR = 'I:\\LorekeeperBackup';
+const SYNC_SCRIPT = path.join(BACKUP_DIR, 'lorekeeper-sync.bat');
+const PRETTY_FILE = path.join(DATA_DIR, 'lorekeeper-data.pretty.json');
+
 // Ensure all standard data folders exist on startup
 ['', 'Companions', 'Lorebooks', 'Collections', 'Worlds', 'Personas', 'Templates', 'Notes'].forEach(sub => {
   const p = sub ? path.join(DATA_DIR, sub) : DATA_DIR;
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
 });
+
+// Writes a pretty-printed, key-sorted copy of the data file for git to diff.
+// saveData writes compact single-line JSON, which git treats as one giant line:
+// every commit would store a whole fresh copy instead of a small delta. Sorting
+// keys matters too — without it, key reordering alone shows as a full rewrite.
+// Not called on every autosave (stringifying tens of MB is too slow for that);
+// only on shutdown and on an explicit Sync Now.
+async function writePrettyData() {
+  try {
+    if (!fs.existsSync(DATA_FILE)) return { success: false, error: 'no data file' };
+    const raw = await fs.promises.readFile(DATA_FILE, 'utf-8');
+    const parsed = JSON.parse(raw);
+    const sortKeys = (v) => {
+      if (Array.isArray(v)) return v.map(sortKeys);
+      if (v && typeof v === 'object') {
+        const out = {};
+        for (const k of Object.keys(v).sort()) out[k] = sortKeys(v[k]);
+        return out;
+      }
+      return v;
+    };
+    const pretty = JSON.stringify(sortKeys(parsed), null, 2);
+    await fs.promises.writeFile(PRETTY_FILE, pretty, 'utf-8');
+    return { success: true, size: Buffer.byteLength(pretty, 'utf-8') };
+  } catch (e) {
+    console.error('writePrettyData:', e);
+    return { success: false, error: e.message };
+  }
+}
+
+// Fire-and-forget launch of the sync script. Detached and unref'd so a slow
+// git push can never hold the app open or delay quitting.
+function launchSyncDetached() {
+  try {
+    if (!fs.existsSync(SYNC_SCRIPT)) return false;
+    const child = spawn('cmd.exe', ['/c', SYNC_SCRIPT], {
+      cwd: BACKUP_DIR, detached: true, stdio: 'ignore', windowsHide: true
+    });
+    child.unref();
+    return true;
+  } catch (e) { console.error('launchSyncDetached:', e); return false; }
+}
 
 let mainWindow;
 let allowClose = false;
@@ -88,6 +139,11 @@ function createWindow() {
       settled = true;
       ipcMain.removeListener('flush-complete', finish);
       if (saveInFlight) { try { await saveInFlight; } catch (err) {} }
+      // Data is now final on disk, so this is the correct moment to refresh the
+      // pretty copy and hand off to the sync script. The spawn is detached, so
+      // quitting is not blocked on git.
+      try { await writePrettyData(); } catch (err) {}
+      launchSyncDetached();
       allowClose = true;
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
     };
@@ -284,7 +340,10 @@ ipcMain.handle('export-file', async (event, { defaultName, content, folder }) =>
   });
   if (!filePath) return false;
   fs.writeFileSync(filePath, content, 'utf-8');
-  return true;
+  // Return the chosen filename so the renderer can remember it. Deriving the export name
+  // from the item's current title meant renaming an item silently started exporting to a
+  // NEW file instead of updating the one already uploaded to Saucepan.
+  return { success: true, filePath: filePath, fileName: path.basename(filePath) };
 });
 
 // ── JSON import ──────────────────────────────────────────
@@ -637,6 +696,40 @@ ipcMain.handle('restore-lastgood', async () => {
     fs.writeFileSync(DATA_FILE, content, 'utf-8');
     return { success: true, data, size: fs.statSync(DATA_BACKUP_FILE).size };
   } catch(e) { return { success: false, error: e.message }; }
+});
+
+// ── Git backup sync ──────────────────────────────────────
+// Runs the sync script and waits for it, so the UI can report the real result.
+// The shutdown path uses launchSyncDetached() instead — there, waiting is wrong.
+ipcMain.handle('sync-to-git', async () => {
+  const pretty = await writePrettyData();
+  if (!pretty.success) return { success: false, error: 'Pretty-print failed: ' + pretty.error };
+  if (!fs.existsSync(SYNC_SCRIPT)) return { success: false, error: 'Sync script not found at ' + SYNC_SCRIPT };
+  return await new Promise((resolve) => {
+    let out = '';
+    const child = spawn('cmd.exe', ['/c', SYNC_SCRIPT], { cwd: BACKUP_DIR, windowsHide: true });
+    child.stdout.on('data', d => { out += d.toString(); });
+    child.stderr.on('data', d => { out += d.toString(); });
+    const timer = setTimeout(() => { try { child.kill(); } catch (e) {} resolve({ success: false, error: 'Sync timed out after 3 minutes', output: out }); }, 180000);
+    child.on('error', (e) => { clearTimeout(timer); resolve({ success: false, error: e.message }); });
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      resolve({ success: code === 0, code, output: out.trim(), prettySize: pretty.size });
+    });
+  });
+});
+
+ipcMain.handle('get-sync-info', async () => ({
+  backupDir: BACKUP_DIR,
+  scriptFound: fs.existsSync(SYNC_SCRIPT),
+  prettyExists: fs.existsSync(PRETTY_FILE),
+  prettyMtime: fs.existsSync(PRETTY_FILE) ? fs.statSync(PRETTY_FILE).mtime.toISOString() : null
+}));
+
+ipcMain.handle('open-backup-folder', async () => {
+  if (!fs.existsSync(BACKUP_DIR)) return false;
+  shell.openPath(BACKUP_DIR);
+  return true;
 });
 
 // ── Export backup ────────────────────────────────────────
