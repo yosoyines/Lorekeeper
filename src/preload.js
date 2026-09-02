@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('lorekeeper', {
   saveCollectionJson: (filename, data) => ipcRenderer.invoke('save-collection-json', { filename, data }),
   saveNotesFile: (filename, content) => ipcRenderer.invoke('save-notes-file', { filename, content }),
   saveTemplateFile: (filename, data) => ipcRenderer.invoke('save-template-file', { filename, data }),
+  savePersonaFile: (filename, data) => ipcRenderer.invoke('save-persona-file', { filename, data }),
   copyImageToFolder: (srcPath, destFolder, filename) => ipcRenderer.invoke('copy-image-to-folder', { srcPath, destFolder, filename }),
   writeImageFromBase64: (opts) => ipcRenderer.invoke('write-image-from-base64', opts),
   exportBackup: (opts) => ipcRenderer.invoke('export-backup', opts),

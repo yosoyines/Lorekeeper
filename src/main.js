@@ -658,6 +658,22 @@ ipcMain.handle('save-template-file', async (event, { filename, data: templateDat
 });
 
 
+// Standalone persona backup — same reasoning as Notes and Templates: personas
+// only ever lived inside the main data file with no independent file of their own.
+// The Personas\ folder existed but nothing ever wrote to it automatically; the .md
+// files in there were manual "Export MD" saves, which are formatted documents and
+// cannot be reimported. This writes real JSON, so a persona is actually recoverable.
+ipcMain.handle('save-persona-file', async (event, { filename, data: personaData }) => {
+  try {
+    const dir = path.join(DATA_DIR, 'Personas');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const safeName = filename.replace(/[\\/:*?"<>|]/g, '_');
+    const filePath = path.join(dir, safeName.endsWith('.json') ? safeName : safeName + '.json');
+    await fs.promises.writeFile(filePath, JSON.stringify(personaData, null, 2), 'utf-8');
+    return true;
+  } catch (e) { console.error('save-persona-file:', e); return false; }
+});
+
 // ── Helpers for backup ───────────────────────────────────
 function addDirToZip(zip, dirPath, zipPrefix) {
   if (!fs.existsSync(dirPath)) return;

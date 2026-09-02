@@ -352,6 +352,21 @@
   .md-preview blockquote { border-left: 3px solid var(--accent2); padding: 4px 10px; margin: 8px 0; color: var(--text2); background: var(--bg4); border-radius: 0 var(--r) var(--r) 0; }
   .md-toggle { display: flex; justify-content: flex-end; margin-bottom: 6px; }
   .md-toggle button { font-size: 11px; padding: 3px 10px; }
+.gal-chip{font-size:7px;font-weight:700;letter-spacing:.06em;padding:1px 4px;border-radius:3px;color:#fff}
+.gal-chip-spicy{background:rgba(248,113,113,.9)}
+.gal-chip-gal{background:rgba(96,165,250,.9)}
+.help-p{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:8px}
+.help-b{color:var(--text)}
+.help-code{background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:12px;font-family:monospace;color:var(--accent)}
+.help-warn{margin-top:8px;padding:10px 12px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:var(--r);font-size:12px;color:var(--amber);line-height:1.7}
+.help-warn-h{display:block;margin-bottom:4px}
+.help-note{margin-top:8px;font-size:12px;color:var(--text3);line-height:1.8}
+.help-note-h{color:var(--text);display:block;margin-bottom:4px}
+.pflag-row{display:flex;gap:4px;margin-top:6px}
+.pflag{flex:1;min-width:0;padding:3px 4px;font-size:9px;line-height:1.2;font-weight:600;letter-spacing:.02em;text-align:center;border-radius:var(--r);cursor:pointer;user-select:none;background:var(--bg3);border:1px solid var(--border);color:var(--text3);transition:all .12s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pflag:hover{color:var(--text2);border-color:var(--text3)}
+.pflag-spicy-on{background:rgba(248,113,113,.15);border-color:#f87171;color:#f87171}
+.pflag-gal-on{background:rgba(96,165,250,.15);border-color:#60a5fa;color:#60a5fa}
 </style>
 </head>
 <body>
@@ -616,6 +631,669 @@ const LITERARY_ARCHETYPES = [
 // Saucepan voice catalogue (LABS). Local-only reference — the platform does not
 // export a voice field, so this is tracked in Lorekeeper and stripped on export.
 const SAUCEPAN_VOICES = [{n:"Passion Flower",d:"A sultry woman whispering in your ear. Suitable for intimate conversations at close quarters."},{n:"Saltbush",d:"The parentified eldest daughter who is a hair's breath from quitting."},{n:"Narrowleaf Milkweed",d:"Preppy, high, excited voice of a young woman who has not been put down by life's realities. Yet."},{n:"Sycamore",d:"The raspy and low voice that accompanies a smouldering gaze."},{n:"Bluestar",d:"A gentle voice ready to walk you down from a panic attack, or another situationship."},{n:"Camphor Tree",d:"A lightly-accented youth who can be a rascal and a devoted lover, whenever you please."},{n:"Redosier Dogwood",d:"The warm voice of a friendly rogue in an unfamiliar place."},{n:"Musk Mallow",d:"A calm, smooth voice in a British book store. Suitable as a narrator."},{n:"Fennel",d:"An exhausted man forced to work a dead end job, here to answer your endless questions."},{n:"Lodgepole Pine",d:"A young man with the signature carefree attitude of youth. Suitable for bratty, sarcastic, or immature characters."},{n:"Foeniculum",d:"An exhausted woman forced to work a dead end job, here to answer your endless questions."},{n:"Meadow Clary",d:"A reserved woman who speaks with maximum vocal fry. Suitable for non-human fantasy characters."},{n:"Blue Bugle",d:"A serious man who leads the charge in high-stakes projects."},{n:"Chive",d:"A man who was born into power and demands perfection from his underlings."},{n:"Grewia",d:"The assertive voice of the smartest person in the room. Suitable as a narrator."},{n:"Purple Foxglove",d:"A higher-pitched man with light German accent. Sensual and slow, and gets throaty for emphasis."},{n:"Yarrow",d:"A man of the Wild West who watches in case strangers bring trouble to town."},{n:"Lyreleaf",d:"A modern woman who tolerates no nonsense and no amateurs."},{n:"Kiaat",d:"A hypnotic storyteller retelling an enchanting tale around a fire. Suitable for folkloric characters."},{n:"Bearberry",d:"The internal monologue that runs as a snide background sound to all things annoying."},{n:"Holm Oak",d:"An attentive lover here to delight you all day and all night."},{n:"Blackberry",d:"A gruff man in his fifties who is used to toil in the unforgiving cold of his homeland."},{n:"Goat Willow",d:"A man with rough edges you do not want to piss off."},{n:"Dahoon",d:"The patient and friendly man who is always ready to cook up a storm for you."},{n:"Catalpa",d:"The friendly new addition to town with a background few people knows."},{n:"Valley Oak",d:"The distinguished voice of an honourable man placed in a position of leadership."},{n:"Sessile Oak",d:"This man loves and dotes on his family with gifts and good-natured ribbing."},{n:"Yew",d:"A documentary narrator with an even cadence and a calming tone of voice."},{n:"Beech",d:"A happy man who is enjoys telling urban legends to his coworkers and the occasional visitors."},{n:"Nopal",d:"An amused lover who loves your smile."},{n:"Marula",d:"A hopeful youth ready to set out towards new adventures."},{n:"Sawara Cypress",d:"A stern elder who speaks with weight in every word."},{n:"Scabious",d:"A weary man who has seen too much and drinks whiskey like water."}];
+
+
+// Help page content. Lives in the plain-JS block, not the Babel block: this is
+// ~24 KB of static prose and compiling it at runtime bought nothing. Past ~500 KB
+// Babel deoptimises and click handlers silently stop working app-wide (session 23),
+// so prose belongs on this side of the line. Rendered by HelpPage.
+// Inline markers: **bold**, `code`, _italic_. Item types: p, tip, step, warn, note.
+const HELP_SECTIONS = [
+ {
+  "title": "Dashboard",
+  "icon": "ti-layout-dashboard",
+  "items": [
+   {
+    "t": "p",
+    "x": "The dashboard is your daily workflow hub."
+   },
+   {
+    "t": "p",
+    "x": "**Calendar** — Shows scheduled characters (purple chips) and posted dates (green ✓). Click any day to expand it and see what is scheduled. Click a day to open the scheduler and add characters."
+   },
+   {
+    "t": "p",
+    "x": "**Today Banner** — Any character marked ready whose scheduled date has arrived or already passed, with a Mark Posted button. It keys off the scheduled date, not the day you set the status, so scheduling a month ahead and marking them later behaves the same. Marking posted stamps the _scheduled_ date, not the day you clicked, so a late-marked character still lands on the right calendar day."
+   },
+   {
+    "t": "p",
+    "x": "**Upcoming** — Next 5 scheduled characters with their dates and readiness status."
+   },
+   {
+    "t": "p",
+    "x": "**Release Cycle** — A rotating world queue. Set the order in which you cycle through worlds. The next world up is shown here."
+   },
+   {
+    "t": "p",
+    "x": "**Site Checklist** — Characters, lorebooks, and collections edited since last export. Clear an item by exporting it and uploading it to the site."
+   },
+   {
+    "t": "p",
+    "x": "**Lorekeeper Checklist** — Pre-export validation for public items. Flags missing fields, missing portrait UUIDs, etc."
+   },
+   {
+    "t": "p",
+    "x": "**Drafts in Progress** — All draft characters with a visual indicator for missing required fields."
+   },
+   {
+    "t": "tip",
+    "x": "Required for export: name, display name, short description, full description, card, 5+ tags, portrait, portrait UUID, portrait slots, scenarios."
+   }
+  ]
+ },
+ {
+  "title": "Characters",
+  "icon": "ti-users",
+  "items": [
+   {
+    "t": "p",
+    "x": "Each character has 11 tabs:"
+   },
+   {
+    "t": "p",
+    "x": "**Identity** — Name, display name, short description (max 140 chars), world, tags (max 25; content warning tags don't count), fandom tags (max 3)."
+   },
+   {
+    "t": "p",
+    "x": "**Full Description** — The long-form public description shown on the character's site profile. Separate from the Character Card, which the model sees but readers do not."
+   },
+   {
+    "t": "p",
+    "x": "**Character Card** — The system prompt. Supports markdown. Use the macro reference panel for Saucepan macros like {{user}} and {{char}}."
+   },
+   {
+    "t": "p",
+    "x": "**Formatting** — Formatting instructions, advanced prompt, and example dialogue."
+   },
+   {
+    "t": "p",
+    "x": "**Scenarios** — Up to 7500 characters. Drag the grip handle to reorder scenarios."
+   },
+   {
+    "t": "p",
+    "x": "**Main portrait vs portrait slots.** The large image on the left is the character's main picture. It does not have to be one of the portrait slots — Set Portrait can import any image. Lorekeeper never reassigns it on its own; the only automatic change is following a file rename."
+   },
+   {
+    "t": "p",
+    "x": "A portrait slot named exactly `profile_pic` mirrors the Profile Pic UUID from the site. That copying is one-way: the Profile Pic field is the source and the slot follows it, so editing the slot's own UUID will not change the profile pic."
+   },
+   {
+    "t": "p",
+    "x": "**Portraits** — Up to 10 portrait slots. Each needs a platform Image ID (UUID). Drag to reorder portraits."
+   },
+   {
+    "t": "p",
+    "x": "**Lorebooks** — Link this character to lorebooks. Linked lorebooks are what the Assistant reads for world context."
+   },
+   {
+    "t": "p",
+    "x": "**Collections** — Which collections this character belongs to. A character can be in collections across several worlds."
+   },
+   {
+    "t": "p",
+    "x": "**Schedule** — Set status (draft / ready / posted), schedule dates, and posted dates. Setting status to Posted auto-stamps today as the posted date."
+   },
+   {
+    "t": "p",
+    "x": "**Lorebook Entry** — If a lorebook template is set up for the world, fill in the character's entry and save it directly to the world lorebook."
+   },
+   {
+    "t": "p",
+    "x": "**Settings** — Access level, temperature, spicy flags, companion folder (for auto-save). Also contains **Update from JSON**, **Export JSON**, and **Export MD**."
+   },
+   {
+    "t": "tip",
+    "x": "Export JSON strips all app-only fields automatically. Images export as UUID references only — make sure portrait UUIDs are set first."
+   }
+  ]
+ },
+ {
+  "title": "Worlds",
+  "icon": "ti-world",
+  "items": [
+   {
+    "t": "p",
+    "x": "Each world groups characters, lorebooks, collections, and gallery images together."
+   },
+   {
+    "t": "p",
+    "x": "**Characters / Lorebooks / Collections tabs** — Browse and manage content in this world. Characters from other worlds that belong to a collection in this world also appear here."
+   },
+   {
+    "t": "p",
+    "x": "**Gallery tab** — All images associated with this world."
+   },
+   {
+    "t": "p",
+    "x": "**World Info tab** — Edit world name, description, tags, banner image, notes, plot archetypes (for the Plot tool), and lorebook templates."
+   },
+   {
+    "t": "p",
+    "x": "**Export ZIP** — The Export ZIP button in the topbar packages all posted characters + public lorebooks + public collections for this world into a dated zip file, stripped of app-only fields and ready to upload. Stamps site_last_synced_at on everything exported."
+   },
+   {
+    "t": "tip",
+    "x": "Drag the grip handle (⠿) next to a world in the sidebar to reorder worlds. The order is saved and used throughout the app."
+   }
+  ]
+ },
+ {
+  "title": "Lorebooks",
+  "icon": "ti-book",
+  "items": [
+   {
+    "t": "p",
+    "x": "Lorebooks hold world lore as chapters. Each chapter is a titled text entry."
+   },
+   {
+    "t": "p",
+    "x": "**Chapters tab** — Add, reorder, and edit chapters."
+   },
+   {
+    "t": "p",
+    "x": "**Settings tab** — Access level, definition protection, image ID, tags, and auto-save filename."
+   },
+   {
+    "t": "p",
+    "x": "**Export tab** — Export as platform-ready JSON or as a Markdown document (all chapters as ## headings)."
+   },
+   {
+    "t": "p",
+    "x": "**Access level** — Set to Public when ready to upload. Private lorebooks are excluded from the Site Checklist and world Export ZIP."
+   },
+   {
+    "t": "p",
+    "x": "**Definition protection** — Copy Protection is recommended. Avoid Open."
+   },
+   {
+    "t": "p",
+    "x": "**Auto-save filename** — Set a filename (e.g. `MyLorebook.json`) and Lorekeeper auto-saves the lorebook to `Lorebooks\\` on every edit."
+   },
+   {
+    "t": "tip",
+    "x": "Standalone lorebooks (no world) are accessible from the Lorebooks page in the sidebar."
+   }
+  ]
+ },
+ {
+  "title": "Collections",
+  "icon": "ti-folders",
+  "items": [
+   {
+    "t": "p",
+    "x": "Collections group characters together on the site."
+   },
+   {
+    "t": "p",
+    "x": "**Edit tab** — Name, description, tags, world, auto-save filename, and character picker."
+   },
+   {
+    "t": "p",
+    "x": "**Export tab** — Export as platform-ready JSON or as a Markdown document (name, description, character list, tags)."
+   },
+   {
+    "t": "p",
+    "x": "**Character picker** — Add or remove characters from the collection. Characters from any world can be added."
+   },
+   {
+    "t": "p",
+    "x": "**Access level** — Set to Public to include the collection in world Export ZIPs."
+   },
+   {
+    "t": "tip",
+    "x": "A character can belong to multiple collections across different worlds — this is intentional. Collections are the mechanism for cross-world grouping."
+   }
+  ]
+ },
+ {
+  "title": "Personas",
+  "icon": "ti-masks-theater",
+  "items": [
+   {
+    "t": "p",
+    "x": "Personas are your player characters — independent of worlds, used across roleplay."
+   },
+   {
+    "t": "p",
+    "x": "Each persona has a name, pronouns, description, portrait, and an optional linked lorebook."
+   },
+   {
+    "t": "p",
+    "x": "The **Export MD** button in the topbar exports a markdown sheet with name, pronouns, description, and linked lorebook name."
+   }
+  ]
+ },
+ {
+  "title": "Templates (character creation)",
+  "icon": "ti-template",
+  "items": [
+   {
+    "t": "p",
+    "x": "Character templates pre-fill fields when creating a new character."
+   },
+   {
+    "t": "p",
+    "x": "Global templates are available everywhere. World templates only appear when creating a character in that world."
+   },
+   {
+    "t": "p",
+    "x": "Supported fields: display name format, short/full description, card, formatting, advanced prompt, tags, fandom tags, access level, spicy flags, temperature, and more."
+   },
+   {
+    "t": "p",
+    "x": "The **Export MD** button in the template editor exports a reference sheet with all non-empty fields."
+   },
+   {
+    "t": "tip",
+    "x": "Use {{name}} in the Display Name Format field — it gets replaced with the character's actual name on creation."
+   }
+  ]
+ },
+ {
+  "title": "Lorebook Templates (per-world)",
+  "icon": "ti-template",
+  "items": [
+   {
+    "t": "p",
+    "x": "Lorebook templates let you define a structured format for character entries in a world lorebook — e.g. a hockey player profile for all team members."
+   },
+   {
+    "t": "step",
+    "n": 1,
+    "x": "Go to the world → World Info tab → Lorebook Templates section."
+   },
+   {
+    "t": "step",
+    "n": 2,
+    "x": "Click New template. Give it a name, pick the target lorebook, set a chapter title template (e.g. CHARACTER NAME | POSITION | ROLE), and paste the template text."
+   },
+   {
+    "t": "step",
+    "n": 3,
+    "x": "Use {{CHARACTER NAME}} for the character's name in uppercase, and {{CHAR}} for normal case."
+   },
+   {
+    "t": "step",
+    "n": 4,
+    "x": "Open any character in that world → Lorebook Entry tab. The template appears pre-filled with their name."
+   },
+   {
+    "t": "step",
+    "n": 5,
+    "x": "Edit the chapter title and fill in the template body, then click Save to Lorebook."
+   },
+   {
+    "t": "tip",
+    "x": "Saving updates the existing chapter if one already exists for that character (matched by character ID, not title)."
+   }
+  ]
+ },
+ {
+  "title": "Relationship Map",
+  "icon": "ti-circles-relation",
+  "items": [
+   {
+    "t": "p",
+    "x": "The Map tab in the right panel (expand with the toggle button in the topbar) shows a visual relationship map for a world."
+   },
+   {
+    "t": "p",
+    "x": "**Nodes** — Each character in the world appears as a portrait circle. Drag nodes to reposition them. The layout resets when you switch worlds."
+   },
+   {
+    "t": "p",
+    "x": "**Drawing connections** — Click **+ connect** under a character, then click another character. A prompt asks for a relationship label (e.g. rivals, lovers, siblings)."
+   },
+   {
+    "t": "p",
+    "x": "**Editing connections** — Click a line or its label to open the edit popup at the bottom of the panel. Drag the popup by the ⠿ handle to move it out of the way. Edit the label or delete the connection."
+   },
+   {
+    "t": "p",
+    "x": "**Reset layout** — Re-runs the auto-layout grid if nodes drift off-screen."
+   },
+   {
+    "t": "tip",
+    "x": "Characters that belong to this world via a collection (not just world_id) also appear — cross-world characters like shared cast members show up correctly."
+   }
+  ]
+ },
+ {
+  "title": "Tools panel",
+  "icon": "ti-tool",
+  "items": [
+   {
+    "t": "p",
+    "x": "Open the Tools tab in the right panel."
+   },
+   {
+    "t": "p",
+    "x": "**Height** — Convert cm ↔ ft/in. Click result to copy."
+   },
+   {
+    "t": "p",
+    "x": "**Names** — Generate names by gender. International pool."
+   },
+   {
+    "t": "p",
+    "x": "**Physicals** — Roll eyes, hair, and build separately or all at once."
+   },
+   {
+    "t": "p",
+    "x": "**Nationality** — Filter by region. Shows language and currency."
+   },
+   {
+    "t": "p",
+    "x": "**Color** — HSL sliders + 6 harmony modes. Click swatches to copy hex."
+   },
+   {
+    "t": "p",
+    "x": "**Text Diff** — Paste two versions of a text to highlight what changed."
+   },
+   {
+    "t": "p",
+    "x": "**Personality** — Roll Literary Archetype, MBTI, Jungian, and Attachment Style."
+   },
+   {
+    "t": "p",
+    "x": "**Plot** — Roll from 100 global archetypes, or filter to world-specific ones added in World Info."
+   },
+   {
+    "t": "p",
+    "x": "**Esper Powers** — Rolls an ability type, rank (F through S), drawback, and codename for an esper character."
+   },
+   {
+    "t": "p",
+    "x": "**Hockey** — Rolls a position, role description, handedness, and character trait for a hockey player."
+   },
+   {
+    "t": "p",
+    "x": "**Swim** — Rolls a stroke, event distance, stroke description, and swimmer archetype."
+   },
+   {
+    "t": "p",
+    "x": "**Western Zodiac** — Rolls a sun sign with element, modality, traits, shadow side, and vibe."
+   },
+   {
+    "t": "p",
+    "x": "**Chinese Zodiac** — Rolls a sign with element, reference years, traits, shadow side, and vibe."
+   },
+   {
+    "t": "p",
+    "x": "**Img UUID** — Saucepan offers three copy formats for every image (markdown, an img tag, a CSS background rule) and the UUID is usually the only part you want. Paste any of them — or all three at once — and this pulls the UUID out. Results are deduplicated, so pasting all three formats of the same image gives one UUID, not three."
+   },
+   {
+    "t": "p",
+    "x": "**Image Prompt Generator** — Generates an image generation prompt for the current character using whichever AI provider is set in Settings, including a local model via LM Studio. Art style and mood dropdowns; optional extra notes; copy button."
+   },
+   {
+    "t": "p",
+    "x": "Content warnings and POV/format tags are stripped before the prompt is built — they describe what the story contains, not what the picture looks like, and sending them skews the composition. Tags still export to Saucepan normally. The character's name is also never sent, since image models cannot render a name and a surname can bias the result."
+   }
+  ]
+ },
+ {
+  "title": "Image Tools",
+  "icon": "ti-photo",
+  "items": [
+   {
+    "t": "p",
+    "x": "Found in the right panel → Tools tab → Image Tools section."
+   },
+   {
+    "t": "p",
+    "x": "**Format Converter** — Convert images between PNG, JPEG, and WebP. Drag or paste an image, pick a format, download the result."
+   },
+   {
+    "t": "p",
+    "x": "**Paste &amp; Save** — Paste a screenshot or image from clipboard and save it directly to a character's portrait folder. Useful for quickly capturing site images."
+   },
+   {
+    "t": "p",
+    "x": "**Crop** — Crop any image to an exact pixel region. Drag to define the crop area, adjust handles, download the result."
+   },
+   {
+    "t": "p",
+    "x": "**Image Prompt Generator** — See Tools panel section above."
+   }
+  ]
+ },
+ {
+  "title": "Editing conveniences",
+  "icon": "ti-keyboard",
+  "items": [
+   {
+    "t": "p",
+    "x": "**Ctrl+F — find in long text.** On a character, searches Full Description, Character Card, Formatting, and every intro. On a lorebook, searches the short description and every chapter. On a collection, the definition and lorebook display. Matches appear as buttons showing the count per field; clicking one jumps to that tab. Esc closes."
+   },
+   {
+    "t": "tip",
+    "x": "This is a Lorekeeper search, not the browser's. It has to be, because the browser's find cannot see text inside editable fields — which is where all of this content lives."
+   },
+   {
+    "t": "p",
+    "x": "**Spell check** — Misspellings are underlined in every text field. Right-click one for suggestions, or to add the word to your dictionary. The same menu carries cut, copy, and paste."
+   }
+  ]
+ },
+ {
+  "title": "Import / Export",
+  "icon": "ti-file-import",
+  "items": [
+   {
+    "t": "p",
+    "x": "The Import/Export page has three sections: **Backup**, **Restore**, and **Import**."
+   },
+   {
+    "t": "p",
+    "x": "**Backup** — Export a full ZIP of everything (data + all images), or export a single world as a ZIP. Store backups somewhere safe outside the Lorekeeper folder."
+   },
+   {
+    "t": "p",
+    "x": "**Restore** — Two options: **Import &amp; merge from backup** reads a ZIP and shows a preview of adds, updates, and conflicts — nothing is deleted, local-only data is preserved, and you choose Keep Local or Take Backup per conflict. **Restore from last good backup** is the emergency option: replaces all data with the auto-saved lastgood file (no zip needed)."
+   },
+   {
+    "t": "p",
+    "x": "**Import (single items or batch)** — Paste a JSON directly, or click Scan Folders to scan `Companions\\`, `Lorebooks\\`, and `Collections\\`. Each item shows a badge: new / update ↓ / local newer ↑ / up to date. Assign worlds and click Import."
+   },
+   {
+    "t": "tip",
+    "x": "Items marked 'local newer' are skipped by default. Click 'Import anyway' on that item, or check 'Force import all', to override. Images alongside JSONs are automatically linked as image_relpath."
+   },
+   {
+    "t": "p",
+    "x": "If the JSON you pick turns out to be a full Lorekeeper backup rather than a single item, Lorekeeper now stops and says so, showing what the file holds against what you currently have. Confirming replaces everything — use Restore → Import &amp; merge from backup instead if you only wanted part of it."
+   }
+  ]
+ },
+ {
+  "title": "Auto-save to disk",
+  "icon": "ti-device-floppy",
+  "items": [
+   {
+    "t": "p",
+    "x": "Characters, lorebooks, and collections can auto-save to `I:\\Lorekeeper\\` on every edit."
+   },
+   {
+    "t": "p",
+    "x": "Set a **Folder Name** on a character (Settings tab) and it saves to `Companions\\FolderName\\companion.json`."
+   },
+   {
+    "t": "p",
+    "x": "Set a **Lorebook Filename** on a lorebook and it saves to `Lorebooks\filename.json`."
+   },
+   {
+    "t": "p",
+    "x": "Set a **Collections Filename** on a collection and it saves to `Collections\filename.json`."
+   },
+   {
+    "t": "p",
+    "x": "New items get a filename auto-generated from their name. Clear the field to disable auto-save."
+   },
+   {
+    "t": "tip",
+    "x": "Auto-saved files have app-only fields stripped — they are clean platform-format JSONs ready to upload."
+   }
+  ]
+ },
+ {
+  "title": "Image Storage Audit",
+  "icon": "ti-photo-scan",
+  "items": [
+   {
+    "t": "p",
+    "x": "Keeps images stored as local files instead of base64 blobs in the data JSON."
+   },
+   {
+    "t": "p",
+    "x": "**Rescan images** — Scans folders for image files and links them to existing items. Use after dropping images into `Lorebooks\\` or `Collections\\` manually."
+   },
+   {
+    "t": "p",
+    "x": "**Audit base64** — Sorts every image into four states: already using a local file; has a path but the file is missing; still base64 with no file yet; and has a working file but is _also_ still carrying leftover base64 in the data."
+   },
+   {
+    "t": "p",
+    "x": "**Clear leftover base64** — For that last group. No file is written, since the image is already on disk — this only drops the redundant copy out of the JSON. This is usually where the bulk of a large data file goes."
+   },
+   {
+    "t": "p",
+    "x": "**Link / Write** — For items with no file yet. Where a matching image is already sitting in the folder, the button offers to link it rather than write a duplicate; the button text says which it will do."
+   }
+  ]
+ },
+ {
+  "title": "Data Safety",
+  "icon": "ti-shield-check",
+  "items": [
+   {
+    "t": "p",
+    "x": "Lorekeeper protects your data with several layers:"
+   },
+   {
+    "t": "p",
+    "x": "**Auto-save** — Data is written after every change (600ms debounce). A load guard prevents saving until data is fully loaded."
+   },
+   {
+    "t": "p",
+    "x": "**Shrink-refuse** — If a save would shrink the data file beyond a safety threshold, it is refused. Prevents runaway autosaves from overwriting real data with an empty shape."
+   },
+   {
+    "t": "p",
+    "x": "**Last-good backup** — On every successful save, the previous file is copied to `lorekeeper-data.lastgood.json`. Use Restore → Restore from last good backup to recover it without a zip."
+   },
+   {
+    "t": "p",
+    "x": "**Flush on close** — Closing the window used to kill a pending save mid-write. Lorekeeper now holds the window open until the last change has actually reached disk."
+   },
+   {
+    "t": "p",
+    "x": "**Pre-shrink snapshot** — Operations that legitimately shrink the data file a lot, such as clearing base64 images, copy the old file to `lorekeeper-data.preshrink-{date}.json` first. These are safe to delete once you have confirmed everything looks right; nothing removes them automatically."
+   },
+   {
+    "t": "p",
+    "x": "**Export ZIP (world topbar)** — Platform-ready zip for upload to Saucepan. Not the same as a backup — only includes posted characters, public lorebooks, and public collections."
+   },
+   {
+    "t": "tip",
+    "x": "Do a full backup before any restore. Full backup zips are the safest recovery option; the lastgood file is for quick recovery from recent corruption."
+   }
+  ]
+ },
+ {
+  "title": "Settings",
+  "icon": "ti-settings",
+  "items": [
+   {
+    "t": "p",
+    "x": "**Font size** — Changes the base font size across the whole app immediately."
+   },
+   {
+    "t": "p",
+    "x": "**AI provider &amp; API key** — Used by the Assistant and the Image Prompt Generator. Choose Anthropic, OpenAI, Google, OpenRouter, or LM Studio, then paste the matching key. LM Studio runs locally and needs no key — start its server, load one or more models, and pick from the Model dropdown, which lists whatever is currently loaded. Loading several means switching between them without leaving Lorekeeper."
+   },
+   {
+    "t": "p",
+    "x": "**Autosave debounce** — How long to wait after a keystroke before saving. Default 600ms."
+   },
+   {
+    "t": "p",
+    "x": "**Data file** — Shows where data is stored. Click to open the folder."
+   },
+   {
+    "t": "p",
+    "x": "**Theme and colorblind mode** — Settings → Appearance. Pick an accent color to generate a full dark/light theme. Colorblind mode adjusts red/green or blue/yellow pairs: Red-Green mode (deuteranopia/protanopia) swaps red→orange and green→blue; Blue-Yellow mode (tritanopia) swaps amber→red-orange and teal→pink."
+   }
+  ]
+ },
+ {
+  "title": "AI assistant",
+  "icon": "ti-sparkles",
+  "items": [
+   {
+    "t": "p",
+    "x": "The Assistant tab in the right panel gives you an AI writing assistant that knows your world context. Powered by whichever provider you choose in Settings: Anthropic, OpenAI, Google, OpenRouter, or a local model via LM Studio."
+   },
+   {
+    "t": "p",
+    "x": "**What it knows** depends on the context scope selector at the top of the Assistant panel:"
+   },
+   {
+    "t": "p",
+    "x": "**Character** — only the character you are editing. **World** — the world, its characters and collections, and lorebook summaries without the chapter text. **Full** — everything, including full chapter text."
+   },
+   {
+    "t": "p",
+    "x": "Chapter text is what overruns a local model's context window: a mature world runs to roughly 27k tokens against the ~8k many local models allow. On a local model, start at Character or World."
+   },
+   {
+    "t": "p",
+    "x": "**Chat resets** when you switch to a different character or world. Copy anything useful before switching."
+   },
+   {
+    "t": "tip",
+    "x": "Click any suggested prompt on the empty chat screen to pre-fill it. Or just type — 'write a short description for this character', 'suggest scenarios based on the card', etc."
+   },
+   {
+    "t": "warn",
+    "h": "⚠ Cloud providers need an API key — separate from any chat subscription",
+    "x": "Each provider's consumer chat app (claude.ai, chatgpt.com, gemini.google.com) is billed separately from its developer API. You need an API key with credits, not just a subscription. LM Studio is the exception: it runs on your own machine, needs no key, and costs nothing per message.",
+    "s": []
+   },
+   {
+    "t": "note",
+    "h": "Setup (Anthropic example):",
+    "x": "",
+    "s": [
+     {
+      "n": 1,
+      "x": "Go to console.anthropic.com and create an account (separate from claude.ai)."
+     },
+     {
+      "n": 2,
+      "x": "Add credits — minimum $5. There is no free tier."
+     },
+     {
+      "n": 3,
+      "x": "Go to API Keys → Create Key. Copy the key (starts with sk-ant-)."
+     },
+     {
+      "n": 4,
+      "x": "In Lorekeeper → Settings → AI Provider → select Anthropic → paste the key → Save."
+     }
+    ]
+   },
+   {
+    "t": "p",
+    "x": "Other providers follow the same pattern: create an account at the provider's developer console (platform.openai.com, aistudio.google.com, or openrouter.ai), add credits, generate a key, and paste it in the matching Settings field."
+   },
+   {
+    "t": "p",
+    "x": "**Cost estimate:** roughly $0.05–0.15 per conversation with a capable cloud model, depending on world size. Lighter models (Haiku, GPT-4o mini, Gemini Flash) are cheaper but less capable. A local model through LM Studio costs nothing per message, at the price of a much smaller context window."
+   }
+  ]
+ }
+];
 const SAUCEPAN_TAGS = {"dead_dove": {"c": "Content Warnings", "d": "Content warning: Tags are here for a reason; active content may be disturbing or distressing"}, "noncon_dubcon": {"c": "Content Warnings", "d": "Content warning: Non-consensual or dubiously consensual elements"}, "abuse": {"c": "Content Warnings", "d": "Content warning: Physical, emotional, or psychological mistreatment"}, "blackmail": {"c": "Content Warnings", "d": "Content warning: Coercive leverage through threats or exposure"}, "slur_usage": {"c": "Content Warnings", "d": "Content warning: Usage of derogatory slurs or offensive language"}, "self_harm_suicide": {"c": "Content Warnings", "d": "Content warning: Self-harm, suicidal ideation, or suicide attempts"}, "violence": {"c": "Content Warnings", "d": "Content warning: Material contains explicit violent themes"}, "gore": {"c": "Content Warnings", "d": "Content warning: Graphic depictions of blood, injuries, and viscera"}, "drugs_addiction": {"c": "Content Warnings", "d": "Content warning: Substance use and dependency"}, "incest_stepcest": {"c": "Content Warnings", "d": "Content warning: Incestuous relationships. Blood incest is not allowed on Saucepan."}, "vore": {"c": "Content Warnings", "d": "Content warning: Characters being consumed, swallowed whole, or absorbed"}, "cannibalism": {"c": "Content Warnings", "d": "Content warning: Characters consuming or eating other characters"}, "feral": {"c": "Content Warnings", "d": "Content warning: Content with sentient animals (real-life animals with human-level intelligence, not fictional species)"}, "trauma": {"c": "Content Warnings", "d": "Content warning: Depictions of traumatic experiences or their aftermath"}, "terminal_illness": {"c": "Content Warnings", "d": "Content warning: Depictions of terminal illness, disease, or end-of-life conditions"}, "user_harm": {"c": "Content Warnings", "d": "Content warning: Scenarios where the user character may be harmed"}, "death": {"c": "Content Warnings", "d": "Content warning: Dying, loss of life, or grief"}, "body_horror": {"c": "Content Warnings", "d": "Content warning: Graphic depictions of monstrous or grotesque bodily transformation"}, "eating_disorder": {"c": "Content Warnings", "d": "Content warning: Anorexia, bulimia, or other harmful relationships with food"}, "amputation": {"c": "Content Warnings", "d": "Content warning: Non-consensual amputations or loss of limbs"}, "miscarriage": {"c": "Content Warnings", "d": "Content warning: Loss of a child or pregnancy"}, "male": {"c": "Character Identity", "d": "Characters with a focus on a male identity and experience."}, "female": {"c": "Character Identity", "d": "Characters with a focus on a female identity and experience."}, "non_binary": {"c": "Character Identity", "d": "Companions who identify outside the traditional binary"}, "trans": {"c": "Character Identity", "d": "Companions whose identity differs from their assigned gender"}, "intersex": {"c": "Character Identity", "d": "Companions with variations in sex characteristics"}, "altersex": {"c": "Species/Being Types", "d": "Companions with alternative or non-standard sex characteristics"}, "masc": {"c": "Character Identity", "d": "Masculine presenting person, regardless of gender identity"}, "fem": {"c": "Character Identity", "d": "Feminine presenting person, regardless of gender identity"}, "andro": {"c": "Character Identity", "d": "Androgynous presenting person, regardless of gender identity"}, "genderfluid": {"c": "Character Identity", "d": "Characters whose gender identity changes"}, "gender_norms": {"c": "Character Identity", "d": "Characters who explore, challenge, or engage with gender as a social construct"}, "multiple_genders": {"c": "Character Identity", "d": "Cast contains more than one gender, great for ensemble bots"}, "any_pov": {"c": "Point of View", "d": "Content inclusive and accessible to all readers"}, "male_pov": {"c": "Point of View", "d": "Content from masculine perspectives"}, "fem_pov": {"c": "Point of View", "d": "Content from feminine perspectives"}, "nb_pov": {"c": "Point of View", "d": "Content for non-binary perspectives and experiences"}, "poc_user": {"c": "Point of View", "d": "Content for people of colour users' perspectives and experiences"}, "plus_size_user": {"c": "Point of View", "d": "Content for plus-sized users' perspectives and experiences"}, "disabled_user": {"c": "Point of View", "d": "Content for disabled users' perspectives and experiences"}, "trans_pov": {"c": "Point of View", "d": "Content for trans perspectives and experiences"}, "intersex_pov": {"c": "Point of View", "d": "Content for intersex perspectives and experiences"}, "demi_pov": {"c": "Point of View", "d": "Content for demi-human perspectives and experiences"}, "monster_pov": {"c": "Point of View", "d": "Content from a monster's perspective"}, "villain_pov": {"c": "Point of View", "d": "Content from a villain's perspective"}, "good_person_pov": {"c": "Point of View", "d": "Content from a hero or good person perspective"}, "non_human_pov": {"c": "Point of View", "d": "Content from a non-human or creature perspective"}, "older_user": {"c": "Point of View", "d": "For bots designed with user being an older person in mind (40s and above)"}, "injured_user": {"c": "Point of View", "d": "Roleplay starts with user sick or injured"}, "tall_user": {"c": "Point of View", "d": "For users that are really tall (7ft or more)"}, "short_user": {"c": "Point of View", "d": "For users that are really short (Below 5ft)"}, "victim_pov": {"c": "Point of View", "d": "Content told from a victim's perspective"}, "second_person_pov": {"c": "Point of View", "d": "Narration addresses the reader as 'you'"}, "third_person_pov": {"c": "Point of View", "d": "External narration using he/she/they"}, "first_person_pov": {"c": "Point of View", "d": "Character's narrative uses 'I'"}, "mlm": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to men"}, "wlw": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to women"}, "m4a": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to any gender"}, "w4a": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to any gender"}, "m4nb": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to non-binary"}, "w4nb": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to non-binary"}, "m4w": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to women"}, "w4m": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to men"}, "m4t": {"c": "Sexual & Romantic Orientation", "d": "Men attracted to trans"}, "w4t": {"c": "Sexual & Romantic Orientation", "d": "Women attracted to trans"}, "nb4m": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to men"}, "nb4w": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to women"}, "nb4a": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to any gender"}, "nb4nb": {"c": "Sexual & Romantic Orientation", "d": "Non-binary attracted to non-binary"}, "t4m": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to men"}, "t4w": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to women"}, "t4t": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to trans"}, "t4a": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to any gender"}, "t4nb": {"c": "Sexual & Romantic Orientation", "d": "Trans attracted to non-binary"}, "bi": {"c": "Sexual & Romantic Orientation", "d": "Characters attracted to more than one gender"}, "pansexual": {"c": "Sexual & Romantic Orientation", "d": "Characters attracted to people regardless of gender"}, "asexual": {"c": "Sexual & Romantic Orientation", "d": "Characters who experience little to no sexual attraction"}, "demisexual": {"c": "Sexual & Romantic Orientation", "d": "Characters who only experience sexual attraction after forming an emotional bond"}, "aromantic": {"c": "Sexual & Romantic Orientation", "d": "Characters who experience little to no romantic attraction"}, "queer": {"c": "Sexual & Romantic Orientation", "d": "Sexuality or identity that is harder to label; umbrella term for diverse orientations"}, "closeted": {"c": "Sexual & Romantic Orientation", "d": "Characters secretly hiding their true sexuality or gender identity from those around them"}, "dom": {"c": "Relationship Structure & Dynamics", "d": "Dominant companions in power dynamics"}, "sub": {"c": "Relationship Structure & Dynamics", "d": "Submissive companions in power dynamics"}, "switch": {"c": "Relationship Structure & Dynamics", "d": "Companions that can swap between dominant and submissive roles"}, "multiple": {"c": "Relationship Structure & Dynamics", "d": "Stories with polyamorous or multiple-companion dynamics"}, "vanilla": {"c": "Relationship Structure & Dynamics", "d": "Stories with traditional romantic dynamics"}, "bdsm": {"c": "Relationship Structure & Dynamics", "d": "Bondage, discipline, and sadomasochism; physical acts of consensual kink"}, "ntr": {"c": "Relationship Structure & Dynamics", "d": "Umbrella for partner-theft dynamics: your partner taken, taking someone else's partner, or consensual sharing"}, "unestablished_relationship": {"c": "Relationship Structure & Dynamics", "d": "Stories where relationships are developing or undefined"}, "contractual_relationship": {"c": "Relationship Structure & Dynamics", "d": "Relationships bound by formal agreement, contracts, or arranged terms"}, "qpr": {"c": "Relationship Structure & Dynamics", "d": "Queer Platonic Relationship; intimate and committed but not romantic"}, "sugar_parent": {"c": "Relationship Structure & Dynamics", "d": "One partner provides financial support in exchange for companionship"}, "platonic": {"c": "Relationship Structure & Dynamics", "d": "Non-romantic relationships focused on friendship"}, "step_sibling": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving step-siblings"}, "neighbor": {"c": "Relationship Structure & Dynamics", "d": "Relationships between people living next to each other"}, "roommate": {"c": "Relationship Structure & Dynamics", "d": "Relationships between people sharing living quarters"}, "spouse": {"c": "Relationship Structure & Dynamics", "d": "Relationships between married partners"}, "step_parent": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving step-parents"}, "lover": {"c": "Relationship Structure & Dynamics", "d": "Romantic partners in established relationships"}, "childhood_friend": {"c": "Relationship Structure & Dynamics", "d": "Relationships with friends from childhood"}, "butler": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving a servant or household staff member"}, "senpai": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving a senior or older companion"}, "kouhai": {"c": "Relationship Structure & Dynamics", "d": "Relationships involving a junior or younger companion"}, "power_dynamics": {"c": "Relationship Structure & Dynamics", "d": "Intentional, consensual exchange of control and authority between partners"}, "age_gap": {"c": "Relationship Structure & Dynamics", "d": "Content involving a significant age difference between companions"}, "ex": {"c": "Relationship Structure & Dynamics", "d": "Content involving former romantic partners"}, "cheating": {"c": "Relationship Structure & Dynamics", "d": "A partner is unfaithful, without a cuckoldry element"}, "unrequited_love": {"c": "Relationship Structure & Dynamics", "d": "One-sided romantic feelings that aren't reciprocated"}, "forbidden_love": {"c": "Relationship Structure & Dynamics", "d": "Content involving love that is prohibited or taboo"}, "soulmate": {"c": "Relationship Structure & Dynamics", "d": "Characters bound by fate, destiny, or a supernatural bond"}, "boss": {"c": "Relationship Structure & Dynamics", "d": "Content involving a boss-employee relationship dynamic"}, "harem": {"c": "Relationship Structure & Dynamics", "d": "One focal partner with multiple romantic interests"}, "concubine": {"c": "Relationship Structure & Dynamics", "d": "Historical or hierarchical companion in a secondary spouse or consort role"}, "captive": {"c": "Relationship Structure & Dynamics", "d": "Scenarios where someone is held against their will"}, "dark_romance": {"c": "Relationship Structure & Dynamics", "d": "Toxic, intense, or abusive love scenarios"}, "best_friend": {"c": "Relationship Structure & Dynamics", "d": "Close friend, long-time companion, or confidant"}, "taken": {"c": "Relationship Structure & Dynamics", "d": "Characters already in a committed relationship with someone else"}, "colleague": {"c": "Relationship Structure & Dynamics", "d": "Person with mostly professional relationship"}, "crush": {"c": "Relationship Structure & Dynamics", "d": "Passionate, romantic attraction to someone"}, "fwb": {"c": "Relationship Structure & Dynamics", "d": "Friends with benefits; casual sexual relationships without romance"}, "hookup": {"c": "Relationship Structure & Dynamics", "d": "Intimacy without romance, one-time encounter"}, "rejection": {"c": "Relationship Structure & Dynamics", "d": "Refusal or dismissal of someone's feelings or proposals"}, "lovers_to_enemies": {"c": "Relationship Structure & Dynamics", "d": "Relationships shift from romance to hostility"}, "savior": {"c": "Relationship Structure & Dynamics", "d": "One character rescues another from bullies, jail, or bad situations"}, "partner": {"c": "Relationship Structure & Dynamics", "d": "Fellow cop, firefighter, soldier; someone you trust to watch your back"}, "teammate": {"c": "Relationship Structure & Dynamics", "d": "Someone on the same team, whether sports, military, or any shared- goal group"}, "party_member": {"c": "Relationship Structure & Dynamics", "d": "Fellow adventurers bonded through quests and shared danger"}, "objectification": {"c": "Relationship Structure & Dynamics", "d": "Treated as less than human, something to be owned"}, "stranger": {"c": "Relationship Structure & Dynamics", "d": "Encounters with someone completely unknown"}, "pbf": {"c": "Relationship Structure & Dynamics", "d": "Romantic or sexual tension with a parent's close friend"}, "parent_in_law": {"c": "Relationship Structure & Dynamics", "d": "Complicated or romantic dynamics with a spouse's parent"}, "top": {"c": "Kinks & Intimate Content", "d": "Characters who exclusively take the dominant or penetrative role in intimacy"}, "bottom": {"c": "Kinks & Intimate Content", "d": "Characters who exclusively take the receptive role in intimacy"}, "soft_dom": {"c": "Relationship Structure & Dynamics", "d": "Dominant but leads with care, patience and a gentle touch"}, "selfcest": {"c": "Relationship Structure & Dynamics", "d": "Romantic/sexual relationship with a clone, AU version, or time-travelling self"}, "enemies_to_lovers": {"c": "Plot Devices & Structure", "d": "Conflict transforming into romance"}, "friends_to_lovers": {"c": "Plot Devices & Structure", "d": "Friendship evolving into romance"}, "love_triangle": {"c": "Plot Devices & Structure", "d": "Stories involving three people in a complicated romantic dynamic"}, "forced_proximity": {"c": "Plot Devices & Structure", "d": "Stories where characters are forced to stay close together"}, "arranged_marriage": {"c": "Relationship Structure & Dynamics", "d": "Marriages planned by families, politics, or duty"}, "fake_relationship": {"c": "Plot Devices & Structure", "d": "Partners pretending to date or be together for ulterior motives"}, "pregnant": {"c": "Plot Devices & Structure", "d": "Scenarios involving pregnancy"}, "oc": {"c": "Plot Devices & Structure", "d": "Original user-created characters"}, "scenario": {"c": "Plot Devices & Structure", "d": "Companion centered on a single core idea or dilemma, with no predefined lead character."}, "interactive_rpg": {"c": "Plot Devices & Structure", "d": "Companion functions as an interactive roleplaying game"}, "amnesia": {"c": "Plot Devices & Structure", "d": "Stories featuring memory loss as a plot device"}, "gender_bend": {"c": "Plot Devices & Structure", "d": "Stories featuring characters transformed into the opposite gender"}, "time_travel": {"c": "Plot Devices & Structure", "d": "Characters move between different time periods"}, "chosen_one": {"c": "Plot Devices & Structure", "d": "Narratives with a character destined for greatness"}, "prophecy": {"c": "Plot Devices & Structure", "d": "Content involving predicted events or destinies"}, "quest": {"c": "Plot Devices & Structure", "d": "Stories structured around journeys to achieve goals"}, "tournament": {"c": "Plot Devices & Structure", "d": "Narratives centred on competitions or formalized contests"}, "found_family": {"c": "Plot Devices & Structure", "d": "Stories about non-biological family bonds formed through circumstance"}, "ensemble_cast": {"c": "Plot Devices & Structure", "d": "Stories featuring multiple main characters of equal importance"}, "unreliable_narrator": {"c": "Plot Devices & Structure", "d": "Content told from the perspective of a character whose credibility is questionable"}, "colleagues_to_lovers": {"c": "Plot Devices & Structure", "d": "Stories where professional relationships evolve into romance"}, "curse": {"c": "Plot Devices & Structure", "d": "Stories where character/setting is under supernatural harm/misfortune"}, "mistaken_identity": {"c": "Plot Devices & Structure", "d": "Characters led to believe someone's identity is another's"}, "chance_meeting": {"c": "Plot Devices & Structure", "d": "Stories about characters who just happen to run into each other"}, "kidnapping": {"c": "Plot Devices & Structure", "d": "Forced abduction and confinement"}, "hostage": {"c": "Relationship Structure & Dynamics", "d": "Person held against their will as leverage"}, "lore_heavy": {"c": "Plot Devices & Structure", "d": "Companions deeply tied to the lore of their world"}, "passional_crime": {"c": "Plot Devices & Structure", "d": "A violent crime committed in a sudden heat of passion"}, "sexual_awakening": {"c": "Plot Devices & Structure", "d": "Characters discovering an unexplored side of their sexuality"}, "parallel_universe": {"c": "Plot Devices & Structure", "d": "Stories featuring alternate versions of reality or different dimensions that exist alongside our own"}, "portal": {"c": "Plot Devices & Structure", "d": "Characters transported or reincarnated into a different world"}, "smut": {"c": "Story Genres & Styles", "d": "Content with mature themes and consensual intimacy"}, "fluff": {"c": "Story Genres & Styles", "d": "Heartwarming content celebrating joy and comfort"}, "angst": {"c": "Story Genres & Styles", "d": "Stories heavy with emotional pain, inner conflict, and suffering"}, "comfort": {"c": "Story Genres & Styles", "d": "Content focused on providing emotional support and reassurance"}, "hurt_comfort": {"c": "Story Genres & Styles", "d": "Emotional or physical hurt followed by comfort and care"}, "hurt_no_comfort": {"c": "Story Genres & Styles", "d": "Emotional or physical hurt without resolution"}, "comedy": {"c": "Story Genres & Styles", "d": "Content focused on humour and joy"}, "horror": {"c": "Story Genres & Styles", "d": "Stories designed to frighten, unsettle, or create dread"}, "fantasy": {"c": "Story Genres & Styles", "d": "Content with magical and otherworldly elements"}, "adventure": {"c": "Story Genres & Styles", "d": "Content focused on exploration and discovery"}, "action": {"c": "Story Genres & Styles", "d": "Content with dynamic and exciting sequences"}, "romance": {"c": "Story Genres & Styles", "d": "Content focused on romantic relationships and emotions"}, "slice_of_life": {"c": "Story Genres & Styles", "d": "Ordinary day-to-day experiences"}, "noir": {"c": "Story Genres & Styles", "d": "Dark, cynical themes and stylised crime drama"}, "urban_fantasy": {"c": "Story Genres & Styles", "d": "Magical elements blended with modern city settings"}, "magical": {"c": "Story Genres & Styles", "d": "Stories where magic, spells, and enchantment are central"}, "sci_fi": {"c": "Story Genres & Styles", "d": "Stories set in futuristic or technologically advanced worlds"}, "mystery": {"c": "Story Genres & Styles", "d": "Content involving secrets, puzzles, or unsolved questions"}, "conspiracy": {"c": "Story Genres & Styles", "d": "Stories featuring hidden plots and secret schemes"}, "heist": {"c": "Story Genres & Styles", "d": "Narratives about elaborate theft or complex robberies"}, "slow_burn": {"c": "Story Genres & Styles", "d": "Relationships develop gradually over extended periods"}, "politics": {"c": "Story Genres & Styles", "d": "Stories centred on political intrigue, governance, and power"}, "religion": {"c": "Story Genres & Styles", "d": "Content exploring faith and spirituality"}, "philosophy": {"c": "Story Genres & Styles", "d": "Content examining life's big questions"}, "coming_of_age": {"c": "Story Genres & Styles", "d": "Stories focusing on growth and transition from youth to adulthood"}, "redemption": {"c": "Story Genres & Styles", "d": "Stories about characters seeking forgiveness or atonement"}, "revenge": {"c": "Story Genres & Styles", "d": "Narratives centered on retribution for past wrongs"}, "justice": {"c": "Story Genres & Styles", "d": "Content exploring fairness, morality, and consequences"}, "betrayal": {"c": "Story Genres & Styles", "d": "Stories involving deception and broken trust"}, "sacrifice": {"c": "Story Genres & Styles", "d": "Narratives featuring characters giving up something valuable"}, "survival": {"c": "Story Genres & Styles", "d": "Content focusing on perseverance against difficult circumstances"}, "identity": {"c": "Story Genres & Styles", "d": "Stories exploring who characters are and their sense of self"}, "freedom": {"c": "Story Genres & Styles", "d": "Content examining liberation and autonomy"}, "otome": {"c": "Story Genres & Styles", "d": "Female-centric romantic relationships"}, "supernatural": {"c": "Story Genres & Styles", "d": "Paranormal phenomena; ghosts, cryptids, unexplained events"}, "psychological": {"c": "Story Genres & Styles", "d": "Stories exploring the mind; manipulation, paranoia, psychological tension"}, "thriller": {"c": "Story Genres & Styles", "d": "Suspense, danger, and unexpected twists"}, "urban_fiction": {"c": "Story Genres & Styles", "d": "Gritty, street-level narratives set in modern city environments"}, "wuxia": {"c": "Story Genres & Styles", "d": "Martial arts heroes and mystical cultivation in Chinese-inspired settings"}, "non_canonical_au": {"c": "Story Genres & Styles", "d": "Stories in an established universe changed from original"}, "canon_compliant": {"c": "Story Genres & Styles", "d": "Roleplays that stay true to media source"}, "sfw": {"c": "Story Genres & Styles", "d": "Stories not designed to be sexually motivated"}, "war": {"c": "Story Genres & Styles", "d": "Narratives set during armed conflicts"}, "peace": {"c": "Story Genres & Styles", "d": "Stories focusing on harmony and conflict resolution"}, "contemporary": {"c": "Locations and Eras", "d": "Content set in the present day"}, "renaissance": {"c": "Locations and Eras", "d": "Set during the cultural rebirth of 14th–17th century Europe"}, "prison": {"c": "Locations and Eras", "d": "Stories set in prison or correctional facilities"}, "victorian": {"c": "Locations and Eras", "d": "Set in the Victorian era (1837–1901)"}, "college": {"c": "Locations and Eras", "d": "Stories set in higher education environments"}, "hospital": {"c": "Locations and Eras", "d": "Set in medical facilities"}, "library": {"c": "Locations and Eras", "d": "Set in libraries and archives"}, "tavern_inn": {"c": "Locations and Eras", "d": "Stories set in traditional inns, taverns, and guesthouses"}, "hotel": {"c": "Locations and Eras", "d": "Set in hotels and modern accommodation"}, "mansion": {"c": "Locations and Eras", "d": "Stories set in large, luxurious estates and grand homes"}, "home": {"c": "Locations and Eras", "d": "Stories set in domestic home environments"}, "island": {"c": "Locations and Eras", "d": "Stories set on islands, both tropical and remote"}, "bar": {"c": "Locations and Eras", "d": "Stories set in modern bars and drinking establishments"}, "club": {"c": "Locations and Eras", "d": "Stories set in nightclubs and dance venues"}, "circus": {"c": "Locations and Eras", "d": "Stories set in circuses and traveling entertainment shows"}, "holidays": {"c": "Locations and Eras", "d": "Stories centered around holiday celebrations and seasonal festivities"}, "small_town": {"c": "Locations and Eras", "d": "Stories set in tight-knit rural or suburban communities"}, "gym": {"c": "Locations and Eras", "d": "Set in fitness centres and athletic training environments"}, "workplace": {"c": "Locations and Eras", "d": "Stories set in professional work environments"}, "cyberpunk": {"c": "Locations and Eras", "d": "High-tech, low-life dystopian futures"}, "steampunk": {"c": "Locations and Eras", "d": "Victorian-inspired worlds with steam-powered technology"}, "solarpunk": {"c": "Locations and Eras", "d": "Sustainable futures powered by renewable energy"}, "post_apocalyptic": {"c": "Locations and Eras", "d": "Set after a global catastrophe or civilisation collapse"}, "medieval": {"c": "Locations and Eras", "d": "Set in middle ages-inspired settings"}, "space": {"c": "Locations and Eras", "d": "Stories set in outer space or on other planets"}, "underwater": {"c": "Locations and Eras", "d": "Stories set beneath the ocean or in aquatic environments"}, "military": {"c": "Locations and Eras", "d": "Stories set in military or armed forces environments"}, "wild_west": {"c": "Locations and Eras", "d": "Set in the American frontier era"}, "historical": {"c": "Locations and Eras", "d": "Stories set in past time periods"}, "historical_china": {"c": "Locations and Eras", "d": "Set in ancient or imperial China"}, "vintage": {"c": "Locations and Eras", "d": "Stories set in the 1900s era with classic, retro aesthetics"}, "y2k": {"c": "Locations and Eras", "d": "Early 2000s with millennium-era aesthetics"}, "online": {"c": "Locations and Eras", "d": "Stories set mainly over internet or digital settings"}, "wilderness": {"c": "Locations and Eras", "d": "Remote outdoors — forests, savannahs, plains, tundras"}, "desert": {"c": "Locations and Eras", "d": "Set in arid landscapes"}, "laboratory": {"c": "Locations and Eras", "d": "Stories set within laboratory or research facilities"}, "eatery": {"c": "Locations and Eras", "d": "Stories set in restaurant, fast food, or meal service areas"}, "temple_church": {"c": "Locations and Eras", "d": "Stories set within places of religious worship"}, "party_festival": {"c": "Locations and Eras", "d": "Set at social gatherings or celebrations"}, "beach": {"c": "Locations and Eras", "d": "Set on sandy shores with sun, surf, and coastal vibes"}, "remote_cabin": {"c": "Locations and Eras", "d": "Set in isolated areas like cabins or lake houses"}, "farm_setting": {"c": "Locations and Eras", "d": "Working with the land, managing natural resources, raising animals, cultivating crops"}, "regency_era": {"c": "Locations and Eras", "d": "Set during the British Regency period (1795–1837)"}, "mpreg": {"c": "World-Building Concepts", "d": "World setting featuring male pregnancy"}, "omegaverse": {"c": "World-Building Concepts", "d": "World setting with alpha/beta/omega dynamics"}, "bdsm_verse": {"c": "World-Building Concepts", "d": "World setting where dom/sub/switch dynamics are fundamental to society"}, "guide_sentinel": {"c": "World-Building Concepts", "d": "World setting featuring enhanced sensory guides and their protectors"}, "dystopian": {"c": "Locations and Eras", "d": "Set in oppressive, troubled future societies"}, "utopian": {"c": "Locations and Eras", "d": "Set in idealised, perfect future societies"}, "disabled": {"c": "Species/Being Types", "d": "Companions with a physical or mental condition that limits their movements, senses, or activities"}, "neurodivergent": {"c": "Character Archetypes & Personalities", "d": "Companions who are neurodivergent, including autism, ADHD, and other neurological differences"}, "hero": {"c": "Character Archetypes & Personalities", "d": "Protagonists who fight for good, protect others, or champion a cause"}, "villain": {"c": "Character Archetypes & Personalities", "d": "Antagonists who oppose the protagonist - from cunning schemers to outright evil"}, "villainess": {"c": "Character Archetypes & Personalities", "d": "Female antagonists and morally grey characters"}, "anti_hero": {"c": "Character Archetypes & Personalities", "d": "Protagonists with questionable morals or unconventional methods"}, "royalty": {"c": "Character Archetypes & Personalities", "d": "Characters in positions of privilege and power"}, "nobility": {"c": "Character Archetypes & Personalities", "d": "Characters belonging to the noble class or aristocracy"}, "duke_duchess": {"c": "Character Archetypes & Personalities", "d": "Characters holding the title of duke or duchess"}, "pirate": {"c": "Character Archetypes & Personalities", "d": "Seafaring outlaws, treasure hunters, and swashbucklers"}, "dilf": {"c": "Character Archetypes & Personalities", "d": "Content featuring an attractive older male character, often a father figure"}, "milf": {"c": "Character Archetypes & Personalities", "d": "Content featuring an attractive older female character, often a mother figure"}, "emo": {"c": "Character Archetypes & Personalities", "d": "Characters with dark, emotional, and introspective personalities"}, "murderer": {"c": "Character Archetypes & Personalities", "d": "Characters who have committed homicide"}, "jock": {"c": "Character Archetypes & Personalities", "d": "Athletic characters often associated with sports"}, "nerd": {"c": "Character Archetypes & Personalities", "d": "Characters who are intellectual and nerdy"}, "bimbo_himbo": {"c": "Character Archetypes & Personalities", "d": "Attractive characters who appear superficial but have good hearts"}, "bully": {"c": "Character Archetypes & Personalities", "d": "Characters who intimidate or mistreat others"}, "rival": {"c": "Character Archetypes & Personalities", "d": "Characters in competition with each other"}, "virgin": {"c": "Character Archetypes & Personalities", "d": "Characters who haven't experienced sexual intimacy"}, "promiscuous": {"c": "Character Archetypes & Personalities", "d": "Characters with multiple sexual partners or casual attitudes toward sex"}, "filthy": {"c": "Character Archetypes & Personalities", "d": "Content featuring dirty, unhygienic, or unclean characters"}, "wealthy": {"c": "Character Archetypes & Personalities", "d": "Characters with significant financial resources"}, "healer": {"c": "Character Archetypes & Personalities", "d": "Characters who specialize in healing, whether magical or medical"}, "rogue": {"c": "Character Archetypes & Personalities", "d": "Stealthy, cunning characters skilled in trickery or thievery"}, "warrior": {"c": "Character Archetypes & Personalities", "d": "Characters skilled in combat and battle"}, "mage": {"c": "Character Archetypes & Personalities", "d": "Characters with magical abilities or training"}, "tsundere": {"c": "Character Archetypes & Personalities", "d": "Characters who mask affection with hostility before revealing their true feelings"}, "yandere": {"c": "Character Archetypes & Personalities", "d": "Characters whose love manifests in obsessive or dangerous ways"}, "kuudere": {"c": "Character Archetypes & Personalities", "d": "Characters who are emotionally reserved but caring underneath"}, "dandere": {"c": "Character Archetypes & Personalities", "d": "Quiet, shy characters who open up over time"}, "deredere": {"c": "Character Archetypes & Personalities", "d": "Sweet, affectionate characters who are openly loving"}, "himedere": {"c": "Character Archetypes & Personalities", "d": "Characters who act like royalty and expect to be treated as such"}, "kamidere": {"c": "Character Archetypes & Personalities", "d": "Arrogant characters with a god complex or superiority attitude"}, "bakadere": {"c": "Character Archetypes & Personalities", "d": "Silly, clumsy characters who are often naive or oblivious"}, "kakkodere": {"c": "Character Archetypes & Personalities", "d": "Characters who are normally cool and confident, but become cute, affectionate, and deredere for their love interest"}, "introverted": {"c": "Character Archetypes & Personalities", "d": "Reserved characters who gain energy from solitude"}, "extroverted": {"c": "Character Archetypes & Personalities", "d": "Outgoing characters who gain energy from social interactions"}, "anxious": {"c": "Character Archetypes & Personalities", "d": "Characters who experience worry, nervousness, or unease"}, "ambitious": {"c": "Character Archetypes & Personalities", "d": "Characters with strong desire and determination to achieve goals"}, "incel": {"c": "Character Archetypes & Personalities", "d": "Involuntarily celibate characters consumed by romantic or sexual frustration"}, "stalker": {"c": "Character Archetypes & Personalities", "d": "Characters who are a little *too* obsessive"}, "needy_clingy": {"c": "Character Archetypes & Personalities", "d": "Personalities marked by intense attachment and reassurance seeking"}, "biker": {"c": "Character Archetypes & Personalities", "d": "Outlaw club or motorcycle culture archetype"}, "ninja_samurai": {"c": "Character Archetypes & Personalities", "d": "Traditional Japanese warriors and stealth fighters"}, "esl": {"c": "Character Archetypes & Personalities", "d": "Non‑native speaker character trait affecting language and cadence"}, "grumpy": {"c": "Character Archetypes & Personalities", "d": "Characters with a consistently irritable or bad-tempered personality"}, "brat": {"c": "Character Archetypes & Personalities", "d": "Characters who are defiant, playfully disobedient, and enjoy pushing boundaries"}, "masochist": {"c": "Relationship Structure & Dynamics", "d": "Characters who derive pleasure from receiving pain or humiliation"}, "sadist": {"c": "Relationship Structure & Dynamics", "d": "Characters who derive pleasure from inflicting pain or humiliation"}, "person_next_door": {"c": "Character Archetypes & Personalities", "d": "Approachable, relatable characters with an everyday charm"}, "gentle_giant": {"c": "Character Archetypes & Personalities", "d": "Large, imposing characters with a surprisingly soft and caring nature"}, "reluctant_hero": {"c": "Character Archetypes & Personalities", "d": "Characters who are thrust into heroic roles despite their own resistance"}, "mastermind": {"c": "Character Archetypes & Personalities", "d": "Brilliant strategists who orchestrate complex plans and manipulations"}, "well_intentioned_extremist": {"c": "Character Archetypes & Personalities", "d": "Characters who pursue noble goals through morally questionable methods"}, "daredevil": {"c": "Character Archetypes & Personalities", "d": "Thrill-seekers who live for danger and take extreme risks"}, "mean_catty": {"c": "Character Archetypes & Personalities", "d": "Sharp-tongued, petty, and quick to tear others down"}, "perverted": {"c": "Character Archetypes & Personalities", "d": "Lecherous and dirty-minded characters"}, "sensitive": {"c": "Character Archetypes & Personalities", "d": "Emotionally/physically over-reactive characters"}, "loyal": {"c": "Character Archetypes & Personalities", "d": "Devoted and faithful characters"}, "manipulator": {"c": "Character Archetypes & Personalities", "d": "Scheming characters who gaslight and control"}, "corrupt": {"c": "Character Archetypes & Personalities", "d": "Morally depraved characters"}, "mentally_ill": {"c": "Character Archetypes & Personalities", "d": "Characters with any mental illness (includes delusional)"}, "cosplayer": {"c": "Character Archetypes & Personalities", "d": "Characters who dress as other media characters as hobby"}, "two_faced": {"c": "Character Archetypes & Personalities", "d": "Present façade while hiding true personality"}, "stoner": {"c": "Character Archetypes & Personalities", "d": "Characters/settings involving cannabis use or stoner culture"}, "widowed": {"c": "Character Archetypes & Personalities", "d": "Someone who lost their partner"}, "divorced": {"c": "Character Archetypes & Personalities", "d": "Characters navigating life after the end of a marriage"}, "clown": {"c": "Character Archetypes & Personalities", "d": "Individuals who work as clowns, jesters, or similar entertainment"}, "sassy": {"c": "Character Archetypes & Personalities", "d": "Confident, flamboyant, \"extra\", but not malicious/mean-spirited"}, "drag_crossdress": {"c": "Character Archetypes & Personalities", "d": "Wearing clothing associated with another gender"}, "tomboy": {"c": "Character Archetypes & Personalities", "d": "Female character who enjoys typically masculine activities and style"}, "femboy": {"c": "Character Archetypes & Personalities", "d": "Male character who enjoys typically feminine activities and style"}, "gyaru": {"c": "Character Archetypes & Personalities", "d": "Tanned skin, bleached/dyed hair, glamorous fashion and makeup, rebellious attitude"}, "popular": {"c": "Character Archetypes & Personalities", "d": "Characters who command social authority and attention within their peer group"}, "genki": {"c": "Character Archetypes & Personalities", "d": "Character has excessive amounts of energy and enthusiasm"}, "emotionally_unavailable": {"c": "Character Archetypes & Personalities", "d": "Detached and unwilling to connect"}, "hedonistic": {"c": "Character Archetypes & Personalities", "d": "Lives for excess, constantly chasing pleasure, luxury, and indulgence"}, "charismatic": {"c": "Character Archetypes & Personalities", "d": "Effortlessly charming characters who draw others in with magnetic personality"}, "telepath": {"c": "Character Archetypes & Personalities", "d": "Character is able to read minds"}, "empath": {"c": "Character Archetypes & Personalities", "d": "Deeply attuned to the emotions of others on an instinctual, near-supernatural level"}, "unreliable": {"c": "Character Archetypes & Personalities", "d": "Wishy-washy, often say what they don't mean"}, "selfish": {"c": "Character Archetypes & Personalities", "d": "Think of themselves above all others"}, "empathetic": {"c": "Character Archetypes & Personalities", "d": "Connect to others on deep emotional level"}, "playful": {"c": "Character Archetypes & Personalities", "d": "Enjoy playing around and teasing"}, "independent": {"c": "Character Archetypes & Personalities", "d": "Self-sufficient, don't need to rely on others"}, "celebrity": {"c": "Professions", "d": "Public figures known for their fame and public presence"}, "detective": {"c": "Professions", "d": "Characters who investigate crimes and seek truth"}, "assistant": {"c": "Professions", "d": "Personal assistants who support their employers"}, "executive": {"c": "Professions", "d": "Characters in high-level management or corporate positions"}, "business_owner": {"c": "Professions", "d": "Characters who own and operate businesses"}, "o_l": {"c": "Professions", "d": "Female white-collar office worker; common Japanese media archetype"}, "content_creator": {"c": "Professions", "d": "Digital creators who produce content for online audiences"}, "vtuber": {"c": "Professions", "d": "Virtual YouTubers who stream and create content as anime avatars"}, "idol": {"c": "Professions", "d": "Performers who entertain and inspire dedicated fans"}, "performer": {"c": "Professions", "d": "Artists who entertain audiences through live or recorded performance"}, "mafia": {"c": "Professions", "d": "Characters involved in organised crime at an institutional level"}, "gangster": {"c": "Professions", "d": "Characters involved in street-level criminal activities and urban gangs"}, "musician": {"c": "Professions", "d": "Artists who create and perform music"}, "teacher_professor": {"c": "Professions", "d": "Educators who impart knowledge and skills"}, "student": {"c": "Professions", "d": "Individuals pursuing education and learning"}, "nurse": {"c": "Professions", "d": "Healthcare professionals who provide care and support"}, "doctor": {"c": "Professions", "d": "Medical professionals who diagnose and treat illnesses"}, "police_officer": {"c": "Professions", "d": "Law enforcement officers who maintain public safety"}, "firefighter": {"c": "Professions", "d": "Emergency responders who combat fires and rescue people"}, "pilot": {"c": "Professions", "d": "Aviation professionals who operate aircraft"}, "soldier": {"c": "Professions", "d": "Military personnel who serve and protect"}, "chef": {"c": "Professions", "d": "Culinary artists who create and prepare food"}, "athlete": {"c": "Professions", "d": "Sports professionals who compete and excel"}, "lawyer": {"c": "Professions", "d": "Legal professionals who represent and advise clients"}, "politician": {"c": "Professions", "d": "Public servants who govern and make decisions"}, "scientist": {"c": "Professions", "d": "Researchers who explore and discover new knowledge"}, "engineer": {"c": "Professions", "d": "Professionals who design and build structures and systems"}, "artist": {"c": "Professions", "d": "Creative individuals who express themselves through visual art"}, "writer": {"c": "Professions", "d": "Authors who create and share written works"}, "journalist": {"c": "Professions", "d": "Reporters who gather and disseminate news"}, "model": {"c": "Professions", "d": "Individuals who showcase fashion and products"}, "actor": {"c": "Professions", "d": "Performers who portray characters in various media"}, "intern": {"c": "Professions", "d": "Individuals gaining experience and training in a profession"}, "librarian": {"c": "Professions", "d": "Professionals who manage and organise information resources"}, "plumber": {"c": "Professions", "d": "Skilled workers who install and repair plumbing"}, "cowboy_cowgirl": {"c": "Professions", "d": "Individuals associated with ranching and the American West"}, "maid_butler": {"c": "Professions", "d": "Domestic workers who provide cleaning and personal services"}, "bartender": {"c": "Professions", "d": "Professionals who mix and serve beverages"}, "waiter_waitress": {"c": "Professions", "d": "Service professionals who take orders and serve food"}, "stripper": {"c": "Professions", "d": "Performers who entertain through dance and striptease"}, "porn_star": {"c": "Professions", "d": "Adult film actors who perform in explicit content"}, "hikikomori": {"c": "Professions", "d": "Individuals who withdraw from society and live in isolation"}, "unemployed": {"c": "Professions", "d": "Individuals without a job or source of income"}, "homeless": {"c": "Professions", "d": "Individuals without a permanent place to live"}, "bodyguard": {"c": "Professions", "d": "Professionals who provide personal protection and security"}, "viking": {"c": "Professions", "d": "Norse-inspired seafaring warriors, raiders, and explorers"}, "adventurer": {"c": "Professions", "d": "Bold explorers who seek treasure, glory, and excitement"}, "hunter": {"c": "Professions", "d": "Characters who track and hunt prey or targets"}, "blue_collar": {"c": "Professions", "d": "Characters who perform skilled manual or trade labour"}, "white_collar": {"c": "Professions", "d": "Those who typically work in an office or professional environment"}, "pink_collar": {"c": "Professions", "d": "Those who work roles typically associated with women"}, "pro_dom": {"c": "Professions", "d": "Professionals who provide domination services"}, "retail": {"c": "Professions", "d": "Those who work in retail stores"}, "cashier": {"c": "Professions", "d": "Those who handle money and transactions"}, "surfer": {"c": "Professions", "d": "Those who live for the wave and the go-with-the-flow mentality"}, "servant": {"c": "Professions", "d": "Those who serve others in various capacities"}, "special_agents": {"c": "Professions", "d": "Law enforcement officers with specialised training and jurisdiction"}, "spy": {"c": "Professions", "d": "Covert operative involved in intelligence gathering"}, "part_timer": {"c": "Professions", "d": "Character working limited hours or a side job"}, "pimp": {"c": "Professions", "d": "Manager within the sex trade overseeing workers"}, "priest": {"c": "Professions", "d": "Religious clergy offering rites, guidance, or counsel"}, "florist": {"c": "Professions", "d": "Artisan who arranges and sells flowers"}, "assassin": {"c": "Professions", "d": "Professional killer trained in stealth and lethal techniques"}, "mail_carrier": {"c": "Professions", "d": "Postal worker who delivers mail and packages to homes and businesses"}, "masseuse": {"c": "Professions", "d": "Professional who provides therapeutic massage"}, "therapist": {"c": "Professions", "d": "Mental health professional who provides counselling"}, "barista": {"c": "Professions", "d": "Coffee specialist who crafts drinks at cafes"}, "housespouse": {"c": "Professions", "d": "Characters with a stay-at-home domestic role"}, "coach": {"c": "Professions", "d": "Athletic trainers, team coaches, or personal fitness mentors"}, "fan": {"c": "Professions", "d": "Devoted admirers or superfans fixated on someone they idolise"}, "lessor": {"c": "Professions", "d": "Characters who lease housing to tenants"}, "sex_worker": {"c": "Professions", "d": "Individuals who engage in sexual activity for monetary exchange"}, "frat_sorority": {"c": "Professions", "d": "Individuals in college Greek life organizations"}, "farmer": {"c": "Professions", "d": "Individuals who own or work the land"}, "mechanic": {"c": "Professions", "d": "Person working as mechanic on cars, planes, mechs"}, "owner": {"c": "Professions", "d": "Characters who own others (slave master, pet owner)"}, "pet": {"c": "Professions", "d": "Pet characters such as demi-humans kept as pets"}, "sugar_baby": {"c": "Professions", "d": "Person who receives cash in exchange for their companionship"}, "racer": {"c": "Professions", "d": "High-speed competitors across cars, bikes, and tracks"}, "tech": {"c": "Professions", "d": "Works in the tech sector, cyber security, or digital fields"}, "indentured": {"c": "Professions", "d": "Characters in a state of ownership or servitude"}, "astronaut": {"c": "Professions", "d": "Explorers venturing beyond Earth's atmosphere"}, "martial_artist": {"c": "Professions", "d": "Professional fighters and combat sports athletes"}, "hacker": {"c": "Professions", "d": "Person who hacks into computers, legal or illegal"}, "non_human": {"c": "Species/Being Types", "d": "Characters who are any non-human species or entity"}, "monster": {"c": "Species/Being Types", "d": "Fearsome or grotesque creatures distinct from demi-humans and furries"}, "monster_girl": {"c": "Species/Being Types", "d": "Feminine characters with monstrous or inhuman physical features"}, "demi_human": {"c": "Species/Being Types", "d": "Characters blending human and animal traits"}, "furry": {"c": "Species/Being Types", "d": "Fully anthropomorphic animal characters with human-like traits"}, "giant": {"c": "Species/Being Types", "d": "Characters of extraordinary size"}, "robot": {"c": "Species/Being Types", "d": "Fully artificial or mechanical beings - androids, automata, AI constructs"}, "vampire": {"c": "Species/Being Types", "d": "Blood-drinking immortals with supernatural powers and dark allure"}, "alien": {"c": "Species/Being Types", "d": "Extraterrestrial beings from other planets or dimensions"}, "elf": {"c": "Species/Being Types", "d": "Graceful, long-lived beings associated with magic, beauty, or nature"}, "dragon": {"c": "Species/Being Types", "d": "Powerful mythical reptilian beings with magic and ancient wisdom"}, "zombie": {"c": "Species/Being Types", "d": "Reanimated beings driven by supernatural means"}, "orc": {"c": "Species/Being Types", "d": "Strong warrior beings often portrayed as fierce and tribal"}, "centaur": {"c": "Species/Being Types", "d": "Half-human, half-horse beings combining human intellect with equine strength"}, "goblin": {"c": "Species/Being Types", "d": "Small mischievous creatures known for cunning and trickery"}, "werewolf": {"c": "Species/Being Types", "d": "Humans who transform into wolves or wolf-like beasts"}, "werekin": {"c": "Species/Being Types", "d": "Humans with animal forms, triggered or voluntary"}, "beastkin": {"c": "Species/Being Types", "d": "Humanoids with animal features like ears, tails, or fur"}, "deity": {"c": "Species/Being Types", "d": "Divine beings, gods, or goddesses with supernatural powers"}, "kemono": {"c": "Species/Being Types", "d": "Japanese-style anthropomorphic animal characters"}, "monster_boy": {"c": "Species/Being Types", "d": "Male or masculine characters with monster or supernatural features"}, "mermaid": {"c": "Species/Being Types", "d": "Mythical beings with a human upper body and a fish tail"}, "eldritch": {"c": "Species/Being Types", "d": "Cosmic or incomprehensible beings, often tied to horror"}, "fairy": {"c": "Species/Being Types", "d": "Small, magical beings from folklore, known for enchantment and mischief."}, "fae": {"c": "Species/Being Types", "d": "Mysterious magical folk from the faerie realm, often tricky or ancient."}, "demon": {"c": "Species/Being Types", "d": "Supernatural beings from the underworld, embodying temptation or chaos"}, "cryptid": {"c": "Species/Being Types", "d": "Mysterious creatures of uncertain origin from folklore and urban legend"}, "ghost": {"c": "Species/Being Types", "d": "Disembodied spirit or lingering presence from the afterlife"}, "kobold": {"c": "Species/Being Types", "d": "Small reptilian creatures known for cunning and trap-making"}, "dwarf": {"c": "Species/Being Types", "d": "Stout humanoids known for mining, crafting, and fierce loyalty"}, "undead": {"c": "Species/Being Types", "d": "Creatures that died but continue to exist through supernatural means"}, "angel": {"c": "Species/Being Types", "d": "Celestial beings associated with light, purity, and guidance"}, "human": {"c": "Species/Being Types", "d": "Ordinary characters without non-human traits"}, "insectoid": {"c": "Species/Being Types", "d": "Characters possessing insect-like traits"}, "tiefling": {"c": "Species/Being Types", "d": "Characters with draconic or demonic features"}, "demigod": {"c": "Species/Being Types", "d": "Characters descended from gods"}, "mutant": {"c": "Species/Being Types", "d": "Characters with abilities or traits from genetic mutation"}, "enhanced": {"c": "Species/Being Types", "d": "Characters with abilities gained through science"}, "shapechanger": {"c": "Species/Being Types", "d": "Characters that can change forms (usually at will)"}, "cyborg": {"c": "Species/Being Types", "d": "Characters that are partially machine"}, "naga": {"c": "Species/Being Types", "d": "Characters with the upper body of a human and lower body of a serpent"}, "plus_sized_bot": {"c": "Species/Being Types", "d": "Companions with a larger body type"}, "mythological": {"c": "Species/Being Types", "d": "Characters or creatures from myths, legends, and folklore"}, "futa": {"c": "Species/Being Types", "d": "Companions identifying as futanari, with both male and female traits"}, "breeding": {"c": "Kinks & Intimate Content", "d": "Impregnation fantasies and related dynamics"}, "somnophilia": {"c": "Kinks & Intimate Content", "d": "Attraction to sleeping or unconscious individuals"}, "body_worship": {"c": "Kinks & Intimate Content", "d": "Adoration and reverence of a partner's body"}, "pet_play": {"c": "Kinks & Intimate Content", "d": "Roleplaying as pets or owners in a power dynamic"}, "praise_kink": {"c": "Kinks & Intimate Content", "d": "Verbal affirmation and positive reinforcement as arousal"}, "bondage": {"c": "Kinks & Intimate Content", "d": "Physical restraint used for sensual or sexual pleasure"}, "voyeurism": {"c": "Kinks & Intimate Content", "d": "Sexual excitement from watching others without being seen"}, "exhibitionism": {"c": "Kinks & Intimate Content", "d": "Sexual thrill derived from being seen or watched by others"}, "size_difference": {"c": "Kinks & Intimate Content", "d": "Height or body size disparities between partners"}, "hyper": {"c": "Species/Being Types", "d": "Characters with exaggerated or extreme anatomical proportions"}, "orgasm_denial": {"c": "Kinks & Intimate Content", "d": "Controlling or withholding release for heightened pleasure"}, "humiliation": {"c": "Kinks & Intimate Content", "d": "Embarrassment and degradation as a source of arousal"}, "impact_play": {"c": "Kinks & Intimate Content", "d": "Physical force or impact used for sexual pleasure"}, "blood_play": {"c": "Kinks & Intimate Content", "d": "Use of blood for sexual pleasure"}, "breath_play": {"c": "Kinks & Intimate Content", "d": "Intentional restriction of oxygen for sexual pleasure"}, "temperature_play": {"c": "Kinks & Intimate Content", "d": "Temperature-based sensations used for sexual pleasure"}, "cnc": {"c": "Kinks & Intimate Content", "d": "Consensual non-consent role-play scenarios"}, "brat_taming": {"c": "Kinks & Intimate Content", "d": "Disciplining defiant or rebellious partners"}, "weapon_play": {"c": "Kinks & Intimate Content", "d": "Use of weapons for sexual pleasure or threat"}, "sensory_play": {"c": "Kinks & Intimate Content", "d": "Focus on heightened sensations and stimulus experimentation"}, "age_play": {"c": "Kinks & Intimate Content", "d": "Roleplay involving caregiver and regressed roles by agreement"}, "mind_control": {"c": "Kinks & Intimate Content", "d": "Compelled thought, altered will, or implanted urges"}, "watersports": {"c": "Kinks & Intimate Content", "d": "Uro‑centric play involving fluids as part of intimacy"}, "dollification": {"c": "Kinks & Intimate Content", "d": "Transformation or treatment of a partner as a living doll"}, "hair_kink": {"c": "Kinks & Intimate Content", "d": "Attraction to or erotic play with hair"}, "transformation": {"c": "Kinks & Intimate Content", "d": "Physical or mental transformation of characters"}, "food_play": {"c": "Kinks & Intimate Content", "d": "Incorporating food into intimate activities for sensory pleasure"}, "wax_play": {"c": "Kinks & Intimate Content", "d": "Using warm or hot wax for sensory stimulation"}, "freeuse": {"c": "Kinks & Intimate Content", "d": "Consensual arrangement where one partner is available at any time"}, "oral": {"c": "Kinks & Intimate Content", "d": "Focus on mouth-to-genital acts for sexual pleasure"}, "safe_sex": {"c": "Kinks & Intimate Content", "d": "Practice of safe and consensual sex with protection"}, "face_sitting": {"c": "Kinks & Intimate Content", "d": "One partner sits on the other's face for oral stimulation"}, "feet": {"c": "Kinks & Intimate Content", "d": "Attraction to and worship of feet"}, "primal_play": {"c": "Kinks & Intimate Content", "d": "Raw, animalistic intimacy; growling, biting, scratching, predator/prey dynamics"}, "drunk_sex": {"c": "Kinks & Intimate Content", "d": "Characters under the influence during sex"}, "findom": {"c": "Kinks & Intimate Content", "d": "Sexual control through financial domination"}, "tendrils": {"c": "Kinks & Intimate Content", "d": "Sexual use of tentacles or tentacle-like appendages"}, "e_sex": {"c": "Kinks & Intimate Content", "d": "Sexual activities conducted in digital or online spaces"}, "omorashi": {"c": "Kinks & Intimate Content", "d": "Arousal from holding or losing bladder control"}, "chastity": {"c": "Kinks & Intimate Content", "d": "Confinement of genitalia for ownership, pain, or pleasure denial"}, "non_human_genitalia": {"c": "Kinks & Intimate Content", "d": "Exotic anatomy like knots, ovipositors, or hemipenes"}, "olfactophilia": {"c": "Kinks & Intimate Content", "d": "Arousal from scents and smells"}, "lactation": {"c": "Kinks & Intimate Content", "d": "Arousal from or involving the production and consumption of breast milk"}, "sexual_roleplay": {"c": "Kinks & Intimate Content", "d": "Consensual sexual LARPing or acting out roles"}, "ovipositor": {"c": "Kinks & Intimate Content", "d": "Laying eggs for sexual pleasure"}, "plushophilia": {"c": "Kinks & Intimate Content", "d": "Sexual attraction to or interaction with stuffed animals"}, "small_anatomy": {"c": "Kinks & Intimate Content", "d": "Characters with below average or small genitalia"}, "large_anatomy": {"c": "Kinks & Intimate Content", "d": "Characters with above average or large genitalia"}, "masturbation": {"c": "Kinks & Intimate Content", "d": "Sexual self-gratification"}, "breastplay": {"c": "Kinks & Intimate Content", "d": "Erotic focus on stimulating breasts"}, "sex_toys": {"c": "Kinks & Intimate Content", "d": "Use of sex toys or objects for sexual pleasure"}, "risque": {"c": "Story Genres & Styles", "d": "Not inherently intimate but can carry a sensual undertone"}, "inflation": {"c": "Kinks & Intimate Content", "d": "Characters inflated to extreme and unnatural limits"}, "heat_rut": {"c": "Kinks & Intimate Content", "d": "Intense, instinct-driven sexual desire or mating cycle"}, "glory_hole": {"c": "Kinks & Intimate Content", "d": "Anonymous sexual activity through a partition"}, "dacryphilia": {"c": "Kinks & Intimate Content", "d": "Sexual interest in tears or sobbing"}, "ugly_bastard": {"c": "Kinks & Intimate Content", "d": "Sexual content involving an unattractive or repulsive character"}, "game": {"c": "Media Sources", "d": "Characters from video games"}, "rpg": {"c": "Media Sources", "d": "Content from roleplaying games"}, "anime": {"c": "Media Sources", "d": "Characters from Japanese media"}, "books": {"c": "Media Sources", "d": "Characters from literature"}, "movie": {"c": "Media Sources", "d": "Characters from films"}, "tv_show": {"c": "Media Sources", "d": "Characters from television"}, "comic": {"c": "Media Sources", "d": "Characters from visual storytelling"}, "theatre": {"c": "Media Sources", "d": "Characters from theatrical performances"}, "utility": {"c": "Other", "d": "Content focused on practical or functional purposes © 2026saucepan.ai · Privacy Policy · Terms of Service · Content & Community Guidelines · Suicide Prevention · FAQ · Models · Sitemap · Site Updates · Feature Requests · Support Us · Install App"}, "unknown": {"c": "Other", "d": "Content that doesn't fit into any other category"}, "mono_usersexual": {"c": "Sexual & Romantic Orientation", "d": "Develops exclusive, hyper-focused attraction solely to {{user}}"}, "duress_bond": {"c": "Relationship Structure & Dynamics", "d": "Characters develop loyalty or affection toward the source of their duress"}, "trauma_bonded": {"c": "Relationship Structure & Dynamics", "d": "Unwavering loyalty or protectiveness toward the source of their harm"}, "betrothed": {"c": "Relationship Structure & Dynamics", "d": "Engaged or promised in marriage, whether by choice or obligation"}, "mutual_pining": {"c": "Relationship Structure & Dynamics", "d": "Both want each other, neither acts on it"}, "devotee": {"c": "Relationship Structure & Dynamics", "d": "One character worships or is devoted to another, relational not kink"}, "guardian": {"c": "Relationship Structure & Dynamics", "d": "Caretaker with authority over a ward"}, "infidelity": {"c": "Relationship Structure & Dynamics", "d": "Content involving unfaithfulness within a committed relationship"}, "affair": {"c": "Relationship Structure & Dynamics", "d": "An ongoing secret relationship outside a partnership"}, "netorare": {"c": "Relationship Structure & Dynamics", "d": "Your partner is seduced or taken by someone else"}, "netorase": {"c": "Relationship Structure & Dynamics", "d": "Your partner is willingly shared or offered"}, "netori": {"c": "Relationship Structure & Dynamics", "d": "You are the one taking someone else's partner"}, "protégé": {"c": "Relationship Structure & Dynamics", "d": "Mentorship blurring into romance; Western counterpart to Kouhai"}, "rebound": {"c": "Relationship Structure & Dynamics", "d": "Seeking a relationship to heal or provoke jealousy after a breakup"}, "secret_relationship": {"c": "Relationship Structure & Dynamics", "d": "Partners hiding their relationship from the people around them"}, "step_family": {"c": "Relationship Structure & Dynamics", "d": "Relationships within blended or step-families"}, "situationship": {"c": "Relationship Structure & Dynamics", "d": "The undefined \"what are we\" dynamic; more than friends, less than partners"}, "accidental_bond": {"c": "Plot Devices & Structure", "d": "Bound together by magic, curse, soul link, or circumstance"}, "body_swap": {"c": "Plot Devices & Structure", "d": "Two characters swap bodies"}, "confession": {"c": "Plot Devices & Structure", "d": "The climactic moment of declaring romantic feelings"}, "dare_bet": {"c": "Plot Devices & Structure", "d": "Romance sparked by a wager, challenge, or dare"}, "gambling_wagering": {"c": "Plot Devices & Structure", "d": "High-stakes games of chance drive the plot; bets, odds, and risk as narrative fuel"}, "open_world": {"c": "Plot Devices & Structure", "d": "Set world and lore open for exploration and discovery"}, "sandbox": {"c": "Plot Devices & Structure", "d": "Completely open for free exploration without set objectives"}, "reincarnation": {"c": "Plot Devices & Structure", "d": "Reborn in the same or a different world, often with past-life memories"}, "secret_identity": {"c": "Plot Devices & Structure", "d": "Character deliberately hiding who they really are"}, "crack_crackfic": {"c": "Story Genres & Styles", "d": "Absurd, intentionally silly scenarios that defy logic"}, "drama": {"c": "Story Genres & Styles", "d": "Character-driven stories powered by emotional conflict and consequence"}, "tragedy": {"c": "Story Genres & Styles", "d": "Stories ending in loss, downfall, or catastrophe"}, "grimdark": {"c": "Story Genres & Styles", "d": "Ultra-dark, morally grey, and bleak fantasy"}, "gothic": {"c": "Story Genres & Styles", "d": "Dark, atmospheric stories blending horror, romance, and decay"}, "slasher": {"c": "Story Genres & Styles", "d": "A masked or relentless killer stalks and murders victims"}, "lit_rpg": {"c": "Story Genres & Styles", "d": "Stories with game-like mechanics such as stats, levels, and skills"}, "afterlife": {"c": "Locations and Eras", "d": "Stories set in post-mortal planes of existence"}, "heaven": {"c": "Locations and Eras", "d": "Celestial paradise of divine beings and eternal peace"}, "hell": {"c": "Locations and Eras", "d": "Infernal realm of demons, suffering, and dark temptation"}, "limbo": {"c": "Locations and Eras", "d": "Neutral borderland between planes, for the undecided or forgotten"}, "purgatory": {"c": "Locations and Eras", "d": "Transitional plane of atonement and judgment"}, "casino": {"c": "Locations and Eras", "d": "Set in casino environments, gaming floors, and poker rooms"}, "domestic": {"c": "Locations and Eras", "d": "Stories set in homes and personal spaces"}, "ancient": {"c": "Locations and Eras", "d": "Set in ancient civilisations and early history"}, "outdoors": {"c": "Locations and Eras", "d": "Stories set in natural environments"}, "urban": {"c": "Locations and Eras", "d": "Stories set in cities and metropolitan areas"}, "hybridverse": {"c": "World-Building Concepts", "d": "World where human-animal hybrids exist as a recognised social class"}, "mundane_au": {"c": "World-Building Concepts", "d": "Fantasy or sci-fi characters placed into an ordinary everyday world"}, "slaveryverse": {"c": "World-Building Concepts", "d": "World where slavery or ownership is a legal and structured social institution"}, "soulmate_au": {"c": "World-Building Concepts", "d": "World where soulmates are a fundamental mechanic of existence"}, "countdown_timer": {"c": "World-Building Concepts", "d": "A timer counting down to the moment you meet your soulmate"}, "red_string": {"c": "World-Building Concepts", "d": "Fate visibly connects soulmates through an unbreakable thread"}, "soulmate_marks": {"c": "World-Building Concepts", "d": "Physical marks that appear to indicate a destined partner"}, "superhero_au": {"c": "World-Building Concepts", "d": "World operating on superhero logic; powers, secret identities, and villains"}, "brooding": {"c": "Character Archetypes & Personalities", "d": "Dark, introspective personalities weighed down by inner turmoil"}, "cold_aloof": {"c": "Character Archetypes & Personalities", "d": "Emotionally distant characters who keep others at arm's length"}, "delinquent": {"c": "Character Archetypes & Personalities", "d": "Rebellious rule-breakers, often from troubled or street backgrounds"}, "flirty": {"c": "Character Archetypes & Personalities", "d": "Playfully seductive characters who use charm and teasing to connect"}, "gambler": {"c": "Character Archetypes & Personalities", "d": "Risk-takers who live by luck, wagers, and high-stakes games"}, "gifted": {"c": "Character Archetypes & Personalities", "d": "Characters with innate or trained supernatural or extraordinary abilities"}, "morally_grey": {"c": "Character Archetypes & Personalities", "d": "Characters whose ethics are ambiguous, neither purely good nor evil"}, "oujidere": {"c": "Character Archetypes & Personalities", "d": "Prince-like characters who act regal and expect royal treatment, whether or not they are actually royalty"}, "protective": {"c": "Character Archetypes & Personalities", "d": "Characters who fiercely guard and defend those they care about"}, "sunshine": {"c": "Character Archetypes & Personalities", "d": "Warm, optimistic personalities who brighten every room they enter"}, "knight": {"c": "Character Archetypes & Personalities", "d": "Armored warriors bound by chivalry, honor, and feudal duty"}, "tattooist": {"c": "Professions", "d": "Character who works as a tattoo artist"}, "butcher": {"c": "Professions", "d": "A person whose trade is cutting up and selling meat"}, "bounty_hunter": {"c": "Professions", "d": "Tracks and captures targets for payment"}, "food_hospitality": {"c": "Professions", "d": "Characters who work in food service or hospitality industries"}, "freelance": {"c": "Professions", "d": "Worker juggling multiple short-term clients"}, "healthcare": {"c": "Professions", "d": "Characters who work in medical or therapeutic fields"}, "intelligence": {"c": "Professions", "d": "Covert operatives involved in espionage and intelligence work"}, "law_enforcement": {"c": "Professions", "d": "Characters who uphold the law and maintain public order"}, "prison_guard": {"c": "Professions", "d": "Law enforcement official supervising inmates within a prison"}, "mercenary": {"c": "Professions", "d": "Hired combat professionals loyal to payment, not cause"}, "occultist": {"c": "Professions", "d": "Practitioners of forbidden or arcane arts as a vocation"}, "professional_gambler": {"c": "Professions", "d": "Characters who make a profession out of gambling and wagering"}, "retired": {"c": "Professions", "d": "Living off saved funds; no longer in active employment"}, "fit": {"c": "Species/Being Types", "d": "Well-defined muscles with low-to-moderate body fat"}, "ripped": {"c": "Species/Being Types", "d": "Extremely low body fat with maximum muscle definition"}, "lanky": {"c": "Species/Being Types", "d": "Long and thin limbs with low muscle and fat mass"}, "mythical": {"c": "Species/Being Types", "d": "Legendary creatures from myth, folklore, and ancient storytelling"}, "stocky": {"c": "Species/Being Types", "d": "Broad, short-limbed, heavy-set with solid muscle underneath"}, "thicc": {"c": "Species/Being Types", "d": "Strong musculature hidden under a layer of fat"}, "anal_play": {"c": "Kinks & Intimate Content", "d": "Characters that enjoy receiving anal stimulation"}, "thigh_fetish": {"c": "Kinks & Intimate Content", "d": "Sexual attraction specifically focused on the upper legs"}, "crush_fetish": {"c": "Kinks & Intimate Content", "d": "Arousal from crushing or being crushed by objects, creatures, or a partner"}, "dirty_talk": {"c": "Kinks & Intimate Content", "d": "Arousing pleasure through explicit or provocative language"}, "feederism": {"c": "Kinks & Intimate Content", "d": "Weight gain, feeding kinks, or feeder/feedee dynamics"}, "fluid_play": {"c": "Kinks & Intimate Content", "d": "Content centred around body fluids as part of intimacy"}, "semen_play": {"c": "Kinks & Intimate Content", "d": "Arousal from cum-related acts; creampies, facials, cumswap"}, "group_sex": {"c": "Kinks & Intimate Content", "d": "Sexual activity involving more than two participants"}, "double_penetration": {"c": "Kinks & Intimate Content", "d": "Simultaneous penetration of two openings"}, "spitroast": {"c": "Kinks & Intimate Content", "d": "Simultaneous penetration from both ends"}, "macro_micro": {"c": "Kinks & Intimate Content", "d": "Extreme size play; one partner gigantic, the other tiny"}, "marking_claiming": {"c": "Kinks & Intimate Content", "d": "Physically or symbolically marking a partner as one's own"}, "scenting": {"c": "Kinks & Intimate Content", "d": "Identifying or marking a partner through scent; common in omegaverse and demi-human content"}, "hypnosis": {"c": "Kinks & Intimate Content", "d": "Arousal through trance, suggestion, or hypnotic control"}, "fart_fetish": {"c": "Kinks & Intimate Content", "d": "Sexual arousal from flatulence"}, "musk": {"c": "Kinks & Intimate Content", "d": "Arousal from natural body odour; distinct from perfumes or neutral smells"}, "edging": {"c": "Kinks & Intimate Content", "d": "Repeatedly bringing to the edge of climax without allowing release"}, "pegging": {"c": "Kinks & Intimate Content", "d": "Female-to-male anal penetration"}, "kitten_play": {"c": "Kinks & Intimate Content", "d": "Roleplaying as a kitten or owner"}, "pony_play": {"c": "Kinks & Intimate Content", "d": "Roleplaying as a pony or handler"}, "puppy_play": {"c": "Kinks & Intimate Content", "d": "Roleplaying as a puppy or puppy owner"}, "role_reversal": {"c": "Kinks & Intimate Content", "d": "Switching expected power, gender, or positional roles"}, "lingerie_fetish": {"c": "Kinks & Intimate Content", "d": "Attraction to delicate or luxurious undergarments"}, "mask_kink": {"c": "Kinks & Intimate Content", "d": "Arousal from a partner wearing a mask or hood during intimacy"}, "voice_kink": {"c": "Kinks & Intimate Content", "d": "Arousal triggered by the sound or quality of a specific voice"}, "corruption": {"c": "Kinks & Intimate Content", "d": "Gradual moral or sexual transformation of a pure or innocent character"}, "discrimination": {"c": "Content Warnings", "d": "Content warning: Material contains prejudice or bigotry toward specific groups"}, "ableism": {"c": "Content Warnings", "d": "Content warning: Prejudice or hostility toward disabled people"}, "fatphobia": {"c": "Content Warnings", "d": "Content warning: Prejudice or hostility toward fat people"}, "homophobia": {"c": "Content Warnings", "d": "Content warning: Prejudice or hostility toward gay people"}, "raceplay": {"c": "Content Warnings", "d": "Content warning: Content involving racial roleplay themes or power dynamics based on race"}, "religious_discrimination": {"c": "Content Warnings", "d": "Content warning: Prejudice or hostility based on faith or belief"}, "sexism": {"c": "Content Warnings", "d": "Content warning: Prejudice or hostility based on gender"}, "transphobia": {"c": "Content Warnings", "d": "Content warning: Prejudice or hostility toward trans people"}, "medical_trauma": {"c": "Content Warnings", "d": "Content warning: Traumatic medical experiences distinct from terminal illness"}, "scat": {"c": "Content Warnings", "d": "Content warning: Sexual content involving feces"}, "perfectionist": {"c": "Character Archetypes & Personalities", "d": "Driven characters who demand flawlessness from themselves and others"}, "sentient_fictional_creature": {"c": "Species/Being Types", "d": "Sentient fantasy creatures (fictional animals with human-level intelligence, not real-life species)"}};
 
 const PLOT_DESCRIPTIONS = {
@@ -3315,6 +3993,11 @@ function TagSelector({value, onChange, max, showCW, worldChars}) {
   const addCustom = (tag) => {
     const t = tag.trim().toLowerCase().replace(/\s+/g,'_');
     if(!t || current.includes(t)) return;
+    // Custom tags are not allowed — only the site's own tag list. Gated here
+    // rather than at the call site so the Enter key cannot bypass it. A tag
+    // Saucepan does not know is silently dropped on import, so a typo would
+    // otherwise look applied in Lorekeeper and simply vanish on the site.
+    if(!SAUCEPAN_TAGS[t]) return;
     const isCW = CW_TAGS.has(t);
     if(!isCW && nonCW.length >= (max||25)) return;
     onChange([...current, t]);
@@ -3356,7 +4039,7 @@ function TagSelector({value, onChange, max, showCW, worldChars}) {
         <input ref={inputRef} value={search} onChange={e=>{setSearch(e.target.value);setOpen(true);}}
           onFocus={()=>setOpen(true)}
           onKeyDown={e=>{if(e.key==='Enter'){addCustom(search);}if(e.key==='Escape'){setOpen(false);setSearch('');}}}
-          placeholder="Search or type a custom tag…"
+          placeholder="Search tags…"
           style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none'}}/>
         {open && search.length > 0 && (
           <div style={{position:'absolute',top:'100%',left:0,right:0,zIndex:100,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r)',marginTop:4,maxHeight:260,overflowY:'auto',boxShadow:'0 4px 20px rgba(0,0,0,0.4)'}}>
@@ -3378,11 +4061,8 @@ function TagSelector({value, onChange, max, showCW, worldChars}) {
               </div>
             ))}
             {search.trim() && !SAUCEPAN_TAGS[search.trim().toLowerCase().replace(/\s+/g,'_')] && (
-              <div onClick={()=>addCustom(search)}
-                style={{padding:'7px 10px',cursor:'pointer',fontSize:12,color:'var(--text3)',borderTop:'1px solid var(--border)'}}
-                onMouseEnter={e=>e.currentTarget.style.background='var(--accent-dim)'}
-                onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                Add custom tag: <strong style={{color:'var(--text)'}}>"{search.trim()}"</strong>
+              <div style={{padding:'7px 10px',fontSize:11,color:'var(--text3)',borderTop:'1px solid var(--border)',lineHeight:1.5}}>
+                No Saucepan tag matches that. Only tags from the site's list can be used.
               </div>
             )}
             {Object.keys(groupedFiltered).length === 0 && !search.trim() && (
@@ -3433,7 +4113,7 @@ function LightboxModal({src, onClose}) {
   );
 }
 
-function GalleryItem({src, label, sublabel, path, onViewFull}) {
+function GalleryItem({src, label, sublabel, path, onViewFull, verySus, galleryOnly}) {
   const [dims, setDims] = useState(null);
   const [hover, setHover] = useState(false);
   const ext = path ? path.split('.').pop().toUpperCase() : (src&&src.startsWith('data:'))?src.split(';')[0].split('/')[1].toUpperCase():'';
@@ -3449,6 +4129,14 @@ function GalleryItem({src, label, sublabel, path, onViewFull}) {
       </div>
       {/* Extension badge */}
       {ext&&<div style={{position:'absolute',top:4,right:4,background:'rgba(0,0,0,0.6)',color:'#fff',fontSize:8,padding:'1px 4px',borderRadius:3,fontWeight:600}}>{ext}</div>}
+      {/* Portrait flags — mirrors the chips on the Portraits tab so the gallery
+          shows at a glance which images are blurred or gallery-only on the site. */}
+      {(verySus||galleryOnly)&&(
+        <div style={{position:'absolute',top:4,left:4,display:'flex',flexDirection:'column',gap:3,alignItems:'flex-start'}}>
+          {verySus&&<span className="gal-chip gal-chip-spicy" title="Extra Spicy — blurred on the site">SPICY</span>}
+          {galleryOnly&&<span className="gal-chip gal-chip-gal" title="Gallery only — the LLM will not pick this in chat">GALLERY</span>}
+        </div>
+      )}
       {/* Hover overlay with details */}
       {hover&&(
         <div style={{position:'absolute',inset:0,background:'rgba(15,14,19,0.88)',display:'flex',flexDirection:'column',justifyContent:'center',padding:8,gap:3}}>
@@ -3941,7 +4629,6 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
     if(world) {
       parts.push(`\n## CURRENT WORLD: ${world.name}`);
       if(world.short_description) parts.push(`World description: ${world.short_description}`);
-      if((world.tags||[]).length) parts.push(`World tags: ${world.tags.join(', ')}`);
       if(world.notes) parts.push(`World notes:\n${world.notes}`);
 
       // All lorebooks in world with full chapter content
@@ -4802,7 +5489,6 @@ function WorldsPage({data,setSelectedWorld,setModal}) {
           <div className="world-card-footer">
             <span className="world-stat"><span>{chars}</span>chars</span>
             <span className="world-stat"><span>{lores}</span>lorebooks</span>
-            {(w.tags||[]).slice(0,2).map(t=><span key={t} className="tag">{t}</span>)}
           </div>
         </div>;
       })}
@@ -4895,7 +5581,7 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
             {/* character portraits and portrait slots */}
             {worldChars.flatMap(c=>[
               getImgSrc(c.image) && <GalleryItem key={`${c.id}-main`} src={getImgSrc(c.image)} label={c.name} sublabel="portrait" path={c.image?.relPath}/>,
-              ...(c.portraits||[]).filter(p=>p.data||p.relPath).map((p,i)=><GalleryItem key={`${c.id}-p${i}`} src={p.data||p.relPath} label={c.name} sublabel={p.name||`portrait ${i+1}`} path={p.relPath}/>),
+              ...(c.portraits||[]).filter(p=>p.data||p.relPath).map((p,i)=><GalleryItem key={`${c.id}-p${i}`} src={p.data||p.relPath} label={c.name} sublabel={p.name||`portrait ${i+1}`} path={p.relPath} verySus={p.very_sus} galleryOnly={p.gallery_only}/>),
               getImgSrc(c.companion_profile_banner_image) && <GalleryItem key={`${c.id}-banner`} src={getImgSrc(c.companion_profile_banner_image)} label={c.name} sublabel="banner" path={c.companion_profile_banner_image?.relPath}/>
             ].filter(Boolean))}
             {/* lorebook cover images */}
@@ -4923,7 +5609,6 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
             </div>
           </div>
           <div className="field-block"><label>Short Description</label><textarea value={world.short_description||''} onChange={e=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.short_description=e.target.value;})}/></div>
-          <div className="field-block"><label>Tags</label><TagInput value={world.tags||[]} onChange={v=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.tags=v;})}/></div>
           <div className="field-block">
             <label>Lorebook Templates <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— per-character lorebook entries (Character → Lorebook Entry tab)</span></label>
             <LoreTplManager worldId={world.id} data={data} update={update}/>
@@ -5608,7 +6293,11 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
       c.updated_at=new Date().toISOString();
       if(c.companion_folder){
         const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,...rest}=c;
-        const safe={...rest,image:rest.image?.id?{id:rest.image.id}:null,portraits:(rest.portraits||[]).map(p=>{const{data,...pr}=p;return pr;}),companion_profile_banner_image:rest.companion_profile_banner_image?.id?{id:rest.companion_profile_banner_image.id}:undefined,card:rest.card||' ',example_dialogue:rest.example_dialogue||'',temperature_offset_percentage:rest.temperature_offset_percentage||0};
+        // Must match saveCompanionJson in App() exactly. This used to strip only
+        // `data`, leaking local relPath into the export-shaped file, and read the
+        // banner id directly instead of resolving an inherited world banner.
+        const _bid=resolveBannerId(c,data);
+        const safe={...rest,image:rest.image?.id?{id:rest.image.id}:null,portraits:(rest.portraits||[]).map(p=>{const{data:_d,relPath:_rp,...pr}=p;return pr;}),companion_profile_banner_image:_bid?{id:_bid}:undefined,card:rest.card||' ',example_dialogue:rest.example_dialogue||'',temperature_offset_percentage:rest.temperature_offset_percentage||0};
         window.lorekeeper.saveCompanionJson(companion_folder,safe);
       }
     }
@@ -5733,7 +6422,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
               <div className="field-block"><label>Short Description <span style={{color:(charData.short_description||'').length>140?'var(--red)':'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>{(charData.short_description||'').length}/140</span></label><textarea value={charData.short_description||''} onChange={e=>{if(e.target.value.length<=140)updChar(c=>c.short_description=e.target.value);}} style={{minHeight:70}}/></div>
               <div className="field-block"><label>World</label><select value={charData.world_id||''} onChange={e=>updChar(c=>c.world_id=e.target.value)}><option value="">— Select world —</option>{sortedWorlds(data).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}</select></div>
               <div className="field-row">
-                <div className="field-block"><label>Tags <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— click to search, type to add custom</span></label><TagSelector value={charData.tags||[]} onChange={v=>updChar(c=>c.tags=v)} max={25} worldChars={data.characters.filter(c=>c.world_id===charData.world_id&&c.id!==charData.id)}/></div>
+                <div className="field-block"><label>Tags <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— click to search</span></label><TagSelector value={charData.tags||[]} onChange={v=>updChar(c=>c.tags=v)} max={25} worldChars={data.characters.filter(c=>c.world_id===charData.world_id&&c.id!==charData.id)}/></div>
                 <div className="field-block"><label>Fandom Tags <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0}}>{(charData.fandom_tags||[]).length}/3</span></label><TagInput value={charData.fandom_tags||[]} onChange={v=>updChar(c=>c.fandom_tags=v.slice(0,3))} max={3}/></div>
               </div>
             </div>
@@ -5812,6 +6501,11 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                     <div style={{padding:'8px'}}>
                       <input value={p.name||''} onChange={e=>updChar(c=>c.portraits[i].name=e.target.value)} placeholder="Name (e.g. Charming)" style={{width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none'}}/>
                       <input value={p.description||''} onChange={e=>updChar(c=>c.portraits[i].description=e.target.value)} placeholder="Description (required by site)" style={{width:'100%',background:'var(--bg2)',border:p.description?'1px solid var(--border)':'1px solid var(--amber)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',marginTop:4}}/>
+                      <input value={p.caption||''} onChange={e=>updChar(c=>c.portraits[i].caption=e.target.value)} placeholder="Caption (shown to users in the gallery)" maxLength={200} style={{width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',marginTop:4}}/>
+                      <div className="pflag-row">
+                        <button type="button" className={p.very_sus?'pflag pflag-spicy-on':'pflag'} title="Blurs the image on the site until the viewer opts in. Set this to match the site — Lorekeeper cannot detect it, and exporting with it off will un-blur an image that was spicy." onClick={()=>updChar(c=>c.portraits[i].very_sus=!c.portraits[i].very_sus)}>Extra Spicy</button>
+                        <button type="button" className={p.gallery_only?'pflag pflag-gal-on':'pflag'} title="Image appears in the gallery only — the LLM will not select it for in-chat display." onClick={()=>updChar(c=>c.portraits[i].gallery_only=!c.portraits[i].gallery_only)}>Gallery only</button>
+                      </div>
                       <div style={{display:'flex',gap:4,marginTop:6}}>
                         <button className="btn" style={{flex:1,justifyContent:'center',padding:'3px',fontSize:11}} onClick={async()=>{const r=await window.lorekeeper.importImage({defaultPath:charData.companion_folder?'Companions/'+charData.companion_folder:'Companions'});if(r)updChar(c=>c.portraits[i].data=r.base64);}}><i className="ti ti-photo"></i></button>
                         {(p.data||p.relPath)&&<button className="btn" style={{padding:'3px 5px',fontSize:11}} onClick={()=>setLightboxSrc(p.data||p.relPath)} title="View full image"><i className="ti ti-zoom-in" style={{fontSize:12}}></i></button>}
@@ -5835,7 +6529,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                         if(!c.portraits)c.portraits=[];
                         toAdd.forEach((img,idx)=>{
                           const res=copies[idx];
-                          c.portraits.push({name:img.name,description:'',very_sus:false,data:res?null:img.base64,relPath:res?res.relPath:null});
+                          c.portraits.push({name:img.name,description:'',caption:'',very_sus:false,gallery_only:false,data:res?null:img.base64,relPath:res?res.relPath:null});
                         });
                       });
                     }}><i className="ti ti-plus" style={{fontSize:24}}></i><span style={{fontSize:11}}>Add portraits</span></button>
@@ -6846,6 +7540,26 @@ function PersonaDetailPage({persona,data,update,onBack}) {
   const updP=(fn)=>update(d=>{const p=d.personas?.find(x=>x.id===persona.id);if(p)fn(p);});
   const pData=(data.personas||[]).find(x=>x.id===persona.id)||persona;
   const portRef=React.useRef();
+
+  // Personas had no independent file backup — the Personas\ folder existed but nothing
+  // ever wrote to it automatically, so a persona only lived inside the main data file.
+  // Debounced-write a standalone JSON per persona, same as Notes and Templates.
+  // image.data (base64) is stripped: image_relpath is the real reference, and keeping
+  // the blob would bloat the backup for no recovery value.
+  const personaFileTimer=React.useRef();
+  React.useEffect(()=>{
+    if(!pData||!pData.id) return;
+    clearTimeout(personaFileTimer.current);
+    personaFileTimer.current=setTimeout(()=>{
+      const {image,...rest}=pData;
+      const safeImage=image&&image.id?{id:image.id}:null;
+      const payload={...rest,image:safeImage};
+      const safeName=(pData.name||('persona-'+pData.id)).replace(/[^a-zA-Z0-9_-]/g,'_')+'-persona';
+      window.lorekeeper.savePersonaFile(safeName,payload).catch(()=>{});
+    },800);
+    return ()=>clearTimeout(personaFileTimer.current);
+  },[pData]);
+
   const handlePortrait=async()=>{
     const r=await window.lorekeeper.importImage();
     if(!r) return;
@@ -7621,7 +8335,7 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
         });
         // Pass 2: push truly unmatched image files as extra portrait slots
         item.imageFiles.filter(f=>!matchedRelPaths.has(f.relPath)).forEach(imgFile=>{
-          if(portraits.length<10) portraits.push({name:imgFile.name,description:imgFile.name==='profile_pic'?'Profile picture':'',very_sus:false,data:null,relPath:imgFile.relPath,image:undefined});
+          if(portraits.length<10) portraits.push({name:imgFile.name,description:imgFile.name==='profile_pic'?'Profile picture':'',caption:'',very_sus:false,gallery_only:false,data:null,relPath:imgFile.relPath,image:undefined});
         });
 
         const existing=d.characters.find(x=>x.id===obj.id);
@@ -7643,7 +8357,10 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
               (p.image?.id && x.image?.id && p.image.id === x.image.id) ||
               (!p.image?.id && p.name && x.name === p.name)
             );
-            return (!p.description && ep?.description) ? {...p, description:ep.description} : p;
+            const merged = {...p};
+            if (!merged.description && ep?.description) merged.description = ep.description;
+            if (merged.caption === undefined && ep?.caption !== undefined) merged.caption = ep.caption;
+            return merged;
           });
           // posted_dates: if the site export shows this is posted and we don't already have a
           // posted date locally, derive one from posted_at (or updated_at as a fallback) instead
@@ -8433,206 +9150,51 @@ function SettingsPage({data, update, dataPath}) {
 }
 
 function HelpPage() {
-  const P = ({children}) => <p style={{fontSize:13,color:'var(--text2)',lineHeight:1.7,marginBottom:8}}>{children}</p>;
-  const B = ({children}) => <strong style={{color:'var(--text)'}}>{children}</strong>;
-  const Code = ({children}) => <code style={{background:'var(--bg3)',padding:'1px 5px',borderRadius:3,fontSize:12,fontFamily:'monospace',color:'var(--accent)'}}>{children}</code>;
+  // Content lives in HELP_SECTIONS (plain-JS block). This only renders it.
+  // Inline parser handles **bold**, `code` and _italic_; anything else is plain text.
+  const parseInline = (text) => {
+    const out = [];
+    const re = /\*\*([^*]+)\*\*|`([^`]+)`|_([^_]+)_/g;
+    let last = 0, m, k = 0;
+    while ((m = re.exec(text)) !== null) {
+      if (m.index > last) out.push(text.slice(last, m.index));
+      if (m[1] !== undefined) out.push(<strong key={k++} className="help-b">{m[1]}</strong>);
+      else if (m[2] !== undefined) out.push(<code key={k++} className="help-code">{m[2]}</code>);
+      else out.push(<em key={k++}>{m[3]}</em>);
+      last = re.lastIndex;
+    }
+    if (last < text.length) out.push(text.slice(last));
+    return out;
+  };
+
+  const renderItem = (it, idx) => {
+    if (it.t === 'p') return <p key={idx} className="help-p">{parseInline(it.x)}</p>;
+    if (it.t === 'tip') return <HelpTip key={idx} text={it.x}/>;
+    if (it.t === 'step') return <HelpStep key={idx} n={it.n} text={it.x}/>;
+    if (it.t === 'warn') return (
+      <div key={idx} className="help-warn">
+        <strong className="help-warn-h">{parseInline(it.h)}</strong>
+        {parseInline(it.x)}
+      </div>
+    );
+    if (it.t === 'note') return (
+      <div key={idx} className="help-note">
+        <strong className="help-note-h">{parseInline(it.h)}</strong>
+        {(it.s||[]).map((st,k)=><HelpStep key={k} n={st.n} text={st.x}/>)}
+        {parseInline(it.x)}
+      </div>
+    );
+    return null;
+  };
 
   return (
     <div style={{maxWidth:760}}>
       <p style={{fontSize:13,color:'var(--text3)',marginBottom:20}}>Lorekeeper help reference. Click any section to expand.</p>
-
-      <HelpSection title="Dashboard" icon="ti-layout-dashboard">
-        <P>The dashboard is your daily workflow hub.</P>
-        <P><B>Calendar</B> — Shows scheduled characters (purple chips) and posted dates (green ✓). Click any day to expand it and see what is scheduled. Click a day to open the scheduler and add characters.</P>
-        <P><B>Today Banner</B> — Any character marked ready whose scheduled date has arrived or already passed, with a Mark Posted button. It keys off the scheduled date, not the day you set the status, so scheduling a month ahead and marking them later behaves the same. Marking posted stamps the <I>scheduled</I> date, not the day you clicked, so a late-marked character still lands on the right calendar day.</P>
-        <P><B>Upcoming</B> — Next 5 scheduled characters with their dates and readiness status.</P>
-        <P><B>Release Cycle</B> — A rotating world queue. Set the order in which you cycle through worlds. The next world up is shown here.</P>
-        <P><B>Site Checklist</B> — Characters, lorebooks, and collections edited since last export. Clear an item by exporting it and uploading it to the site.</P>
-        <P><B>Lorekeeper Checklist</B> — Pre-export validation for public items. Flags missing fields, missing portrait UUIDs, etc.</P>
-        <P><B>Drafts in Progress</B> — All draft characters with a visual indicator for missing required fields.</P>
-        <HelpTip text="Required for export: name, display name, short description, full description, card, 5+ tags, portrait, portrait UUID, portrait slots, scenarios." />
-      </HelpSection>
-
-      <HelpSection title="Characters" icon="ti-users">
-        <P>Each character has 11 tabs:</P>
-        <P><B>Identity</B> — Name, display name, short description (max 140 chars), world, tags (max 25; content warning tags don't count), fandom tags (max 3).</P>
-        <P><B>Full Description</B> — The long-form public description shown on the character's site profile. Separate from the Character Card, which the model sees but readers do not.</P>
-        <P><B>Character Card</B> — The system prompt. Supports markdown. Use the macro reference panel for Saucepan macros like {'{{user}}'} and {'{{char}}'}.</P>
-        <P><B>Formatting</B> — Formatting instructions, advanced prompt, and example dialogue.</P>
-        <P><B>Scenarios</B> — Up to 7500 characters. Drag the grip handle to reorder scenarios.</P>
-        <P><B>Main portrait vs portrait slots.</B> The large image on the left is the character's main picture. It does not have to be one of the portrait slots — Set Portrait can import any image. Lorekeeper never reassigns it on its own; the only automatic change is following a file rename.</P>
-        <P>A portrait slot named exactly <Code>profile_pic</Code> mirrors the Profile Pic UUID from the site. That copying is one-way: the Profile Pic field is the source and the slot follows it, so editing the slot's own UUID will not change the profile pic.</P>
-        <P><B>Portraits</B> — Up to 10 portrait slots. Each needs a platform Image ID (UUID). Drag to reorder portraits.</P>
-        <P><B>Lorebooks</B> — Link this character to lorebooks. Linked lorebooks are what the Assistant reads for world context.</P>
-        <P><B>Collections</B> — Which collections this character belongs to. A character can be in collections across several worlds.</P>
-        <P><B>Schedule</B> — Set status (draft / ready / posted), schedule dates, and posted dates. Setting status to Posted auto-stamps today as the posted date.</P>
-        <P><B>Lorebook Entry</B> — If a lorebook template is set up for the world, fill in the character's entry and save it directly to the world lorebook.</P>
-        <P><B>Settings</B> — Access level, temperature, spicy flags, companion folder (for auto-save). Also contains <B>Update from JSON</B>, <B>Export JSON</B>, and <B>Export MD</B>.</P>
-        <HelpTip text="Export JSON strips all app-only fields automatically. Images export as UUID references only — make sure portrait UUIDs are set first." />
-      </HelpSection>
-
-      <HelpSection title="Worlds" icon="ti-world">
-        <P>Each world groups characters, lorebooks, collections, and gallery images together.</P>
-        <P><B>Characters / Lorebooks / Collections tabs</B> — Browse and manage content in this world. Characters from other worlds that belong to a collection in this world also appear here.</P>
-        <P><B>Gallery tab</B> — All images associated with this world.</P>
-        <P><B>World Info tab</B> — Edit world name, description, tags, banner image, notes, plot archetypes (for the Plot tool), and lorebook templates.</P>
-        <P><B>Export ZIP</B> — The Export ZIP button in the topbar packages all posted characters + public lorebooks + public collections for this world into a dated zip file, stripped of app-only fields and ready to upload. Stamps site_last_synced_at on everything exported.</P>
-        <HelpTip text="Drag the grip handle (⠿) next to a world in the sidebar to reorder worlds. The order is saved and used throughout the app." />
-      </HelpSection>
-
-      <HelpSection title="Lorebooks" icon="ti-book">
-        <P>Lorebooks hold world lore as chapters. Each chapter is a titled text entry.</P>
-        <P><B>Chapters tab</B> — Add, reorder, and edit chapters.</P>
-        <P><B>Settings tab</B> — Access level, definition protection, image ID, tags, and auto-save filename.</P>
-        <P><B>Export tab</B> — Export as platform-ready JSON or as a Markdown document (all chapters as ## headings).</P>
-        <P><B>Access level</B> — Set to Public when ready to upload. Private lorebooks are excluded from the Site Checklist and world Export ZIP.</P>
-        <P><B>Definition protection</B> — Copy Protection is recommended. Avoid Open.</P>
-        <P><B>Auto-save filename</B> — Set a filename (e.g. <Code>MyLorebook.json</Code>) and Lorekeeper auto-saves the lorebook to <Code>Lorebooks\</Code> on every edit.</P>
-        <HelpTip text="Standalone lorebooks (no world) are accessible from the Lorebooks page in the sidebar." />
-      </HelpSection>
-
-      <HelpSection title="Collections" icon="ti-folders">
-        <P>Collections group characters together on the site.</P>
-        <P><B>Edit tab</B> — Name, description, tags, world, auto-save filename, and character picker.</P>
-        <P><B>Export tab</B> — Export as platform-ready JSON or as a Markdown document (name, description, character list, tags).</P>
-        <P><B>Character picker</B> — Add or remove characters from the collection. Characters from any world can be added.</P>
-        <P><B>Access level</B> — Set to Public to include the collection in world Export ZIPs.</P>
-        <HelpTip text="A character can belong to multiple collections across different worlds — this is intentional. Collections are the mechanism for cross-world grouping." />
-      </HelpSection>
-
-      <HelpSection title="Personas" icon="ti-masks-theater">
-        <P>Personas are your player characters — independent of worlds, used across roleplay.</P>
-        <P>Each persona has a name, pronouns, description, portrait, and an optional linked lorebook.</P>
-        <P>The <B>Export MD</B> button in the topbar exports a markdown sheet with name, pronouns, description, and linked lorebook name.</P>
-      </HelpSection>
-
-      <HelpSection title="Templates (character creation)" icon="ti-template">
-        <P>Character templates pre-fill fields when creating a new character.</P>
-        <P>Global templates are available everywhere. World templates only appear when creating a character in that world.</P>
-        <P>Supported fields: display name format, short/full description, card, formatting, advanced prompt, tags, fandom tags, access level, spicy flags, temperature, and more.</P>
-        <P>The <B>Export MD</B> button in the template editor exports a reference sheet with all non-empty fields.</P>
-        <HelpTip text="Use {{name}} in the Display Name Format field — it gets replaced with the character's actual name on creation." />
-      </HelpSection>
-
-      <HelpSection title="Lorebook Templates (per-world)" icon="ti-template">
-        <P>Lorebook templates let you define a structured format for character entries in a world lorebook — e.g. a hockey player profile for all team members.</P>
-        <HelpStep n={1} text="Go to the world → World Info tab → Lorebook Templates section."/>
-        <HelpStep n={2} text="Click New template. Give it a name, pick the target lorebook, set a chapter title template (e.g. CHARACTER NAME | POSITION | ROLE), and paste the template text."/>
-        <HelpStep n={3} text="Use {{CHARACTER NAME}} for the character's name in uppercase, and {{CHAR}} for normal case."/>
-        <HelpStep n={4} text="Open any character in that world → Lorebook Entry tab. The template appears pre-filled with their name."/>
-        <HelpStep n={5} text="Edit the chapter title and fill in the template body, then click Save to Lorebook."/>
-        <HelpTip text="Saving updates the existing chapter if one already exists for that character (matched by character ID, not title)." />
-      </HelpSection>
-
-      <HelpSection title="Relationship Map" icon="ti-circles-relation">
-        <P>The Map tab in the right panel (expand with the toggle button in the topbar) shows a visual relationship map for a world.</P>
-        <P><B>Nodes</B> — Each character in the world appears as a portrait circle. Drag nodes to reposition them. The layout resets when you switch worlds.</P>
-        <P><B>Drawing connections</B> — Click <B>+ connect</B> under a character, then click another character. A prompt asks for a relationship label (e.g. rivals, lovers, siblings).</P>
-        <P><B>Editing connections</B> — Click a line or its label to open the edit popup at the bottom of the panel. Drag the popup by the ⠿ handle to move it out of the way. Edit the label or delete the connection.</P>
-        <P><B>Reset layout</B> — Re-runs the auto-layout grid if nodes drift off-screen.</P>
-        <HelpTip text="Characters that belong to this world via a collection (not just world_id) also appear — cross-world characters like shared cast members show up correctly." />
-      </HelpSection>
-
-      <HelpSection title="Tools panel" icon="ti-tool">
-        <P>Open the Tools tab in the right panel.</P>
-        <P><B>Height</B> — Convert cm ↔ ft/in. Click result to copy.</P>
-        <P><B>Names</B> — Generate names by gender. International pool.</P>
-        <P><B>Physicals</B> — Roll eyes, hair, and build separately or all at once.</P>
-        <P><B>Nationality</B> — Filter by region. Shows language and currency.</P>
-        <P><B>Color</B> — HSL sliders + 6 harmony modes. Click swatches to copy hex.</P>
-        <P><B>Text Diff</B> — Paste two versions of a text to highlight what changed.</P>
-        <P><B>Personality</B> — Roll Literary Archetype, MBTI, Jungian, and Attachment Style.</P>
-        <P><B>Plot</B> — Roll from 100 global archetypes, or filter to world-specific ones added in World Info.</P>
-        <P><B>Esper Powers</B> — Rolls an ability type, rank (F through S), drawback, and codename for an esper character.</P>
-        <P><B>Hockey</B> — Rolls a position, role description, handedness, and character trait for a hockey player.</P>
-        <P><B>Swim</B> — Rolls a stroke, event distance, stroke description, and swimmer archetype.</P>
-        <P><B>Western Zodiac</B> — Rolls a sun sign with element, modality, traits, shadow side, and vibe.</P>
-        <P><B>Chinese Zodiac</B> — Rolls a sign with element, reference years, traits, shadow side, and vibe.</P>
-        <P><B>Img UUID</B> — Saucepan offers three copy formats for every image (markdown, an img tag, a CSS background rule) and the UUID is usually the only part you want. Paste any of them — or all three at once — and this pulls the UUID out. Results are deduplicated, so pasting all three formats of the same image gives one UUID, not three.</P>
-        <P><B>Image Prompt Generator</B> — Generates an image generation prompt for the current character using whichever AI provider is set in Settings, including a local model via LM Studio. Art style and mood dropdowns; optional extra notes; copy button.</P>
-        <P>Content warnings and POV/format tags are stripped before the prompt is built — they describe what the story contains, not what the picture looks like, and sending them skews the composition. Tags still export to Saucepan normally. The character's name is also never sent, since image models cannot render a name and a surname can bias the result.</P>
-      </HelpSection>
-
-      <HelpSection title="Image Tools" icon="ti-photo">
-        <P>Found in the right panel → Tools tab → Image Tools section.</P>
-        <P><B>Format Converter</B> — Convert images between PNG, JPEG, and WebP. Drag or paste an image, pick a format, download the result.</P>
-        <P><B>Paste &amp; Save</B> — Paste a screenshot or image from clipboard and save it directly to a character's portrait folder. Useful for quickly capturing site images.</P>
-        <P><B>Crop</B> — Crop any image to an exact pixel region. Drag to define the crop area, adjust handles, download the result.</P>
-        <P><B>Image Prompt Generator</B> — See Tools panel section above.</P>
-      </HelpSection>
-
-      <HelpSection title="Editing conveniences" icon="ti-keyboard">
-        <P><B>Ctrl+F — find in long text.</B> On a character, searches Full Description, Character Card, Formatting, and every intro. On a lorebook, searches the short description and every chapter. On a collection, the definition and lorebook display. Matches appear as buttons showing the count per field; clicking one jumps to that tab. Esc closes.</P>
-        <HelpTip text="This is a Lorekeeper search, not the browser's. It has to be, because the browser's find cannot see text inside editable fields — which is where all of this content lives." />
-        <P><B>Spell check</B> — Misspellings are underlined in every text field. Right-click one for suggestions, or to add the word to your dictionary. The same menu carries cut, copy, and paste.</P>
-      </HelpSection>
-
-      <HelpSection title="Import / Export" icon="ti-file-import">
-        <P>The Import/Export page has three sections: <B>Backup</B>, <B>Restore</B>, and <B>Import</B>.</P>
-        <P><B>Backup</B> — Export a full ZIP of everything (data + all images), or export a single world as a ZIP. Store backups somewhere safe outside the Lorekeeper folder.</P>
-        <P><B>Restore</B> — Two options: <B>Import &amp; merge from backup</B> reads a ZIP and shows a preview of adds, updates, and conflicts — nothing is deleted, local-only data is preserved, and you choose Keep Local or Take Backup per conflict. <B>Restore from last good backup</B> is the emergency option: replaces all data with the auto-saved lastgood file (no zip needed).</P>
-        <P><B>Import (single items or batch)</B> — Paste a JSON directly, or click Scan Folders to scan <Code>Companions\</Code>, <Code>Lorebooks\</Code>, and <Code>Collections\</Code>. Each item shows a badge: new / update ↓ / local newer ↑ / up to date. Assign worlds and click Import.</P>
-        <HelpTip text="Items marked 'local newer' are skipped by default. Click 'Import anyway' on that item, or check 'Force import all', to override. Images alongside JSONs are automatically linked as image_relpath." />
-        <P>If the JSON you pick turns out to be a full Lorekeeper backup rather than a single item, Lorekeeper now stops and says so, showing what the file holds against what you currently have. Confirming replaces everything — use Restore → Import &amp; merge from backup instead if you only wanted part of it.</P>
-      </HelpSection>
-
-      <HelpSection title="Auto-save to disk" icon="ti-device-floppy">
-        <P>Characters, lorebooks, and collections can auto-save to <Code>I:\Lorekeeper\</Code> on every edit.</P>
-        <P>Set a <B>Folder Name</B> on a character (Settings tab) and it saves to <Code>Companions\FolderName\companion.json</Code>.</P>
-        <P>Set a <B>Lorebook Filename</B> on a lorebook and it saves to <Code>Lorebooksilename.json</Code>.</P>
-        <P>Set a <B>Collections Filename</B> on a collection and it saves to <Code>Collectionsilename.json</Code>.</P>
-        <P>New items get a filename auto-generated from their name. Clear the field to disable auto-save.</P>
-        <HelpTip text="Auto-saved files have app-only fields stripped — they are clean platform-format JSONs ready to upload." />
-      </HelpSection>
-
-      <HelpSection title="Image Storage Audit" icon="ti-photo-scan">
-        <P>Keeps images stored as local files instead of base64 blobs in the data JSON.</P>
-        <P><B>Rescan images</B> — Scans folders for image files and links them to existing items. Use after dropping images into <Code>Lorebooks\</Code> or <Code>Collections\</Code> manually.</P>
-        <P><B>Audit base64</B> — Sorts every image into four states: already using a local file; has a path but the file is missing; still base64 with no file yet; and has a working file but is <I>also</I> still carrying leftover base64 in the data.</P>
-        <P><B>Clear leftover base64</B> — For that last group. No file is written, since the image is already on disk — this only drops the redundant copy out of the JSON. This is usually where the bulk of a large data file goes.</P>
-        <P><B>Link / Write</B> — For items with no file yet. Where a matching image is already sitting in the folder, the button offers to link it rather than write a duplicate; the button text says which it will do.</P>
-      </HelpSection>
-
-      <HelpSection title="Data Safety" icon="ti-shield-check">
-        <P>Lorekeeper protects your data with several layers:</P>
-        <P><B>Auto-save</B> — Data is written after every change (600ms debounce). A load guard prevents saving until data is fully loaded.</P>
-        <P><B>Shrink-refuse</B> — If a save would shrink the data file beyond a safety threshold, it is refused. Prevents runaway autosaves from overwriting real data with an empty shape.</P>
-        <P><B>Last-good backup</B> — On every successful save, the previous file is copied to <Code>lorekeeper-data.lastgood.json</Code>. Use Restore → Restore from last good backup to recover it without a zip.</P>
-        <P><B>Flush on close</B> — Closing the window used to kill a pending save mid-write. Lorekeeper now holds the window open until the last change has actually reached disk.</P>
-        <P><B>Pre-shrink snapshot</B> — Operations that legitimately shrink the data file a lot, such as clearing base64 images, copy the old file to <Code>lorekeeper-data.preshrink-{'{date}'}.json</Code> first. These are safe to delete once you have confirmed everything looks right; nothing removes them automatically.</P>
-        <P><B>Export ZIP (world topbar)</B> — Platform-ready zip for upload to Saucepan. Not the same as a backup — only includes posted characters, public lorebooks, and public collections.</P>
-        <HelpTip text="Do a full backup before any restore. Full backup zips are the safest recovery option; the lastgood file is for quick recovery from recent corruption." />
-      </HelpSection>
-
-      <HelpSection title="Settings" icon="ti-settings">
-        <P><B>Font size</B> — Changes the base font size across the whole app immediately.</P>
-        <P><B>AI provider &amp; API key</B> — Used by the Assistant and the Image Prompt Generator. Choose Anthropic, OpenAI, Google, OpenRouter, or LM Studio, then paste the matching key. LM Studio runs locally and needs no key — start its server, load one or more models, and pick from the Model dropdown, which lists whatever is currently loaded. Loading several means switching between them without leaving Lorekeeper.</P>
-        <P><B>Autosave debounce</B> — How long to wait after a keystroke before saving. Default 600ms.</P>
-        <P><B>Data file</B> — Shows where data is stored. Click to open the folder.</P>
-        <P><B>Theme and colorblind mode</B> — Settings → Appearance. Pick an accent color to generate a full dark/light theme. Colorblind mode adjusts red/green or blue/yellow pairs: Red-Green mode (deuteranopia/protanopia) swaps red→orange and green→blue; Blue-Yellow mode (tritanopia) swaps amber→red-orange and teal→pink.</P>
-      </HelpSection>
-
-      <HelpSection title="AI assistant" icon="ti-sparkles">
-        <P>The Assistant tab in the right panel gives you an AI writing assistant that knows your world context. Powered by whichever provider you choose in Settings: Anthropic, OpenAI, Google, OpenRouter, or a local model via LM Studio.</P>
-        <P><B>What it knows</B> depends on the context scope selector at the top of the Assistant panel:</P>
-        <P><B>Character</B> — only the character you are editing. <B>World</B> — the world, its characters and collections, and lorebook summaries without the chapter text. <B>Full</B> — everything, including full chapter text.</P>
-        <P>Chapter text is what overruns a local model's context window: a mature world runs to roughly 27k tokens against the ~8k many local models allow. On a local model, start at Character or World.</P>
-        <P><B>Chat resets</B> when you switch to a different character or world. Copy anything useful before switching.</P>
-        <HelpTip text="Click any suggested prompt on the empty chat screen to pre-fill it. Or just type — 'write a short description for this character', 'suggest scenarios based on the card', etc." />
-        <div style={{marginTop:8,padding:'10px 12px',background:'rgba(251,191,36,0.08)',border:'1px solid rgba(251,191,36,0.25)',borderRadius:'var(--r)',fontSize:12,color:'var(--amber)',lineHeight:1.7}}>
-          <strong style={{display:'block',marginBottom:4}}>⚠ Cloud providers need an API key — separate from any chat subscription</strong>
-          Each provider's consumer chat app (claude.ai, chatgpt.com, gemini.google.com) is billed separately from its developer API. You need an API key with credits, not just a subscription. LM Studio is the exception: it runs on your own machine, needs no key, and costs nothing per message.
-        </div>
-        <div style={{marginTop:8,fontSize:12,color:'var(--text3)',lineHeight:1.8}}>
-          <strong style={{color:'var(--text)',display:'block',marginBottom:4}}>Setup (Anthropic example):</strong>
-          <HelpStep n={1} text="Go to console.anthropic.com and create an account (separate from claude.ai)."/>
-          <HelpStep n={2} text="Add credits — minimum $5. There is no free tier."/>
-          <HelpStep n={3} text="Go to API Keys → Create Key. Copy the key (starts with sk-ant-)."/>
-          <HelpStep n={4} text="In Lorekeeper → Settings → AI Provider → select Anthropic → paste the key → Save."/>
-        </div>
-        <P>Other providers follow the same pattern: create an account at the provider's developer console (platform.openai.com, aistudio.google.com, or openrouter.ai), add credits, generate a key, and paste it in the matching Settings field.</P>
-        <P><B>Cost estimate:</B> roughly $0.05–0.15 per conversation with a capable cloud model, depending on world size. Lighter models (Haiku, GPT-4o mini, Gemini Flash) are cheaper but less capable. A local model through LM Studio costs nothing per message, at the price of a much smaller context window.</P>
-      </HelpSection>
+      {HELP_SECTIONS.map((sec,si)=>(
+        <HelpSection key={si} title={sec.title} icon={sec.icon}>
+          {sec.items.map(renderItem)}
+        </HelpSection>
+      ))}
     </div>
   );
 }
