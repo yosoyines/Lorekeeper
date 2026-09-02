@@ -2698,7 +2698,7 @@ function App() {
   // Save platform fields back to Companions/FolderName/character.json
   const saveCompanionJson = (c) => {
     if (!c.companion_folder) return; // no folder assigned, skip
-    const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,...rest} = c;
+    const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,export_filename,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,...rest} = c;
     const exportImage = rest.image?.id ? {id: rest.image.id} : null;
     const exportPortraits = (rest.portraits||[]).map(p => { const {data,relPath,...pRest} = p; return pRest; });
     const _bannerId = resolveBannerId(c, data);
@@ -2712,7 +2712,7 @@ function App() {
     // Strip base64 image data — site only accepts {id: "uuid"}
     const exportImage = rest.image?.id ? {id: rest.image.id} : null;
     const exportPortraits = (rest.portraits||[]).map(p => {
-      const {data,...pRest} = p;
+      const {data,relPath,...pRest} = p;
       return pRest;
     });
     const _bannerId = resolveBannerId(c, data);
@@ -2768,9 +2768,9 @@ function App() {
     const files = [];
     const warnings = [];
     wChars.forEach(c => {
-      const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,...rest} = c;
+      const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,export_filename,...rest} = c;
       const exportImage = rest.image && rest.image.id ? {id: rest.image.id} : null;
-      const exportPortraits = (rest.portraits||[]).map(p => { const {data,...pr} = p; return pr; });
+      const exportPortraits = (rest.portraits||[]).map(p => { const {data,relPath,...pr} = p; return pr; });
       const _bannerId = resolveBannerId(c, data);
       const exportBanner = _bannerId ? {id: _bannerId} : undefined;
       const safe = {...rest, image: exportImage, portraits: exportPortraits, companion_profile_banner_image: exportBanner, card: rest.card||" ", example_dialogue: rest.example_dialogue||"", temperature_offset_percentage: rest.temperature_offset_percentage||0};
@@ -2783,14 +2783,14 @@ function App() {
       files.push({name: "Companions/" + safeName + "/companion.json", content: JSON.stringify(safe, null, 2)});
     });
     wLores.forEach(l => {
-      const {world_id,lorebook_filename,image_data,image_relpath,site_last_synced_at,collaboration_type,status,...rest} = l;
+      const {world_id,lorebook_filename,image_data,image_relpath,site_last_synced_at,export_filename,collaboration_type,status,...rest} = l;
       const loreScIdx = l.selected_chapter_index||0;
       const safe = {...rest, selected_chapter_index:loreScIdx, collaboration_type: l.access_level==='public' ? 'public' : 'private'};
       const safeName = (l.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g, "_");
       files.push({name: "Lorebooks/" + safeName + "-lorebook.json", content: JSON.stringify(safe, null, 2)});
     });
     wColls.forEach(c => {
-      const {world_id,image_data,image_relpath,collection_filename,site_last_synced_at,definition,is_community,...rest} = c;
+      const {world_id,image_data,image_relpath,collection_filename,site_last_synced_at,export_filename,definition,is_community,...rest} = c;
       const safe = {...rest, description: definition||'', lorebooks: c.lorebooks||[]};
       const safeName = (c.name||"collection").replace(/[^a-zA-Z0-9_-]/g, "_");
       files.push({name: "Collections/" + safeName + "-collection.json", content: JSON.stringify(safe, null, 2)});
@@ -5826,8 +5826,9 @@ function LorePage({lorebook,data,update,exportLore,initialTab,importJSON,setModa
   const world = data.worlds.find(w=>w.id===lore.world_id);
 
   const updLore=(fn)=>update(d=>{const l=d.lorebooks.find(x=>x.id===lorebook.id);if(l){fn(l);l.updated_at=new Date().toISOString();if(l.lorebook_filename){
-    const{world_id,image_data,lorebook_filename,...lrest}=l;
-    window.lorekeeper.saveLorebookJson(l.lorebook_filename,{...lrest,updated_at:l.updated_at});
+    // Must match exportLore's strip list.
+    const{world_id,image_data,lorebook_filename,image_relpath,site_last_synced_at,export_filename,collaboration_type,status,...lrest}=l;
+    window.lorekeeper.saveLorebookJson(l.lorebook_filename,{...lrest,selected_chapter_index:l.selected_chapter_index||0,collaboration_type:l.access_level==='public'?'public':'private',updated_at:l.updated_at});
   }}});
 
   const handleImage=async()=>{
@@ -6292,7 +6293,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
       fn(c);
       c.updated_at=new Date().toISOString();
       if(c.companion_folder){
-        const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,...rest}=c;
+        const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,export_filename,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,...rest}=c;
         // Must match saveCompanionJson in App() exactly. This used to strip only
         // `data`, leaking local relPath into the export-shaped file, and read the
         // banner id directly instead of resolving an inherited world banner.
@@ -6381,8 +6382,10 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
               {charData.image?.id&&<button className="btn" style={{padding:'4px 6px',fontSize:10,flexShrink:0}} onClick={()=>navigator.clipboard.writeText(charData.image.id)} title="Copy"><i className="ti ti-copy" style={{fontSize:12}}></i></button>}
             </div>
           </div>
-          <button className="btn" style={{width:'100%',justifyContent:'center'}} onClick={handleBanner}><i className="ti ti-photo"></i>{charData.companion_profile_banner_image?.data?'Change Banner':'Set Banner'}</button>
-          {charData.companion_profile_banner_image?.data&&<div style={BANNER_PREVIEW_STYLE}><ImgFromPath src={charData.companion_profile_banner_image.data||charData.companion_profile_banner_image.relPath} alt="banner" style={BANNER_IMG_STYLE}/></div>}
+          <button className="btn" style={{width:'100%',justifyContent:'center'}} onClick={handleBanner}><i className="ti ti-photo"></i>{(charData.companion_profile_banner_image?.data||charData.companion_profile_banner_image?.relPath)?'Change Banner':'Set Banner'}</button>
+          {/* Gate on data OR relPath: once the base64 migration clears .data and sets
+              .relPath, gating on .data alone hides a banner that still exists. */}
+          {(charData.companion_profile_banner_image?.data||charData.companion_profile_banner_image?.relPath)&&<div style={BANNER_PREVIEW_STYLE}><ImgFromPath src={charData.companion_profile_banner_image.data||charData.companion_profile_banner_image.relPath} alt="banner" style={BANNER_IMG_STYLE}/></div>}
           <div className="field-block" style={{padding:'10px 12px'}}>
             <label style={{fontSize:10}}>Banner <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0}}>(from site)</span></label>
             <div style={{display:'flex',gap:6,marginTop:4}}>
@@ -6848,7 +6851,7 @@ function LoreItemRestoreCard({lorebook, update}) {
   };
 
   const handleLoreBackup = () => {
-    const {world_id,lorebook_filename,image_data,image_relpath,collaboration_type,status,...rest} = lorebook;
+    const {world_id,lorebook_filename,image_data,image_relpath,site_last_synced_at,export_filename,collaboration_type,status,...rest} = lorebook;
     const safe = {...rest, selected_chapter_index: lorebook.selected_chapter_index||0, collaboration_type: lorebook.access_level === 'public' ? 'public' : 'private'};
     window.lorekeeper.exportFile({defaultName:(lorebook.name||'lorebook').replace(/[^a-zA-Z0-9_-]/g,'_')+'-lorebook.json', content:JSON.stringify(safe,null,2), folder:'Lorebooks'});
   };
@@ -6952,7 +6955,11 @@ function CollPage({coll,data,update,exportColl,initialTab,importJSON,openChar,se
   },[collFindOpen]);
   const col=(data.collections.find(x=>x.id===coll.id))||coll;
   const world=data.worlds.find(w=>w.id===col.world_id);
-  const setCol=(fn)=>update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(!c)return;fn(c);c.updated_at=new Date().toISOString();if(c.collection_filename){const{world_id,image_data,collection_filename,...rest}=c;window.lorekeeper.saveCollectionJson(c.collection_filename,{...rest,updated_at:c.updated_at});}});
+  const setCol=(fn)=>update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(!c)return;fn(c);c.updated_at=new Date().toISOString();if(c.collection_filename){
+    // Must match exportColl. The platform's field is "description", not "definition";
+    // image_relpath, site_last_synced_at, export_filename and is_community are app-only.
+    const{world_id,image_data,image_relpath,collection_filename,site_last_synced_at,export_filename,definition,is_community,...rest}=c;
+    window.lorekeeper.saveCollectionJson(c.collection_filename,{...rest,description:definition||'',lorebooks:c.lorebooks||[],updated_at:c.updated_at});}});
   const charCount=data.characters.filter(ch=>(ch.collections||[]).includes(col.id)||(col.companions||[]).includes(ch.id)).length;
   const tabs=[['edit','Edit'],['export','Export']];
   return (
