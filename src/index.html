@@ -1658,6 +1658,63 @@ const CHAR_CHECKS = [
 // Banner UUID actually used on export. A manually pasted id always wins; otherwise the
 // companion inherits the banner of any community collection it belongs to, so shared
 // collection art doesn't have to be re-uploaded per companion on the site.
+
+// ── Saucepan export shapes — SINGLE SOURCE OF TRUTH ──────────────────────
+// Every path that writes a Saucepan-shaped file goes through these three
+// functions. Do not inline a strip list anywhere else.
+//
+// Why: the character shape used to be rebuilt in four places, the lorebook shape
+// in five, the collection shape in three, each with its own hand-maintained field
+// list. They drifted in sessions 18, 31 and 35b, and each fix was applied to some
+// copies and missed others — exportChar and the ZIP loop still leaked portrait
+// relPath two sessions after that fix was written, and setCol never got the
+// definition->description rename exportColl documents having fixed.
+// Consolidated in session 35d. If Saucepan changes a field, change it HERE only.
+
+function buildCompanionExport(c, data) {
+  const {world_id, status, schedule_dates, posted_dates, collections, linked_lorebooks,
+         companion_folder, site_last_synced_at, export_filename, lorebook_entry_text,
+         lorebook_entry_title, voice_catalog_id, reworked_at, ...rest} = c;
+  // Site accepts image references only as {id:"uuid"} — never base64, never a local path.
+  const exportImage = rest.image && rest.image.id ? {id: rest.image.id} : null;
+  const exportPortraits = (rest.portraits || []).map(p => {
+    const {data: _d, relPath: _rp, ...pRest} = p;
+    return pRest;
+  });
+  // Resolve inherited world/community banners rather than reading the field directly.
+  const bannerId = resolveBannerId(c, data);
+  return {
+    ...rest,
+    image: exportImage,
+    portraits: exportPortraits,
+    companion_profile_banner_image: bannerId ? {id: bannerId} : undefined,
+    card: rest.card || ' ',
+    example_dialogue: rest.example_dialogue || '',
+    temperature_offset_percentage: rest.temperature_offset_percentage || 0
+  };
+}
+
+function buildLoreExport(l) {
+  const {world_id, lorebook_filename, image_data, image_relpath, site_last_synced_at,
+         export_filename, collaboration_type, status, ...rest} = l;
+  return {
+    ...rest,
+    // Saucepan requires selected_chapter_index on import.
+    selected_chapter_index: l.selected_chapter_index || 0,
+    // Derive fresh from access_level; the stored value can be stale.
+    collaboration_type: l.access_level === 'public' ? 'public' : 'private'
+  };
+}
+
+function buildCollExport(c) {
+  const {world_id, image_data, image_relpath, collection_filename, site_last_synced_at,
+         export_filename, definition, is_community, ...rest} = c;
+  // The platform's field is "description"; Lorekeeper's internal model calls it
+  // "definition". Forgetting this rename sent collections to the site with no
+  // description text at all.
+  return {...rest, description: definition || '', lorebooks: c.lorebooks || []};
+}
+
 function resolveBannerId(c, data) {
   const manual = c.companion_profile_banner_image && c.companion_profile_banner_image.id;
   if (manual) return manual;
@@ -2685,11 +2742,7 @@ function App() {
     if (res && res.success) { const mb=(res.size/1048576).toFixed(1); alert("Backup saved ("+mb+" MB)"); }
   };
   const exportColl = (c) => {
-    const {world_id,image_data,image_relpath,collection_filename,site_last_synced_at,export_filename,definition,is_community,...rest}=c;
-    // The platform's field for this text is "description", not "definition" — Lorekeeper's
-    // internal data model uses "definition" but that name was leaking straight through to
-    // the export, so Saucepan never actually received the collection's description text.
-    const safe = {...rest, description: definition||'', lorebooks: c.lorebooks||[]};
+    const safe = buildCollExport(c);
     window.lorekeeper.exportFile({ defaultName: c.export_filename || `${c.name}-collection.json`, content:JSON.stringify(safe,null,2), folder:"Collections" }).then(res=>{
       if(res&&res.fileName) update(d=>{const cc=d.collections.find(x=>x.id===c.id);if(cc)cc.export_filename=res.fileName;});
     });
@@ -2698,34 +2751,12 @@ function App() {
   // Save platform fields back to Companions/FolderName/character.json
   const saveCompanionJson = (c) => {
     if (!c.companion_folder) return; // no folder assigned, skip
-    const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,export_filename,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,...rest} = c;
-    const exportImage = rest.image?.id ? {id: rest.image.id} : null;
-    const exportPortraits = (rest.portraits||[]).map(p => { const {data,relPath,...pRest} = p; return pRest; });
-    const _bannerId = resolveBannerId(c, data);
-    const exportBanner = _bannerId ? {id: _bannerId} : undefined;
-    const safe = {...rest, image: exportImage, portraits: exportPortraits, companion_profile_banner_image: exportBanner, card: rest.card||' ', example_dialogue: rest.example_dialogue||'', temperature_offset_percentage: rest.temperature_offset_percentage||0};
-    window.lorekeeper.saveCompanionJson(c.companion_folder, safe);
+    window.lorekeeper.saveCompanionJson(c.companion_folder, buildCompanionExport(c, data));
   };
 
   const exportChar = (c) => {
-    const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,export_filename,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,...rest}=c;
-    // Strip base64 image data — site only accepts {id: "uuid"}
-    const exportImage = rest.image?.id ? {id: rest.image.id} : null;
-    const exportPortraits = (rest.portraits||[]).map(p => {
-      const {data,relPath,...pRest} = p;
-      return pRest;
-    });
-    const _bannerId = resolveBannerId(c, data);
-    const exportBanner = _bannerId ? {id: _bannerId} : undefined;
-    const safe = {
-      ...rest,
-      image: exportImage,
-      portraits: exportPortraits,
-      companion_profile_banner_image: exportBanner,
-      card: rest.card||' ',
-      example_dialogue: rest.example_dialogue||'',
-      temperature_offset_percentage: rest.temperature_offset_percentage||0,
-    };
+    const safe = buildCompanionExport(c, data);
+    const exportImage = safe.image;
     const warnings=[];
     if(!c.short_description) warnings.push('short_description is empty');
     if(!c.full_description) warnings.push('full_description is empty');
@@ -2741,10 +2772,7 @@ function App() {
     });
   };
   const exportLore = (l) => {
-    const {world_id,lorebook_filename,image_data,image_relpath,site_last_synced_at,export_filename,collaboration_type,status,...rest}=l;
-    // collaboration_type: derive fresh from access_level (local value may be stale).
-    // selected_chapter_index: Saucepan requires this on import — include it.
-    const safe = {...rest, selected_chapter_index: l.selected_chapter_index||0, collaboration_type: l.access_level==='public' ? 'public' : 'private'};
+    const safe = buildLoreExport(l);
     const warnings=[];
     if(!l.image_id) warnings.push('image (cover) ID not set — site will reject import');
     if(!l.tags||l.tags.length===0) warnings.push('no tags set');
@@ -2768,13 +2796,8 @@ function App() {
     const files = [];
     const warnings = [];
     wChars.forEach(c => {
-      const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,export_filename,...rest} = c;
-      const exportImage = rest.image && rest.image.id ? {id: rest.image.id} : null;
-      const exportPortraits = (rest.portraits||[]).map(p => { const {data,relPath,...pr} = p; return pr; });
-      const _bannerId = resolveBannerId(c, data);
-      const exportBanner = _bannerId ? {id: _bannerId} : undefined;
-      const safe = {...rest, image: exportImage, portraits: exportPortraits, companion_profile_banner_image: exportBanner, card: rest.card||" ", example_dialogue: rest.example_dialogue||"", temperature_offset_percentage: rest.temperature_offset_percentage||0};
-      if (!exportImage) warnings.push(c.name + ": no portrait UUID");
+      const safe = buildCompanionExport(c, data);
+      if (!safe.image) warnings.push(c.name + ": no portrait UUID");
       (c.portraits||[]).forEach((p,i) => {
         if(!p.description||!p.description.trim()) warnings.push(c.name + ": portrait " + (i+1) + " (" + (p.name||'unnamed') + ") missing description");
         if(!p.image||!p.image.id) warnings.push(c.name + ": portrait " + (i+1) + " (" + (p.name||'unnamed') + ") missing image UUID");
@@ -2783,15 +2806,12 @@ function App() {
       files.push({name: "Companions/" + safeName + "/companion.json", content: JSON.stringify(safe, null, 2)});
     });
     wLores.forEach(l => {
-      const {world_id,lorebook_filename,image_data,image_relpath,site_last_synced_at,export_filename,collaboration_type,status,...rest} = l;
-      const loreScIdx = l.selected_chapter_index||0;
-      const safe = {...rest, selected_chapter_index:loreScIdx, collaboration_type: l.access_level==='public' ? 'public' : 'private'};
+      const safe = buildLoreExport(l);
       const safeName = (l.name||"lorebook").replace(/[^a-zA-Z0-9_-]/g, "_");
       files.push({name: "Lorebooks/" + safeName + "-lorebook.json", content: JSON.stringify(safe, null, 2)});
     });
     wColls.forEach(c => {
-      const {world_id,image_data,image_relpath,collection_filename,site_last_synced_at,export_filename,definition,is_community,...rest} = c;
-      const safe = {...rest, description: definition||'', lorebooks: c.lorebooks||[]};
+      const safe = buildCollExport(c);
       const safeName = (c.name||"collection").replace(/[^a-zA-Z0-9_-]/g, "_");
       files.push({name: "Collections/" + safeName + "-collection.json", content: JSON.stringify(safe, null, 2)});
     });
@@ -5826,9 +5846,7 @@ function LorePage({lorebook,data,update,exportLore,initialTab,importJSON,setModa
   const world = data.worlds.find(w=>w.id===lore.world_id);
 
   const updLore=(fn)=>update(d=>{const l=d.lorebooks.find(x=>x.id===lorebook.id);if(l){fn(l);l.updated_at=new Date().toISOString();if(l.lorebook_filename){
-    // Must match exportLore's strip list.
-    const{world_id,image_data,lorebook_filename,image_relpath,site_last_synced_at,export_filename,collaboration_type,status,...lrest}=l;
-    window.lorekeeper.saveLorebookJson(l.lorebook_filename,{...lrest,selected_chapter_index:l.selected_chapter_index||0,collaboration_type:l.access_level==='public'?'public':'private',updated_at:l.updated_at});
+    window.lorekeeper.saveLorebookJson(l.lorebook_filename,{...buildLoreExport(l),updated_at:l.updated_at});
   }}});
 
   const handleImage=async()=>{
@@ -6293,13 +6311,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
       fn(c);
       c.updated_at=new Date().toISOString();
       if(c.companion_folder){
-        const {world_id,status,schedule_dates,posted_dates,collections,linked_lorebooks,companion_folder,site_last_synced_at,export_filename,lorebook_entry_text,lorebook_entry_title,voice_catalog_id,reworked_at,...rest}=c;
-        // Must match saveCompanionJson in App() exactly. This used to strip only
-        // `data`, leaking local relPath into the export-shaped file, and read the
-        // banner id directly instead of resolving an inherited world banner.
-        const _bid=resolveBannerId(c,data);
-        const safe={...rest,image:rest.image?.id?{id:rest.image.id}:null,portraits:(rest.portraits||[]).map(p=>{const{data:_d,relPath:_rp,...pr}=p;return pr;}),companion_profile_banner_image:_bid?{id:_bid}:undefined,card:rest.card||' ',example_dialogue:rest.example_dialogue||'',temperature_offset_percentage:rest.temperature_offset_percentage||0};
-        window.lorekeeper.saveCompanionJson(companion_folder,safe);
+        window.lorekeeper.saveCompanionJson(c.companion_folder, buildCompanionExport(c, data));
       }
     }
   });
@@ -6851,8 +6863,7 @@ function LoreItemRestoreCard({lorebook, update}) {
   };
 
   const handleLoreBackup = () => {
-    const {world_id,lorebook_filename,image_data,image_relpath,site_last_synced_at,export_filename,collaboration_type,status,...rest} = lorebook;
-    const safe = {...rest, selected_chapter_index: lorebook.selected_chapter_index||0, collaboration_type: lorebook.access_level === 'public' ? 'public' : 'private'};
+    const safe = buildLoreExport(lorebook);
     window.lorekeeper.exportFile({defaultName:(lorebook.name||'lorebook').replace(/[^a-zA-Z0-9_-]/g,'_')+'-lorebook.json', content:JSON.stringify(safe,null,2), folder:'Lorebooks'});
   };
 
@@ -6956,10 +6967,7 @@ function CollPage({coll,data,update,exportColl,initialTab,importJSON,openChar,se
   const col=(data.collections.find(x=>x.id===coll.id))||coll;
   const world=data.worlds.find(w=>w.id===col.world_id);
   const setCol=(fn)=>update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(!c)return;fn(c);c.updated_at=new Date().toISOString();if(c.collection_filename){
-    // Must match exportColl. The platform's field is "description", not "definition";
-    // image_relpath, site_last_synced_at, export_filename and is_community are app-only.
-    const{world_id,image_data,image_relpath,collection_filename,site_last_synced_at,export_filename,definition,is_community,...rest}=c;
-    window.lorekeeper.saveCollectionJson(c.collection_filename,{...rest,description:definition||'',lorebooks:c.lorebooks||[],updated_at:c.updated_at});}});
+    window.lorekeeper.saveCollectionJson(c.collection_filename,{...buildCollExport(c),updated_at:c.updated_at});}});
   const charCount=data.characters.filter(ch=>(ch.collections||[]).includes(col.id)||(col.companions||[]).includes(ch.id)).length;
   const tabs=[['edit','Edit'],['export','Export']];
   return (
@@ -7098,8 +7106,7 @@ function CollItemRestoreCard({coll, update}) {
   };
 
   const handleCollBackup = () => {
-    const {world_id,collection_filename,image_data,image_relpath,...rest} = coll;
-    const safe = {...rest, description: rest.definition||'', lorebooks: coll.lorebooks||[]};
+    const safe = buildCollExport(coll);
     window.lorekeeper.exportFile({defaultName:(coll.name||'collection').replace(/[^a-zA-Z0-9_-]/g,'_')+'-collection.json', content:JSON.stringify(safe,null,2), folder:'Collections'});
   };
 
