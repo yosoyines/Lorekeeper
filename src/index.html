@@ -362,6 +362,11 @@
 .help-warn-h{display:block;margin-bottom:4px}
 .help-note{margin-top:8px;font-size:12px;color:var(--text3);line-height:1.8}
 .help-note-h{color:var(--text);display:block;margin-bottom:4px}
+.cyc-unskip{background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);color:var(--amber,#fbbf24);font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 5px;border-radius:3px;cursor:pointer;flex-shrink:0}
+.cyc-unskip:hover{background:rgba(251,191,36,.3)}
+.cyc-skipnote{margin-top:8px;font-size:11px;color:var(--text3);line-height:1.6;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cyc-clearall{background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-size:10px;padding:2px 7px;border-radius:var(--r);cursor:pointer}
+.cyc-clearall:hover{color:var(--text);border-color:var(--text3)}
 .pflag-row{display:flex;gap:4px;margin-top:6px}
 .pflag{flex:1;min-width:0;padding:3px 4px;font-size:9px;line-height:1.2;font-weight:600;letter-spacing:.02em;text-align:center;border-radius:var(--r);cursor:pointer;user-select:none;background:var(--bg3);border:1px solid var(--border);color:var(--text3);transition:all .12s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pflag:hover{color:var(--text2);border-color:var(--text3)}
@@ -1803,14 +1808,44 @@ function sortedWorlds(data) {
 // Pure helper — operates directly on a structuredClone draft.
 // Advances cycle_head_world_id if the given world is the expected next in the cycle.
 // Out-of-order posts (worldIdx <= headIdx) are silently ignored.
+// Advances cycle_head_world_id when the posted world is the next one due, and
+// consumes any skips that were stepped over to get there.
+//
+// A Skip is ONE-SHOT by design: it means "step over this world once". Permanently
+// dropping a world is what the x button is for. Two bugs made it behave otherwise:
+//
+//   1. cycle_skipped was written by the Skip button and never cleared anywhere, so
+//      a skip was permanent AND invisible — three worlds had been silently skipped
+//      for several sessions before anyone noticed the cycle jumping.
+//   2. expectedNext was (headIdx + 1) with no regard for skips, so after skipping a
+//      world, posting the world after it did not match and the head never advanced
+//      at all. The skip broke the very mechanism meant to move past it.
+//
+// Now the walk steps over skipped worlds to find what is genuinely due next, and any
+// skip passed on the way is spent at that moment. Out-of-order posts are still ignored.
 function advanceCycleHeadInDraft(d, worldId) {
   const cycle = d.release_cycle || [];
   if(cycle.length === 0 || !worldId) return;
   const worldIdx = cycle.indexOf(worldId);
   if(worldIdx === -1) return;
   const headIdx = d.cycle_head_world_id ? cycle.indexOf(d.cycle_head_world_id) : -1;
-  const expectedNext = headIdx === -1 ? 0 : (headIdx + 1) % cycle.length;
-  if(worldIdx === expectedNext) d.cycle_head_world_id = worldId;
+  const skipped = d.cycle_skipped || [];
+  const nameOf = (wid) => { const w = (d.worlds||[]).find(x => x.id === wid); return w ? w.name : null; };
+  const passedSkips = [];
+  let i = (headIdx + 1) % cycle.length;
+  for(let n = 0; n < cycle.length; n++) {
+    if(i === worldIdx) {
+      d.cycle_head_world_id = worldId;
+      // Spend the skips stepped over, and this world's own skip if it had one:
+      // posting a world you had skipped obviously settles it.
+      const spent = passedSkips.concat(nameOf(worldId) || []);
+      d.cycle_skipped = skipped.filter(x => !spent.includes(x));
+      return;
+    }
+    const nm = nameOf(cycle[i]);
+    if(nm && skipped.includes(nm)) { passedSkips.push(nm); i = (i + 1) % cycle.length; continue; }
+    return; // a non-skipped world is due before this one — out-of-order post, ignore
+  }
 }
 
 // Displays an image from either base64 data or file path
@@ -4124,7 +4159,7 @@ function LightboxModal({src, onClose}) {
   return (
     <div onClick={onClose} style={{position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.92)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',cursor:'zoom-out'}}>
       <div onClick={e=>e.stopPropagation()} style={{cursor:'default'}}>
-        <ResolvedImg src={src} alt="" style={{maxWidth:'90vw',maxHeight:'90vh',objectFit:'contain',borderRadius:6,boxShadow:'0 4px 40px rgba(0,0,0,0.8)',display:'block'}}/>
+        <ImgFromPath src={src} alt="" style={{maxWidth:'90vw',maxHeight:'90vh',objectFit:'contain',borderRadius:6,boxShadow:'0 4px 40px rgba(0,0,0,0.8)',display:'block'}}/>
       </div>
       <button onClick={onClose} style={{position:'absolute',top:16,right:16,background:'rgba(255,255,255,0.1)',border:'none',color:'#fff',width:36,height:36,borderRadius:'50%',cursor:'pointer',fontSize:18,display:'flex',alignItems:'center',justifyContent:'center'}}>
         <i className="ti ti-x"></i>
@@ -4141,7 +4176,7 @@ function GalleryItem({src, label, sublabel, path, onViewFull, verySus, galleryOn
     <div className="gallery-item" style={{position:'relative'}}
       onMouseEnter={()=>setHover(true)}
       onMouseLeave={()=>setHover(false)}>
-      <ResolvedImg src={src} alt={label} style={{width:'100%',height:'100%',objectFit:'cover'}}
+      <ImgFromPath src={src} alt={label} style={{width:'100%',height:'100%',objectFit:'cover'}}
         onDims={d=>setDims(d)}/>
       {/* Always visible label */}
       <div style={{position:'absolute',bottom:0,left:0,right:0,background:'rgba(0,0,0,0.65)',fontSize:9,padding:'3px 5px',color:'#fff',lineHeight:1.4}}>
@@ -4172,18 +4207,6 @@ function GalleryItem({src, label, sublabel, path, onViewFull, verySus, galleryOn
   );
 }
 
-
-function ResolvedImg({src, alt, style, className, onDims}) {
-  const [resolved, setResolved] = React.useState(null);
-  React.useEffect(()=>{
-    if(!src){setResolved(null);return;}
-    if(src.startsWith('data:')){setResolved(src);return;}
-    window.lorekeeper.readImagePath(src).then(b64=>{setResolved(b64||null);}).catch(()=>setResolved(null));
-  },[src]);
-  if(!resolved) return <div style={{...style,background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center'}}><i className="ti ti-photo" style={{color:'var(--text3)',fontSize:20}}></i></div>;
-  return <img src={resolved} alt={alt||''} style={style} className={className}
-    onLoad={e=>{if(onDims)onDims({w:e.target.naturalWidth,h:e.target.naturalHeight});}}/>;
-}
 
 
 // ── Personality Tool ─────────────────────────────────────
@@ -4589,7 +4612,15 @@ function PlotTool({data}) {
   );
 }
 
-function ImgFromPath({src, alt, style, className, onClick}) {
+// Single image component for every stored image. Takes either a base64 data URL
+// or a path relative to DATA_DIR, and resolves the latter through IPC.
+//
+// This absorbed ResolvedImg in session 35e — the two were near-identical copies
+// (same state, same effect, same data:/path branch, same placeholder) differing
+// only in that one supported onDims and the other onClick. That is the same
+// duplication pattern that let the export strip lists drift across four sessions,
+// so it was merged before it could diverge. Supports both props; do not fork it.
+function ImgFromPath({src, alt, style, className, onClick, onDims}) {
   const [resolved, setResolved] = React.useState(null);
   React.useEffect(()=>{
     if(!src) { setResolved(null); return; }
@@ -4601,7 +4632,8 @@ function ImgFromPath({src, alt, style, className, onClick}) {
     }).catch(e=>console.error('ImgFromPath error for', src, e));
   }, [src]);
   if(!resolved) return <div style={{...style, background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={onClick}><i className="ti ti-photo" style={{color:'var(--text3)',fontSize:20}}></i></div>;
-  return <img src={resolved} alt={alt||''} style={style} className={className} onClick={onClick}/>;
+  return <img src={resolved} alt={alt||''} style={style} className={className} onClick={onClick}
+    onLoad={e=>{if(onDims)onDims({w:e.target.naturalWidth,h:e.target.naturalHeight});}}/>;
 }
 
 
@@ -5071,7 +5103,22 @@ function LorebookDraftsPanel({data, openLore}) {
 
 function InProgressPanel({data, setSelectedChar}) {
   const [showAll, setShowAll] = useState(false);
-  const rows = data.characters.filter(c => c.status !== 'posted');
+  // Drafts before ready ones: the panel is a to-finish list, not a to-schedule list.
+  // Within drafts, fewest gaps first, so the nearly-done work surfaces above the
+  // barely-started. Ready-but-unposted characters sort last and are what "Show all"
+  // is for. Previously unsorted, so the order was just the underlying array order
+  // (creation/import), and the collapsed top-5 showed the five oldest rather than
+  // the five most actionable.
+  const rows = data.characters
+    .filter(c => c.status !== 'posted')
+    .map(c => ({c, gaps: progressMissing(c).length}))
+    .sort((a, b) => {
+      const aReady = a.gaps === 0, bReady = b.gaps === 0;
+      if (aReady !== bReady) return aReady ? 1 : -1;
+      if (a.gaps !== b.gaps) return a.gaps - b.gaps;
+      return (a.c.name || '').localeCompare(b.c.name || '');
+    })
+    .map(x => x.c);
   if (rows.length === 0) return null;
   const visible = showAll ? rows : rows.slice(0, 5);
   const toggle = () => setShowAll(v => !v);
@@ -5238,6 +5285,10 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
   const nextWorldId=getNextCycleWorld();
   const nextWorld=nextWorldId?data.worlds.find(w=>w.id===nextWorldId):null;
   const skipNext=nextWorld?()=>update(d=>{d.cycle_skipped=[...(d.cycle_skipped||[]),nextWorld.name];}):null;
+  const skippedNames=data.cycle_skipped||[];
+  const isSkipped=(name)=>skippedNames.includes(name);
+  const unskip=(name)=>update(d=>{d.cycle_skipped=(d.cycle_skipped||[]).filter(n=>n!==name);});
+  const clearAllSkips=()=>update(d=>{d.cycle_skipped=[];});
   const noteKey=(charId,dateStr)=>`${charId}_${dateStr}`;
   const getNote=(charId,dateStr)=>(data.schedule_notes||{})[noteKey(charId,dateStr)]||'';
   return (
@@ -5474,7 +5525,8 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
                     style={{display:'flex',alignItems:'center',gap:6,marginBottom:4,padding:'4px 8px',background:'var(--bg3)',borderRadius:'var(--r)',border:wid===nextWorldId?'1px solid var(--accent2)':'1px solid var(--border)',cursor:'grab'}}>
                     <i className="ti ti-grip-vertical" style={{color:'var(--text3)',fontSize:13,flexShrink:0}}></i>
                     <span style={{fontSize:12,color:'var(--text3)',minWidth:14,textAlign:'center'}}>{i+1}</span>
-                    <span style={{flex:1,fontSize:12,color:wid===nextWorldId?'var(--accent)':'var(--text)'}}>{w.emoji?w.emoji+' ':''}{w.name}</span>
+                    <span style={{flex:1,fontSize:12,color:wid===nextWorldId?'var(--accent)':'var(--text)',opacity:isSkipped(w.name)?0.5:1,textDecoration:isSkipped(w.name)?'line-through':'none'}}>{w.emoji?w.emoji+' ':''}{w.name}</span>
+                    {isSkipped(w.name)&&<button className="cyc-unskip" title="Skipped — click to put this world back in the cycle" onClick={()=>unskip(w.name)}>skipped</button>}
                     <button style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',padding:'0 4px'}} onClick={()=>update(d=>{d.release_cycle=d.release_cycle.filter(x=>x!==wid);d.cycle_skipped=(d.cycle_skipped||[]).filter(n=>n!==w.name);})}>×</button>
                   </div>;
                 })}
@@ -5483,6 +5535,12 @@ function DashboardPage({calCells,calYear,calMonth,today,selDay,setSelDay,charsOn
                   <option value="">+ Add world to cycle…</option>
                   {sortedWorlds(data).filter(w=>!cycle.includes(w.id)).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}
                 </select>
+                {skippedNames.length>0&&(
+                  <div className="cyc-skipnote">
+                    {skippedNames.length} world{skippedNames.length===1?'':'s'} skipped for this pass — stepped over once when picking Next up, then automatically cleared.
+                    <button className="cyc-clearall" onClick={clearAllSkips}>Clear all</button>
+                  </div>
+                )}
               </div>
             )}
           </div>
