@@ -1,13 +1,24 @@
 # LOREKEEPER — Master Specification
-**Last updated: October 1, 2026 (session 35k)**
+**Last updated: October 9, 2026 (session 37)**
+
+**This file describes how the app works now.** Three documents, and it matters which one you open:
+
+| Looking for | Open |
+|---|---|
+| How something works, or a constraint not to break | **this file** |
+| What to build next, and what was decided or rejected | `lorekeeper-roadmap.md` |
+| What happened in a past session, and why | `lorekeeper-sessions.md` |
+
+The split happened in session 37. This file had reached 220 KB, a third of it a session-history table with rows up to 5,700 characters, which made document previews fall back to raw markdown.
 
 ---
 
-## Working Files (current as of session 35)
-- Project files at `/mnt/project/` **are synced** — Ine uploads the spec each session. Source files (`index.html`, `main.js`, `preload.js`) are uploaded when a stable version is cleared.
-- Working files during a session live at `/home/claude/`. Claude works from those; never re-pull from `/mnt/project/` mid-session.
-- **Test environment removed (session 35)** — `I:\Test` was deleted once the build was running stably, so `DATA_DIR` is now `I:\Lorekeeper` in dev and next to the exe in production, with no separate test path. Consequence: untested builds now touch live data directly. Hit **Sync now** (Import/Export -> Git Backup Sync) before installing a new build, so a bad session is recoverable from the backup repo rather than only from a ZIP.
-- Backup repo working copy at `I:\LorekeeperBackup` (see Git Backup Sync). It is a **separate git repo from the source repo** — `I:\Lorekeeper` is already the source working tree and two repos cannot share one folder.
+## Working Files
+- Project files at `/mnt/project/` are **no longer synced**. Load `index.html`, `main.js`, `preload.js` and the three documents from the project at the start of a session.
+- Source now also includes `github-backup.js`, `github-ipc.js` (session 37) and `rclone-backup.js` (session 38).
+- `vendor/rclone/rclone.exe` is **not** in the repo and must be placed by hand before building — see Backup.
+- **Test environment removed (session 35)** — `I:\Test` was deleted once the build was running stably, so `DATA_DIR` is now `I:\Lorekeeper` in dev and next to the exe in production, with no separate test path. Consequence: untested builds now touch live data directly. Hit **Back up now** (Import/Export) before installing a new build, so a bad session is recoverable from the backup repo rather than only from a ZIP.
+- Backup repo working copy at `I:\LorekeeperBackup` (see Backup). Only the optional extras script uses it now; the app uploads over the API and needs no local clone. It is a **separate git repo from the source repo** — `I:\Lorekeeper` is already the source working tree and two repos cannot share one folder.
 
 ---
 
@@ -72,8 +83,22 @@ I:\Lorekeeper\
 | `saveData(data)` | Async write to lorekeeper-data.json (compact JSON, no pretty-print) |
 | `exportFile({defaultName, content, folder?})` | Save dialog -> write file. Filter is chosen dynamically from `defaultName`'s extension (json/md/txt/fallback to All Files) — fixed session 17, was previously hardcoded to always show "JSON" even for `.md` exports. `folder` (added session 17/18) defaults the save dialog to the relevant subfolder (`Companions`/`Lorebooks`/`Collections`/`Personas`/`Templates`) instead of always `I:\Lorekeeper\`; creates the folder if it doesn't exist yet. |
 | `saveNotesFile(filename, content)` | Write a standalone `.md` backup to `Notes\{filename}.md`, independent of the main data file — see Data Safety Architecture |
-| `syncToGit()` | Write the pretty data file, then run the backup sync script and wait for it; returns `{success, code, output, prettySize}` — see Git Backup Sync |
-| `getSyncInfo()` | Returns `{backupDir, scriptFound, prettyExists, prettyMtime}` for the Git Backup Sync panel |
+| `syncToGit()` | **Retired route.** Runs the old batch script and waits for it. Superseded by `githubSync()` — see Backup |
+| `getSyncInfo()` | **Retired route.** Status for the old script panel |
+| `getDataDir()` | The data FOLDER. `getDataPath()` returns the data FILE — the portrait picker once appended a subfolder onto that, producing a path through `lorekeeper-data.json` that could never exist |
+| `flushComplete()` | Renderer tells main the final autosave has reached disk, releasing the close handshake (Data Safety layer 4) |
+| `setSyncPaths(paths)` | **Retired route.** Pushes the script paths to main and regenerates `sync-paths.cmd` |
+| `githubStatus()` | `{hasToken, login, repo, branch, lastSync, tokenExpiry, encryptionAvailable}` for the backup panel |
+| `githubSetToken(token)` | Validate against GitHub, then store encrypted via `safeStorage`, outside the data folder. Returns the login and the token's expiry date |
+| `githubClearToken()` | Delete the stored token and forget the login and expiry |
+| `onGithubSyncProgress(cb)` | Subscribe to per-file progress during a backup; returns its own unsubscribe function |
+| `githubListRepos()` / `githubCheckRepo(repo)` | What the token can reach, and whether it can write to one |
+| `githubSync({provider, repo, folder})` | Run a backup. Same `runBackup` the scheduled `--backup` run uses |
+| `githubPreview()` | What a backup would send, without sending it |
+| `rcloneStatus()` | `{binaryFound, bundled, version, backends, backend, folder, destination, connected}` for the cloud setup panel |
+| `rcloneConnect({backend, folder})` | Browser sign-in, save the remote, then **prove it works** with a round-trip write before reporting success. A destination that fails the check is removed again |
+| `rcloneDisconnect()` | Delete the saved remote and clear the staging directory |
+| `onRcloneConnectProgress(cb)` | Progress during sign-in; returns its own unsubscribe function |
 | `openBackupFolder()` | Opens `I:\LorekeeperBackup` in Explorer |
 | `saveTemplateFile(filename, data)` | Write a standalone JSON backup to `Templates\{filename}.json`, independent of the main data file — same reasoning as `saveNotesFile`, added session 17/18 |
 | `saveImage({base64, defaultName})` | Save a binary image via a Save dialog (session 26 image tools) |
@@ -208,16 +233,16 @@ I:\Lorekeeper\
 ---
 
 ## Navigation (Sidebar)
-- **Dashboard** — calendar, today banner, upcoming, release cycle, site checklist, lorekeeper checklist, drafts in progress
-- **Worlds** — world card grid; click -> WorldDetailPage (Characters/Lorebooks/Collections/Gallery/World Info tabs)
+- **Dashboard** — calendar, today banner, upcoming, release cycle, site checklist, lorekeeper checklist, and the in-progress panel split into Drafts and Ready to schedule
+- **Worlds** — world card grid; click -> WorldDetailPage (Characters / Lorebooks / Collections / Gallery / **Timeline** / World Info tabs)
 - **Characters** — world filter dropdown + status filter dropdown (Draft/Ready/Posted), both via shared `WorldFilterDropdown`/funnel pattern (added session 18 — scales to any number of worlds without the filter row wrapping or growing); click -> CharDetailPage (11 tabs)
 - **Lorebooks** — world filter dropdown (includes Standalone), same shared component; click -> LorePage (Chapters/Settings/Export tabs)
 - **Collections** — world filter dropdown (includes Standalone), same shared component; click -> CollPage (Edit/Export tabs)
 - **Personas** — player characters, independent from worlds; click -> PersonaDetailPage; "New Persona" button in topbar (added June 19 — was missing entirely, only Export/Delete existed once a persona was already selected)
 - **Templates** — global and per-world character creation templates; card list grouped by world, with a world filter dropdown to narrow the grouped sections shown (added session 18)
-- **Import/Export** — renamed from "Batch Import" session 19. Scan folders, import, image audit, backup/restore, plus a "Quick Import / Backup" card at the top for single-file import and full-app backup (moved here from the sidebar footer — see below)
-- **Settings** — API key, model, font size (applied globally), debounce, theme/colorblind (placeholders); full-width layout
-- **Help** — 15 collapsible sections covering all features
+- **Import/Export** — renamed from "Batch Import" session 19. Scan folders, import, rescan images, backup/restore, the continuous-backup panel, plus a "Quick Import / Backup" card at the top for single-file import and full-app backup (moved here from the sidebar footer — see below)
+- **Settings** — AI provider and key, font size (applied globally), debounce, theme/colorblind, backup destination; full-width layout
+- **Help** — 20 collapsible sections covering all features
 - **Worlds list** — pinned first, emoji icon, right-click -> pin/unpin
 - **Sidebar collapse** — icons only mode (52px wide). No footer (removed session 19 — see below). **Collapse/expand button fix, session 19:** at 52px collapsed width, the header's padding (24px) plus the logo icon (28px) already consumed the full available space, squeezing the collapse/expand toggle button to zero width — it was still technically in the DOM but invisible and unclickable, making the sidebar impossible to re-expand once collapsed. Fixed by stacking the logo and the toggle button vertically when collapsed instead of competing for horizontal space.
 - **Topbar action button separator, added session 19:** a thin vertical divider now sits between page-specific action buttons (Delete, Export, Update from JSON, etc.) and the Notes panel toggle button on the far right of every page's topbar. Previously a destructive Delete button could sit directly adjacent to the panel toggle with only the standard 8px gap, on Characters/Lorebooks/Collections in particular — easy to misclick. The divider is positioned globally in the topbar layout (not per-page), so it applies consistently everywhere a topbar exists.
@@ -284,7 +309,7 @@ Quick Info sidebar shows: World, Status, Content rating, Access, Scenarios count
 ## Lorebook Detail (tabs)
 1. **Chapters** — chapter list (left) + editor (right); add/delete chapters; **drag-and-drop reordering** (added session 18 — was click-to-select only, no way to reorder without manually re-creating chapters); each chapter has a title and a markdown body
 2. **Settings** — name, short description, world, **Status** (Draft/Ready — app-only, not sent to the site, added session 18 to fill a gap where new lorebooks had no way to signal "still in progress" since `access_level` only has private/public), Access Level, Definition Protection, auto-save filename, tags
-3. **Export** — Export JSON and Export MD, both with warnings (added session 18 — previously only characters had pre-export warnings; lorebooks silently exported with a missing image UUID, no tags, or Open definition protection with no nudge). MD preview toggle, fixed session 18 (previously the preview button called a hardcoded no-op — see Session Log). Export tab is now full-width (fixed session 19 — `.export-panel` CSS, shared by this, `CollExportPanel`, and `CharExportTab`, had a leftover `max-width:600px` that made the tab look half-width on a wide page).
+3. **Export** — Export JSON and Export MD, both with warnings (added session 18 — previously only characters had pre-export warnings; lorebooks silently exported with a missing image UUID, no tags, or Open definition protection with no nudge). MD preview toggle, fixed session 18 (previously the preview button called a hardcoded no-op — see `lorekeeper-sessions.md`). Export tab is now full-width (fixed session 19 — `.export-panel` CSS, shared by this, `CollExportPanel`, and `CharExportTab`, had a leftover `max-width:600px` that made the tab look half-width on a wide page).
 
 Quick Info sidebar shows: World, **Status** (added session 18), Access, Chapters count, Updated date. **Image ID field, fixed session 19:** the cover image UUID field used to be `readOnly` and only rendered at all if a UUID already existed (`{lore.image_id && <div>...}`) — meaning there was no way to ever set one in the first place, only to view/copy one that somehow already got there. Now a real editable input matching the character "paste UUID…" pattern.
 
@@ -377,87 +402,138 @@ See Data Safety Architecture section — independent `.md` backup per world plus
 
 ---
 
-## Git Backup Sync (session 35)
+## Backup
 
 ### Why this exists
-Layers 1–5 of the Data Safety Architecture all defend against **software** failure — an autosave race, a bad write, a killed process. None of them defend against **losing the disk**, because every one of them writes to the same drive as the data they protect.
+Layers 1-5 of the Data Safety Architecture all defend against **software** failure — an autosave race, a bad write, a killed process. None of them defend against **losing the disk**, because every one of them writes to the same drive as the data they protect.
 
-Session 35 opened with exactly that: an `I:` drive failure. Companions, lorebooks and collections survived (they're also on Saucepan). Templates were rebuildable. **Notes were not**, and neither were the ComfyUI workflows or LM Studio presets on the same drive. The drive came back after a reseat, so nothing was permanently lost, but the gap was real.
+Session 35 opened with exactly that: an `I:` drive failure. Companions, lorebooks and collections survived (they are also on Saucepan). Templates were rebuildable. **Notes were not**, and neither were the ComfyUI workflows or LM Studio presets on the same drive. The drive came back after a reseat, so nothing was permanently lost, but the gap was real.
 
 The full backup ZIP already contained everything including notes. The problem was that it also contained every image, which makes it gigabytes and therefore something you export occasionally rather than continuously. **The backup that held the notes was the one too heavy to run often.**
 
 ### The core insight
-Images are re-downloadable from Saucepan. Notes are not. Text-only, the entire corpus — notes, templates, every per-item JSON, and the main data file — is around 16 MB packed. That is small enough to push to git after every session.
+Images are re-downloadable from Saucepan. Notes are not. Text-only, the entire corpus — notes, templates, every per-item JSON, and the main data file — is small enough to push after every session.
 
-### What gets backed up beyond Lorekeeper
-The same script covers ComfyUI and LM Studio, because the disk failure threatened those too and neither app can trigger Lorekeeper's shutdown hook:
-- `ComfyUI\user\default` — workflows and `comfy.settings.json`
-- `ComfyUI\user\__manager\snapshots` — ComfyUI-Manager's installed-node list with versions. This is the reinstall manifest, which is why `custom_nodes\` itself is not backed up.
-- `.lmstudio\config-presets` — configs only, by Ine's preference
+### Destinations
+`backup_provider` in Settings is the seam, shaped like `ai_provider`:
 
-**`.lmstudio\credentials` is deliberately never copied.** It holds API keys. A secret committed once stays recoverable from git history forever, even after the file is deleted, so this is excluded in the script *and* in `.gitignore`.
+| Value | What it does |
+|---|---|
+| `none` | **The default.** Nothing is copied, nothing is uploaded, and the pretty-printed data file is not written either. A fresh install must do nothing rather than something wrong. |
+| `github-api` | Uploads to a GitHub repository over the REST API. |
+| `rclone` | Uploads to Google Drive, OneDrive or Dropbox through the bundled rclone. |
+| `folder` | Copies into a folder on this machine — one another program keeps in sync, another drive, a network share. |
+| `github` | **Retired.** The batch-script route. Kept only so an install still set to it is not silently switched; it disappears from the dropdown once changed. |
+
+**Where the chosen provider comes from, and nowhere else: `settings.backup_provider` in the data file.**
+
+`main.js` keeps a module-level `syncPaths` cache holding the retired script's paths, and `activeProvider()` used to read `syncPaths.provider` before falling back to the data file. That looked like a harmless shortcut and was a fresh-install bug. `resolveSyncPaths()` runs a one-time migration that adopts the legacy constants — `provider: 'github'` among them — whenever `I:\LorekeeperBackup\lorekeeper-sync.bat` happens to exist on the machine. So on any machine that had ever had the old setup, a brand-new install whose UI correctly showed **None** reported the retired script route to main, wrote a 33 MB pretty data file on close and launched a batch script it had nothing to do with. Found by running the packaged build (session 41).
+
+**A cache of where some paths are must never answer the question of what the user chose.** `activeProvider()` now reads the data file and nothing else. The startup regeneration of `sync-paths.cmd` is gated on it as well, so an install on any current route never writes a generated file into a folder it does not use.
+
+**Three places had to be fixed, not one, and the first fix looked like it had failed.** After `activeProvider()` was corrected, a fresh packaged build *still* wrote `sync-paths.cmd` into `I:\LorekeeperBackup`. The other two writers:
+
+- **`set-sync-paths` wrote the file unconditionally.** The renderer pushes paths to main on every Settings change, and main regenerated the file whatever the route. It also read an absent provider as `'github'`. It now defaults to `'none'` and writes only for a script route.
+- **The renderer seeded `backup_repo_dir` from the legacy migration.** `getSyncInfo().backupDir` comes from `resolveSyncPaths()`, so a fresh install copied `I:\LorekeeperBackup` into its own settings while the provider correctly read `none`. The comment four lines above that seed already argues that seeding the *provider* would "hand a fresh install a destination it never chose"; the same argument applies word for word to the folder, and was not applied to it. Now gated on the install already being on a script route.
+
+**The diagnostic that found them: the generated file names its own author.** Its `SRC=` line is whatever `DATA_DIR` the writing process had. `SRC=I:\Lorekeeper\dist3\win-unpacked` proved a packaged build wrote it and ruled out the dev instance in one command. **When something writes a file it should not, read the file before reading the code.**
+
+One dead value survives in all three gates: `legacy-folder` is checked alongside `github`, and nothing in the app has ever written it. Harmless, but do not read it as evidence that such a provider exists.
+
+### The GitHub engine (session 37)
+`src/github-backup.js`, with the IPC wiring in `src/github-ipc.js`. **No git binary, no cloned repo, no script, no terminal** — which is what makes it installable by someone who is not Ine.
+
+A sync:
+1. Read the remote tree for the branch, one recursive call.
+2. Hash every local file with git's own blob hash — `sha1("blob <length>\0" + bytes)`.
+3. Upload only the files whose hash differs.
+4. One tree, one commit, one ref update.
+
+**A sync with nothing changed costs four API calls and uploads nothing.** Confirmed on the real repo: the first run against an existing backup repo uploaded 1 file of 176, because it recognised the 175 the script route had already pushed as identical.
+
+**Deletions are scoped, and this is stricter than the script was.** `robocopy /MIR` deleted anything in the destination not present in the source. The engine removes only paths under the folders it owns — Notes, Templates, Companions, Lorebooks, Collections, Worlds, Personas, and `lorekeeper-data.pretty.json`. A `README.md`, a `.gitignore`, the `ComfyUI/` and `LMStudio/` folders, the sync scripts and the stamp files are left alone. This is what lets the engine and the extras script share one repository.
+
+**Pull guard, lighter than the script's.** The script had to abort outright, because mirroring ran first and would have deleted pulled commits off the disk. Here nothing local is at risk: the last commit this machine pushed is recorded, and if the remote head is something else, uploads proceed but **deletions are held back for that run** and the panel says so. Relevant to the mobile app.
+
+**A truncated tree is refused.** GitHub stops listing past roughly 100,000 entries. Comparing against a partial listing would re-upload files that are fine and, worse, read a present file as missing, so the sync stops rather than guessing.
+
+**Credentials.** The token is encrypted with Electron `safeStorage` and written to `app.getPath('userData')` — **never** the data folder, which is what gets backed up; a token written there would be pushed to the repository and stay recoverable from git history permanently. If `safeStorage.isEncryptionAvailable()` is false the token is refused rather than stored in plain text.
+
+**`main.js` pins the app name with `app.setName('Lorekeeper')`, and that line is load-bearing.** Electron derives `userData` from the app name, and the name depends on how the app was launched: `electron .` reads `package.json` and gets `lorekeeper`, while `electron src/main.js` has no `package.json` beside the entry file and falls back to `Electron`. Both launchers exist in this repo, so one install had two app-data folders — and the token lives in one of them. Saved from one launcher it was invisible to the other, and to the scheduled run. Pinned, every launch path resolves to the same folder.
+
+**A token cannot be moved between those folders.** `safeStorage` generates a key and protects it with DPAPI, but the generated key itself lives in a `Local State` file *inside* the userData folder. Move folders and the token travels while the key does not, so the blob stays intact and permanently unreadable. `readToken` therefore treats an undecryptable file as **absent** rather than as an error, which is what lets the panel ask for the token again instead of insisting it is connected. Changing the app name again would cost one re-paste.
+
+**Token scope: fine-grained, one repository, Contents read and write.** Nothing else. Lorekeeper deliberately **cannot create a repository**, because creating one needs `Administration: write` or a classic `repo` token — blanket access to every repository on the account. The repository is made by hand, once. A backup tool should not hold the wider permission.
+
+**Expiry.** A fine-grained token expires on a date chosen when it was made, and the backup stops when it does. GitHub returns the date on every response; the panel warns inside three weeks and turns red after.
 
 ### Why `lorekeeper-data.pretty.json` exists
-`saveData` writes compact single-line JSON. Git cannot diff a single line, so every commit of the 21 MB data file would store a whole fresh blob rather than a delta. `writePrettyData()` in `main.js` emits a pretty-printed, **recursively key-sorted** copy alongside it.
+`saveData` writes compact single-line JSON. Git cannot diff a single line, so every commit of the data file would store a whole fresh blob rather than a delta. `writePrettyData()` in `main.js` emits a pretty-printed, **recursively key-sorted** copy alongside it.
 
 Key sorting matters as much as the line breaks: without it, JavaScript reordering keys shows up as a full-file rewrite even when nothing changed. With both, a one-note edit diffs to two lines.
 
-This is **not** written on every autosave — stringifying tens of MB is far too slow for that. It is written on shutdown and on Sync Now only. Trade-off: after a hard crash the pretty file is one session stale. Acceptable, since the compact file is intact and the next clean close refreshes it.
+It is **not** written on every autosave — stringifying tens of MB is far too slow. It is written on close and before every backup. Trade-off: after a hard crash it is one session stale, which is acceptable since the compact file is intact.
 
-The pretty file lands in `DATA_DIR`, which is the **source** repo's working tree, so `lorekeeper-data.pretty.json` must stay in the source repo's `.gitignore`.
+The pretty file lands in `DATA_DIR`, which is the **source** repo's working tree, so it must stay in the source repo's `.gitignore`.
 
-### Architecture
-Three pieces, deliberately separated so that each still works when the others don't:
+At 33 MB it is by far the largest thing in the backup, and the only file the API sends in full on most runs — measured at 15-20 seconds. If it ever becomes a problem the fix is to stop committing it: the per-item files already hold everything it contains.
 
-1. **`main.js`** — `writePrettyData()` and `launchSyncDetached()`. The shutdown hook sits inside the existing Layer 5 flush handshake, immediately after `saveInFlight` resolves, so the pretty copy is written from final data rather than a half-saved state. The spawn is `detached` and `unref()`'d, so a slow `git push` can never hold the app open or delay quitting.
-2. **`lorekeeper-sync.bat`** in `I:\LorekeeperBackup` — robocopy mirrors, then `git add -A`, then a `git diff --cached --quiet` check that exits silently when nothing changed (without it, every run would produce an empty commit), then commit and push.
-3. **`GitSyncPanel`** in `index.html` — Sync now button on the Import/Export page. Uses the waiting `sync-to-git` IPC rather than the detached spawn, since the UI needs the real result; prints the script's actual output on failure so a git problem is diagnosable without a terminal. Three-minute timeout.
+### When a backup runs
+- **The button**, on the Import/Export page.
+- **The scheduled task**, via `Lorekeeper.exe --backup` — no window, runs the backup, exits with a code. It goes through the **same** `runBackup` the button does. Two implementations is how the old setup ended up with a panel reporting healthy pushes while the scheduled run had been failing for days.
+- **On close**, the pretty file is refreshed and nothing else. Uploading is deliberately not done here: a 15-20 second push inside an 8-second close window would be killed halfway every time while appearing to have run.
 
 ### Image and model exclusion is layered on purpose
-A wrong path here doesn't fail loudly — it silently mirrors tens of GB of checkpoints and pushes until GitHub rejects it. So:
-- **Path scope** — only `user\` config folders are ever referenced; `models`, `custom_nodes`, `venv`, `input`, `output`, `temp` are never named
-- **Extension filter** — robocopy `/XF` on image, video and model-weight extensions
-- **Size cap** — `/MAX:5242880` refuses any file over 5 MB regardless of type. This is the real backstop: even with a wrong path, a model file physically cannot enter the repo.
-- **`.gitignore`** — repeats all of the above as a second lock
+A wrong path here does not fail loudly — it silently sweeps up tens of GB. So exclusion happens at every level: only text-bearing folders are ever walked; an extension filter drops image, video, audio and archive types; a per-file size cap refuses anything over 40 MB; and the repository `.gitignore` repeats all of it as a second lock.
 
-**Keep the image extension list in sync with `IMAGE_EXTS` in `main.js`.** The first run leaked a `.avif` because the script's list had png/jpg/jpeg/webp/gif/bmp while `IMAGE_EXTS` includes `avif`. A single 100 KB file didn't matter; the silent gap did. Now covers `avif`, `tif`, `tiff` and `mov` as well.
+**Keep the engine's extension list in sync with `IMAGE_EXTS` in `main.js`.** The script's first run leaked a `.avif` because its list had png/jpg/jpeg/webp/gif/bmp while `IMAGE_EXTS` includes `avif`. A single 100 KB file did not matter; the silent gap did.
 
-### Portability — unresolved, blocks any shared build (session 35g)
+### The rclone engine — Google Drive, OneDrive, Dropbox (session 38)
 
-The sync works, but it was designed for one machine and one backend. Both assumptions are baked in hard enough that they must be revisited before Lorekeeper is packaged for anyone else, and before Ine's own setup changes.
+`src/rclone-backup.js`. **Confirmed working against Google Drive on 11 October 2026**, including the browser sign-in and the round-trip connection check. Everything else was already tested against the real rclone binary — see Verified Behaviour.
 
-**Hardcoded paths.** `main.js` has `BACKUP_DIR = 'I:\\LorekeeperBackup'` as a constant. `lorekeeper-sync.bat` additionally hardcodes `I:\Lorekeeper`, `I:\Stability\Data\Packages\ComfyUI` and `%USERPROFILE%\.lmstudio`. If the I: drive goes away — a rebuild, one drive instead of three, a new machine — sync silently stops working: `launchSyncDetached` checks `fs.existsSync(SYNC_SCRIPT)` and returns false without complaint. **There is no failure notice.** The first sign would be noticing the repo has not updated in weeks.
+**Why rclone rather than a native integration.** Drive, OneDrive and Dropbox issue no user-pasteable credential the way the AI providers do. They require OAuth, where the *application* is registered with the provider — so natively that application would have to be Ine: her Google Cloud project, her consent screen, her quota, her name on verification, carrying other people's backups, three times over. rclone is already registered with all of them, owns the OAuth itself, and keeps its tokens in its own config. **Lorekeeper never handles a cloud credential at all**, which is also why `safeStorage` has nothing extra to protect on this route.
 
-**Git is assumed, not chosen.** Nothing about the requirement (get text off this disk) demands git; git was picked because it suits versioned text and Ine already used it. A different user might reasonably want a Drive or Dropbox folder, rclone to any remote, a scheduled zip, or nothing at all. The current design offers no seam for that: the app shells out to a `.bat` whose entire contents assume `git add`/`commit`/`push`.
+**`rclone sync` deletes everything at the destination that is not in the source.** Verified, not assumed: a test sync wiped a `README.md` and an unrelated folder. That is the same footgun as the old `robocopy /MIR`. So **this engine never syncs a whole destination.** It runs one `sync` per owned folder, each to its own path, and `copy` — never `sync` — for the loose `lorekeeper-data.pretty.json`. Deletion is therefore confined to folders Lorekeeper created, and anything else on the account survives. Same ownership rule as the GitHub engine and the folder mirror; all three now behave identically on this point, which is the whole reason they can share a destination.
 
-**A packaged build handed to someone else today would:** show a Git Backup Sync panel citing a drive letter they do not have; fail Sync now with that path in the error; and write a ~21 MB `lorekeeper-data.pretty.json` into their data folder on every close, forever, for nothing. It would *not* leak data — the script is not packaged, no remote is configured — but it is visibly broken.
+**File selection is not reimplemented.** A sync first calls `mirrorToFolder()` into a staging directory, then rclone uploads that directory. The alternative was re-expressing the folder list and the image exclusion in rclone's filter syntax, and every piece of logic this project has kept in two places has drifted within a few sessions. Staging costs a second copy of the text corpus on disk, but only changed files are rewritten, so after the first run it is kilobytes.
 
-**Deliberately not fixed yet.** Making the path configurable without deciding whether the *backend* is pluggable would half-solve it and leave an awkward shape to build on. The two decisions belong together.
+**Config and staging are isolated.** Every rclone call passes `--config` pointing at `userData/rclone.conf`. Without it rclone reads `%APPDATA%\rclone\rclone.conf` — the user's own, which may already hold remotes for something else. A backup tool has no business writing there or depending on what it finds. Staging lives at `userData/rclone-stage`, **not** in the data folder, because the data folder is what gets backed up and a second copy of the corpus inside it would be backed up too.
 
-**When this is picked up, decide in this order:**
-1. Is the backend pluggable, or is git the only supported option with everything else left to the user's own folder-sync tool? This determines everything below.
-2. If pluggable, what is the seam — a script path plus working directory (what exists now, generalised), or an internal git implementation with a folder-copy alternative?
-3. Where do the source paths come from? `DATA_DIR` is known to the app; ComfyUI and LM Studio are not and would need their own settings.
-4. Empty-by-default, so an unconfigured install does nothing rather than something wrong. The pretty-file write must be gated on it too.
-5. Surface failure. Silent no-op is the wrong behaviour for a backup once it is optional.
+**Sign-in avoids rclone's interactive config entirely.** `rclone authorize <backend>` opens the browser, takes the user through consent, and prints the token between two markers; the token is captured from stdout and written with `rclone config create ... --non-interactive`. The marker parser **fails closed** — an unrecognised output is an error, never an empty token — because it is screen-scraping and the alternative is a remote saved with no credential.
 
-**Where the script lives is its own problem.** `lorekeeper-sync.bat` is tracked in the **data** repo (`lorekeeper-data`), not the source repo, while `main.js` — the code that invokes it — is in the source repo. They can drift, and a fresh clone of the source produces an app that calls a script that is not there. Copies currently exist in the data repo, in `I:\LorekeeperBackup`, and in the Claude project files. Decide where the canonical copy belongs; the source repo is the more defensible home, since the script is part of the application's behaviour rather than part of the backed-up data.
+**The connection proves itself before being kept.** The OAuth flow could not be tested without a cloud account, so the first person to connect one *is* the test. Rather than trust that a saved token means a working destination, `verifyRemote()` writes a small file, reads it back, compares the contents and deletes it. **A connection that fails this is removed rather than kept**, because a connection that cannot store anything is worse than none: the panel would report healthy backups. Tested against a working destination, an unwritable one and a nonexistent remote.
+
+**The binary.** `resolveRclone()` looks in `process.resourcesPath/rclone/` first, then falls back to any `rclone` on `PATH`. `package.json` carries an `extraResources` entry mapping `vendor/rclone` → `rclone`, so **a build requires `vendor/rclone/rclone.exe` to exist**; without it a packaged build has no uploader and the UI says so plainly rather than failing oddly. The PATH fallback is what makes the route testable in dev before any build exists.
+
+**Finding the binary in DEV needs the vendor folder, and that was missed once.** `process.resourcesPath` points inside `node_modules/electron/dist/resources` when running from source — Electron's own folder, nothing to do with this project — so a binary placed at `vendor/rclone/rclone.exe` was never looked at and the resolver fell through to `PATH`. `main.js` now passes `vendorDir` as well, and the "could not be started" message lists every folder it checked rather than only asserting that the install is incomplete.
+
+> **Still not verified: a packaged build's bundled binary.** `extraResources` is configured and the resolution logic is tested against the packaged folder shape, but no packaged build has been made with the binary in place. OneDrive and Dropbox are also untested; only Google Drive has been through a real sign-in. There is no reason to expect them to differ — rclone owns all three flows identically — but they have not been run.
+
+### The extras script — optional, and no longer about Lorekeeper
+`lorekeeper-sync.bat` in the backup folder now carries **only folders belonging to other programs**: ComfyUI workflows and settings, the ComfyUI-Manager snapshot list, and LM Studio `config-presets`. Those were lost in the same disk failure and neither app can trigger Lorekeeper's shutdown hook.
+
+It is entirely optional. Nothing in Lorekeeper requires it, a fresh install does not have it, and deleting it costs nothing but those extras. Its configuration lives in `sync-extras.cmd`, which Lorekeeper never reads or writes — the app has no business knowing about software it does not use, and a copy given to someone else must not carry fields for programs they may not have.
+
+**`.lmstudio\credentials` is deliberately never copied.** It holds API keys. A secret committed once stays recoverable from git history forever, even after the file is deleted, so it is excluded in the script *and* in `.gitignore`.
+
+**It pulls now rather than aborting.** The old version aborted whenever the remote was ahead, which was correct then: it mirrored Lorekeeper data with `/MIR`, so pulling and then mirroring would have destroyed what was just pulled. Now that it only touches `ComfyUI/` and `LMStudio/`, there is no such pass, and `git pull --rebase --autostash` is safe. Without this change it would have aborted on every run forever, since the app pushes directly and the clone is behind on nearly every one.
+
+**Keep these files plain ASCII, with no `chcp` line.** Changing the codepage mid-script makes cmd re-read the remainder under a different encoding and lose its byte position; it then executes fragments of its own comment lines as commands. That is what broke the sync on 8 October 2026.
 
 ### Notes on operation
-- `/MIR` means deletions propagate. Deleting a character in Lorekeeper removes it from the backup folder on the next sync — correct, since git retains the history.
-- The repo's `.gitignore` is roughly the **inverse** of the source repo's. The source repo excludes `Companions/`, `Notes/`, `Templates/` etc. as personal data; here those folders are the entire point. Copying the source `.gitignore` over would produce a repo that faithfully syncs nothing.
+- The backup repo's `.gitignore` is roughly the **inverse** of the source repo's. The source repo excludes `Companions/`, `Notes/`, `Templates/` as personal data; in the backup repo those folders are the entire point. Copying one over the other produces a repo that faithfully syncs nothing.
 - `.gitattributes` sets `* -text` to disable CRLF conversion. Without it, git rewrites line endings on checkout, producing phantom full-file diffs on every note.
 - Run `git gc` occasionally. Repo growth is essentially the pretty JSON's history; everything else combined is under 2 MB.
-- Known cosmetic issue: the panel's status line shows `prettyMtime` as raw UTC, so it reads a few hours off local (Montevideo) time. Not yet converted.
+- Rejected, with reasons, in `lorekeeper-roadmap.md`: a Google Drive folder as the primary destination, a desktop-client folder as the answer for shared builds, native OAuth for Drive/OneDrive/Dropbox, and in-app repository creation.
 
----
 
 ## Auto-Save to Disk
 - Characters -> `Companions\{folder}\companion.json`
 - Lorebooks -> `Lorebooks\{filename}.json`
 - Collections -> `Collections\{filename}.json`
 
-> **These per-item files are Saucepan export shapes, not complete backups.** `saveCompanionJson` strips `world_id`, `status`, `schedule_dates`, `posted_dates`, `collections`, `linked_lorebooks`, `companion_folder`, `site_last_synced_at`, `export_filename`, `lorebook_entry_text`, `lorebook_entry_title`, `voice_catalog_id`, `reworked_at` and portrait `relPath` before writing. Restoring from them recovers a character's *content* but not its world membership, collection membership, linked lorebooks or schedule state — as happened in session 16, where that had to be rebuilt by hand. Those fields live only in `lorekeeper-data.json` (and now, via the pretty copy, in the backup repo). Any future two-way sync needs a `local.json` sidecar holding exactly the stripped fields; see What's Next section B.
+> **These per-item files are Saucepan export shapes, not complete backups.** `saveCompanionJson` strips `world_id`, `status`, `schedule_dates`, `posted_dates`, `collections`, `linked_lorebooks`, `companion_folder`, `site_last_synced_at`, `export_filename`, `lorebook_entry_text`, `lorebook_entry_title`, `voice_catalog_id`, `reworked_at` and portrait `relPath` before writing. Restoring from them recovers a character's *content* but not its world membership, collection membership, linked lorebooks or schedule state — as happened in session 16, where that had to be rebuilt by hand. Those fields live only in `lorekeeper-data.json` (and now, via the pretty copy, in the backup repo). Any future two-way sync needs a `local.json` sidecar holding exactly the stripped fields; see Mobile Companion App.
 - Personas -> `Personas\{name}-persona.json` (session 35) — debounced 800ms from `PersonaDetailPage`, same pattern as Notes and Templates. `image.data` base64 is stripped before writing; `image_relpath` is the real reference and the blob would only bloat the backup. Personas are a Saucepan concept but **cannot be exported from Saucepan**, so Lorekeeper holds the only recoverable copy. The pre-existing `.md` files in that folder are manual exports, not backups — markdown is a formatted document and cannot be reimported.
 - New items auto-get folder/filename from name (sanitized, no trailing underscores); clearable to opt out
 - `updated_at` stamped on every edit
@@ -473,9 +549,9 @@ The sync works, but it was designed for one machine and one backend. Both assump
 - `RelPortrait` (relationship map) does the same resolution for SVG `<image>` elements
 - Supported formats: jpg, jpeg, png, gif, webp, avif
 - Export strips all base64
-- **Image Storage Audit (Settings) buckets, corrected session 32.** The scan checks four states, not three: `relpath_ok` (path resolves, no stale data), `relpath_broken` (path set, file missing), `needs_migration` (base64 only, no path), and `leftover_data` (path resolves **and** base64 is still sitting in the JSON). The `leftover_data` case was invisible before session 32 — the scan returned early on anything that had a relpath, so 49 of 50 base64 blobs were being reported as clean. Clearing that bucket needs no file write, only nulling the stale field.
-- The link-existing-file picker is populated for lorebooks/collections/worlds/personas via `listFolderImages` (session 32). Before that only companions had their folder scanned, so every other type fell through to "write a new file" with no options, even when a matching image was already sitting in the folder.
-- Audit and migration both write through `saveDataAllowShrink` — an ordinary save is refused by the Layer 2 shrink guard.
+- **The base64 migration is over, and its machinery was removed in session 35j.** `ImageMigrationPanel` is now **Rescan images and nothing else**. Audit base64, Migrate and Clean up leftover are gone — they were one-time tooling for a migration that completed in session 32, and they cost about 14 KB of a Babel block that sits under a hard ceiling. Anything describing four audit buckets (`relpath_ok`, `relpath_broken`, `needs_migration`, `leftover_data`) is describing code that no longer exists.
+- **Rescan survived because it is not migration machinery.** It repairs a lorebook or collection whose `image_relpath` went missing after a restore or a merge, by matching files on disk back to their records. It writes only that one field, and only when it is absent, so it cannot overwrite a working link.
+- **The removed functions are recoverable from git if base64 ever reappears.** The IPC they depended on — `scanLorebooks`, `scanCollections`, `listFolderImages`, `writeImageFromBase64`, `saveDataAllowShrink` — is all still present in `main.js` and `preload.js`, untouched. `saveDataAllowShrink` is what any future bulk shrink must write through; an ordinary save is refused by the Layer 2 guard.
 
 **Every image consumer must read `*_relpath`, not just the base64 field (session 32 regression).** Clearing the leftover base64 made world and collection images vanish across the app. The relpaths were correct and the files were on disk — the *views* were the problem. Several read the base64 field directly with no relpath fallback, so the base64 had been silently masking a pre-existing gap. Two distinct failures:
 
@@ -485,6 +561,54 @@ The sync works, but it was designed for one machine and one backend. Both assump
 The Site Checklist was also affected: its "no local image backup" test was `if(!l.image_data)`, which would have flagged every migrated lorebook and collection, with blank thumbnails alongside.
 
 **Lesson:** before clearing a field made redundant by a replacement, audit every *consumer* of that field. Verifying that the replacement resolves is not sufficient — it proves the data is reachable, not that anything actually reads it. Grep for the old field name and check each hit.
+
+---
+
+## Token Estimation — calibrated against Saucepan (session 35o)
+
+`estimateTokens(text)` lives in the plain-JS block. It feeds the Character Card meter (`CARD_TOKEN_CAP` 2600 green / `CARD_TOKEN_MAX` 2900 amber / red beyond) and the Assistant's context readout.
+
+### What it reads in
+
+**Saucepan's own units.** The meter is calibrated so a card reading 2600 in Lorekeeper reads about 2600 in the site's Tokens and Temperature panel. Before session 35o it was calibrated against `gpt-tokenizer` (cl100k) instead, which is not what the site reports.
+
+Saucepan serves four models that tokenize differently, so the site shows a blended estimate of its own rather than any one tokenizer's count. That estimate sits consistently **above** cl100k, which is why a function accurate to cl100k read low on the site.
+
+### The calibration
+
+Measured against six real companions — Dylan, Naka, Nagakura, Sebastien, Rob, Don Pedro — taking both the `card` field and the `example_dialogue` field, twelve texts in all. The pre-35o function undercounted the site on **every one**, by 4.5% to 6.7%. A single scale error, not a shape error.
+
+`SAUCEPAN_CAL = 1.072` corrects it. That is the **top** of the measured ratio range, not the mean (1.062), which preserves the long-standing property that the meter errs HIGH — the safe direction for a cap. Result across the twelve: never under, at most 2.5% over, mean absolute error 0.98%.
+
+Validated on six further texts the site counts separately (the scenario / first-message block): five landed between −0.5% and +4.8%. The sixth, Rob, has four scenarios while the site reported a figure consistent with one — a counting-scope mismatch on the site's side, not an estimator failure.
+
+### Why one constant and not a refit
+
+Three-parameter and seven-parameter least-squares refits were tried and **rejected**. Both beat the single constant in-sample and both **lost under leave-one-out cross-validation**:
+
+| Model | In-sample worst | LOO worst | LOO mean |
+|---|---|---|---|
+| Single constant × existing function | 1.68% | **1.74%** | 0.62% |
+| 3-parameter refit | 1.52% | 2.36% | 0.92% |
+| 7-parameter refit | 1.07% | 2.16% | 0.76% |
+
+The seven-parameter fit also produced a **negative newline weight**, which is physically nonsense — proof it was fitting noise rather than structure. With twelve data points one constant is all the data supports.
+
+**If more real numbers are ever collected:** retune `SAUCEPAN_CAL` first, and only add parameters if cross-validation actually improves. Do not trust an in-sample improvement.
+
+### Why the function has the shape it does
+
+`chars/4`, the usual rule of thumb, is tuned for plain English prose and breaks badly on card markdown. Measured at ~2600 tokens of dense markdown (tables, `###`, `**`, `{{macros}}`, dividers) it reads 1953 — a 25% **under**count, so a card at its cap would look like it had 650 tokens to spare. On pure prose it overcounts by 23% in the other direction.
+
+The shipped form models what a BPE tokenizer actually does: short common words cost one token regardless of length, long words split roughly per 4 chars, runs of punctuation collapse, newlines are cheap.
+
+### Consequence of the recalibration
+
+Every card now reads about 6% higher than it did before, because it is no longer reading low. Cards that sat just under 2600 will cross it. Of the six calibration companions, **Nagakura newly crosses the 2600 line** (2558 → 2743). The caps did not change; what changed is that they now measure the same thing the site measures.
+
+### How it was verified
+
+The function was **extracted back out of the shipped `index.html`** and re-run against all twelve site numbers, rather than re-typed into a test. Same method as the crop and cycle simulations, same reason.
 
 ---
 
@@ -583,9 +707,11 @@ Worth recording, because each step found things the previous one missed:
 ### Verification status
 **Companions and lorebooks: verified end to end (session 35e).** Exported from Lorekeeper and uploaded to Saucepan successfully — not just inspected on disk, but accepted by the platform. These were the two shapes carrying the most drift, so this clears the bulk of the risk.
 
-**Collections: still unverified.** Worth doing, because collections had the worst of it: `handleCollBackup` was shipping `definition` and `description` together, and `setCol` had been omitting the description text entirely. Export one collection and confirm `description` holds the text and `definition` is absent.
+**Collections: verified**, after the `lorebook_display` fix. Collections had the worst of the drift — `handleCollBackup` was shipping `definition` and `description` together, and `setCol` had been omitting the description text entirely — so this was the one that most needed confirming.
 
-**Also unverified: the world Export ZIP.** Its three per-type loops were the paths that had silently diverged the furthest. Run one and spot-check a file of each type.
+**World Export ZIP: verified.** Its three per-type loops were the paths that had diverged the furthest, which is why they were checked separately rather than assumed to follow the individual exports.
+
+All three shapes and both export routes are therefore confirmed. Nothing in this section is outstanding.
 
 The builders are strictly stricter than the code they replaced, so the residual failure mode is a field missing from an export rather than a bad field reaching the site.
 
@@ -630,7 +756,6 @@ Don't assume the strip lists above are exhaustive just because they're documente
 ---
 
 ## Dashboard
-*(intentionally untouched during the UI overhaul — out of scope until explicitly revisited)*
 
 ### Calendar
 - Monday-start; overflow cells navigate months; click outside/re-click to deselect
@@ -659,17 +784,17 @@ Don't assume the strip lists above are exhaustive just because they're documente
 - Collections: no `image.id`, no local image, no tags, no description
 - Only flags public or previously-public items
 
-### Drafts in Progress
-- All draft characters; missing-field amber tags; green checkmark when all filled
-
 ### Upcoming Panel + Release Cycle
 - Next scheduled characters; configurable world posting order; drag to reorder
 
-### In Progress panel (session 31)
-- Renamed from "Drafts in progress". Filters `status !== 'posted'`, so **ready-but-unpublished** characters appear alongside drafts (previously only `status === 'draft'` showed).
-- Status badge per row uses the real status (`status-draft` / `status-ready`), not a hardcoded "draft".
-- Capped at 5 rows with a Show all / Show less toggle.
-- Extracted from an inline IIFE into `InProgressPanel` + `InProgressRow` — same Rules-of-Hooks constraint as SiteChecklistPanel: the toggle needs `useState`, which cannot live in an IIFE that early-returns.
+### In Progress panel — two groups: Drafts, and Ready to schedule
+`InProgressPanel` + `InProgressRow`. Takes every character with `status !== 'posted'`, so ready-but-unpublished ones are included, and splits them into **two headed groups rather than one sorted list, because they are different jobs**: drafts are work to finish, ready ones are work to schedule.
+
+- **The split is by gap count, not by status.** `progressMissing(c).length > 0` puts a character under **Drafts**; zero gaps puts it under **Ready to schedule**. So a character whose status is already `ready` still appears under Drafts if a field is missing — which is the point, and matches the status dropdown's own `incomplete-status` gate.
+- **Drafts sort by fewest gaps first**, then by name, so nearly-done work surfaces above barely-started. Before that they were unsorted, so the order was just the underlying array order and the collapsed top five showed the five oldest rather than the five most actionable.
+- **Show all gates the drafts list only.** The ready pool is the shorter one and is what you scan when scheduling, so hiding it behind a click adds nothing. Drafts collapse at 5.
+- Each row shows the portrait, name, title, an intro-text preview, the world and schedule state, a status badge using the real status (`status-draft` / `status-ready`), and amber chips naming what is missing — `example dialogue`, `tags (3/5)`, `voice`, `intros`. A complete character shows a single green `✓ ready to post`.
+- **Must stay its own component, not an inline IIFE.** Same Rules-of-Hooks constraint as `SiteChecklistPanel`: the Show all toggle needs `useState`, which cannot live in an IIFE that early-returns on an empty list — the hook count would differ between renders. That crashed the Dashboard in production once.
 
 ### Rework panel (session 31)
 - Queue of published companions to revisit and improve. Lists **every** `status === 'posted'` character that has no `reworked_at` stamp — deliberately *not* filtered by missing fields, since a posted character already has the required fields filled, which would leave the list permanently empty.
@@ -788,9 +913,12 @@ Working LM Studio config: **context 16384, GPU offload 24 layers, K and V cache 
 Full-width layout (no max-width cap).
 
 **AI Provider** — provider dropdown (Anthropic / OpenAI / Google / OpenRouter / LM Studio) plus provider-specific key and model fields, shown conditionally on the selection. See the AI Integration section for the provider table; detail is deliberately not duplicated here, since the two copies disagreed for four sessions.
-**Appearance** — Font size (Small/Normal/Large/XLarge, applies immediately and globally via CSS `zoom` on `document.documentElement` — see CSS Gotchas section for why `zoom` rather than root font-size); **Theme** (accent color → generated dark + light theme pair, live preview, Apply/Reset — see Theme System section, added session 20); **Colorblind mode** (Off / Red-Green / Blue-Yellow — built session 24; adds `html.cb-rg` or `html.cb-by` CSS class which remaps specific color variables)
-**Data** — Data file path + Open Folder; Auto-save debounce (Fast 300ms / Normal 600ms / Slow 1s / Very Slow 2s)
-**About** — Version info, deps, link to console.anthropic.com
+**Appearance** — Font size (Small/Normal/Large/XLarge, applies immediately and globally via CSS `zoom` on `document.documentElement` — see CSS Gotchas section for why `zoom` rather than root font-size); **Theme** (accent color → generated dark + light theme pair, live preview, Apply/Reset — see Theme System section, added session 20); **Colorblind mode** (Off / Red-Green / Blue-Yellow — built session 24; adds `html.cb-rg` or `html.cb-by`, which remaps specific colour variables. `cb-by` also remaps green, which the Theme System section used to omit)
+**Data** — Data file path + Open Folder; Auto-save debounce (Fast 300ms / Normal 600ms / Slow 1s / Very Slow 2s). The path is discovered at startup, never configured, which is why it is the one machine-specific string allowed to appear in the UI.
+**Backup** — Destination selector (None / GitHub / a synced folder), and the fields each one needs. See the Backup section.
+**About** — Version info and dependencies. **No API-key link** — it used to carry a single "Get Anthropic API key" link, which implied Anthropic was the only option; all five providers are covered in Help instead.
+
+Five sections in total: AI Provider, Appearance, Data, Backup, About.
 
 ---
 
@@ -811,23 +939,47 @@ Full-width layout (no max-width cap).
 | Swim | `ti-send` | Rolls stroke, event distance, description, swimmer archetype |
 | Western Zodiac | `ti-stars` | Rolls sun sign: element/modality, traits, shadow side, vibe |
 | Chinese Zodiac | `ti-yin-yang` | Rolls sign: element, reference years, traits, shadow side, vibe |
-| Image Prompt Generator | `ti-sparkles` | Generates an image generation prompt using Claude API; auto-populates from current character (name, description, tags, card snippet); art style + mood dropdowns; optional extra notes; copy button |
+| Img Prompt | `ti-sparkles` | Generates an image generation prompt using the configured AI provider; auto-populates from the current character (description, tags, card snippet); art style + mood dropdowns; optional extra notes; copy button. **The character's name is deliberately not sent** — every model wrote it into the prompt verbatim, which is dead tokens at best and biases the composition at worst. Content-warning tags and `IMG_SKIP_TAGS` (POV, format and genre metadata) are stripped before the prompt is built. Output passes through `stripWrappingQuotes()`, because all three local models wrapped the prompt in quotes despite being told not to. |
 | Img Convert | `ti-transform` | Format converter (session 26) — converts between PNG/JPG/WEBP/AVIF |
 | Paste & Save | `ti-clipboard-copy` | Reads an image from the clipboard and saves it to disk (session 26) |
 | Crop | `ti-crop` | Crops an image to a chosen aspect/region (session 26) |
-| Img UUID | `ti-id` | Extracts the platform image UUID from a Saucepan image (session 33) |
+| Img UUID | `ti-id` | Extracts the platform image UUID from a Saucepan image (session 33). Saucepan offers three copy formats per image — markdown, an img tag, a CSS background rule — and the UUID is usually the only wanted part. Paste any or all of them; results are deduplicated, so all three formats of one image give one UUID rather than three. |
+| Pick from image | `ti-color-picker` | Click anywhere on a loaded image to take the colour there. Averages a small square by default, because one pixel of a JPEG is usually compression noise rather than the colour you are looking at. Keeps the last eight picks |
+| Palette | `ti-color-swatch` | Pulls the dominant colours out of an image, or builds a palette from one colour. See Colour Handling below |
+| Roll | `ti-dice-5` | A general-purpose picker: paste options one per line or comma-separated, Ctrl+Enter to roll. Keeps a recent-results list, and the button is disabled below two options. |
 
-**Icon constraint:** every icon must exist in Tabler Icons 2.44.0 (pinned version). Confirmed NOT in 2.44: `ti-files-diff`, `ti-waves` — caused blank icons when used.
+**21 tools**, registered in one `tools` array in `index.html` — icon, id and label in a single place. Add to that array rather than to the render. **Count the array before writing a number here**: this line has already been wrong twice.
+
+**Icon constraint:** every icon must exist in Tabler Icons 2.44.0 (pinned version). Confirmed NOT in 2.44: `ti-files-diff`, `ti-waves`, `ti-spell-check` — these render blank. The reliable check is to unpack `@tabler/icons@2.44.0` from npm and look in its `icons/` folder, rather than trusting that a plausible name exists.
+
+---
+
+## Colour Handling — OKLCH, and why not HSL
+
+The original Color tool works in HSL. **HSL lightness does not correspond to what the eye sees**, and the gap is not subtle: pure yellow and pure blue are both "50% lightness" in HSL, while measured in OKLCH they are **0.968 and 0.452**. More than double.
+
+That is why mathematically correct harmonies — triadic, complementary — so often look cheap. Rotating hue while holding saturation and lightness fixed makes every colour shout at the same volume. What reads as designed is a deliberate spread of lightness, with only one or two colours carrying real chroma.
+
+So the Palette tool works in **OKLCH** and converts back to hex only for display. `rgbToOklch` / `oklchToRgb` live in the **plain JS block** — pure maths, no JSX, so they cost nothing against the Babel budget. The round trip was verified exact to the byte on red, blue, white, black, grey, amber and a muted purple.
+
+**`fitChroma()` exists because a requested colour may not be displayable.** High chroma at an extreme lightness falls outside sRGB and converts to something clipped and simply wrong. It binary-searches chroma downwards until the colour survives a round trip, so a swatch always shows the colour it claims to.
+
+**Hue names are measured, not guessed.** OKLCH hue angles do not line up with the HSL wheel: pure red sits at **29**, not 0, and yellow at **110**. Naming by RGB intuition put scarlet in the orange bucket. The boundaries in `hueName()` were set from measured reference colours and checked against twelve.
+
+**Palette extraction buckets in OKLCH as well.** That is what makes two shades of one skin tone collapse into a single entry rather than counting as different colours, and a candidate too close to one already chosen is refused — otherwise a photo of one jumper returns six versions of the same blue.
 
 ---
 
 ## Help System
 
-- Help page in sidebar — 15 collapsible sections, kept current with the app
-- Sections: Dashboard, Characters, Worlds, Lorebooks, Collections, Personas, Templates, Lorebook Templates, Relationship Map, Tools Panel, Import/Export, Auto-save, Image Storage Audit, Backup & Restore, Settings, Claude AI, GitHub backup
-- **Needs updating** (session 29 open item): image tools, 3-card Import/Export layout, colorblind mode, character tab changes, backup merge flow
-- Each has plain explanations, numbered steps, tip callouts
-- Inline help buttons: Site Checklist, Batch Import, Lorebook Entry tab, Lorebook Templates manager
+Content lives in `HELP_SECTIONS` in the **plain JS block** — a JSON array of `{title, icon, items[]}`. `HelpPage` only renders it. Item types are `p`, `tip`, `step` (needs an `n`), `warn` (needs an `h`) and `note` (an `h` plus a numbered `s` array). A `step` without an `n` renders an empty numbered circle, which is the easy mistake.
+
+- **20 sections**, rewritten in session 37 for someone who has never seen the app: Dashboard, Characters, Worlds, Timeline, Lorebooks, Collections, Personas, Templates, Lorebook Templates, Relationship Map, Tools panel, Image Tools, Editing conveniences, Import / Export, Backup, Auto-save to disk, Rescan images, Data Safety, Settings, AI assistant.
+- Inline help buttons elsewhere: Site Checklist, Batch Import, Lorebook Entry tab, Lorebook Templates manager.
+
+**Count the array, do not read the prose.** Session 32's audit found nine wrong statements here and session 37 found more, all of the same kind: totals stated in words ("11 tabs", "three layers", "15 sections") stay perfectly plausible after the underlying list changes. Every such number in Help should be checked against the array it describes.
+
+**Help can outlive the feature.** Session 37 found Help still documenting Audit base64, Migrate and Clean up leftover — removed in session 35j. When a feature is deleted, grep `HELP_SECTIONS` for it in the same breath.
 
 ---
 
@@ -860,45 +1012,62 @@ Saucepan offers three copy formats per image — markdown, an `<img>` tag, and a
 
 **This cannot be Electron's `findInPage`.** That searches rendered DOM text and cannot see inside `<textarea>` values, which is where descriptions, cards, chapters and intros all live. Any future "search the current page" feature has the same constraint.
 
+## Saucepan Macros
+
+**`MACROS` in the plain JS block is a REFERENCE, not an allowlist.** Saucepan accepts more than it lists, so **nothing should ever validate text against it.** A checker built on it would flag `{{him}}` as broken — `{{him}}` is valid — and a checker that produces false positives gets ignored within a week, which is worse than not having one.
+
+**Pronouns resolve by grammatical role, not by the word typed.** The canonical names are `{{sub}} {{obj}} {{poss}} {{poss_p}} {{ref}}`. Every pronoun form is an alias for one of those: `{{they}}`, `{{he}}` and `{{she}}` all resolve to the subjective form for that persona, `{{them}}`/`{{him}}`/`{{her}}` to the objective, and so on.
+
+**The they-forms are the ones to use, and not only because they are easier to remember.** A macro that fails to resolve falls back to the literal word. `{{their}}` degrades to "their", which is still correct for anyone; `{{his}}` degrades to "his", which is wrong for half of readers. The fallback behaviour is the argument, not the convenience.
+
+**`{{s?a:b}}` and `{{p?a:b}}` are a pattern taking any two words, and THE FIRST VALUE IS THE ONE THAT GETS USED.** A singular subject is `{{s?was:were}}`; the same sentence for a plural subject is `{{p?were:was}}`. They are inverses — pick whichever reads naturally and put the matching form first. Any verb works, not just was/were. **Getting this backwards reads perfectly fine until someone with plural pronouns opens the chat**, which is why the rule is now stated in the macro panel rather than left to be inferred from two examples.
+
+The panel was rewritten in session 40 because it listed examples without the rules. `MACROS` groups now carry an optional `note` (the rule) and `tip` (the recommendation), and the panel renders them above the chips.
+
+**If a macro linter is ever built**, it can only check *shape*, never names: a conditional with one value instead of two, an empty or unclosed `{{`, or an uppercase-with-spaces leftover like `{{CHARACTER NAME}}` from a lorebook template. Anything that is a plausible single word inside braces must be left alone.
+
+---
+
 ## Saucepan Tag System (session 34)
 
 `SAUCEPAN_TAGS` (plain JS block, pure data — not part of the Babel budget) is Lorekeeper's local mirror of Saucepan's tag reference: `{id: {c: category, d: description}}`, 659 entries. `TAG_CATEGORIES` lists the 15 known categories in display order.
 
 **This mirror will drift again.** It was last synced 19 Aug 2026 against a 658-tag PDF export. There is no live sync — if Saucepan adds, renames, or re-categorises tags, Lorekeeper won't know until someone re-runs this audit. Re-running it needs a PDF (or any source with real embedded text) of the site's `All Tags` reference page — a screenshot is not sufficient unless captured at native resolution, since a scaled-down screenshot cannot be recovered by upscaling.
 
-**`mythological` is a known loose end.** It exists in `SAUCEPAN_TAGS` but had no match anywhere in the 658-tag audit — not by id, not by any plausible description similarity. It was kept rather than deleted, since "no match found in this audit" isn't proof it's gone from the site. Worth Ine checking directly; if it's confirmed gone, remove the key and add a `TAG_RENAME_MAP` entry only if there's a real successor, otherwise any character still carrying that tag keeps it as an orphaned string (harmless — Lorekeeper doesn't validate tags against `SAUCEPAN_TAGS`, it only uses it for autocomplete/description lookup).
+**`mythological` is a known loose end.** It exists in `SAUCEPAN_TAGS` but had no match anywhere in the 658-tag audit — not by id, not by any plausible description similarity. It was kept rather than deleted, since "no match found in this audit" isn't proof it's gone from the site. Worth Ine checking directly; if it's confirmed gone, remove the key and add a `TAG_ID_REPAIR` entry only if there's a real successor, otherwise any character still carrying that tag keeps it as an orphaned string (harmless — Lorekeeper doesn't validate tags against `SAUCEPAN_TAGS`, it only uses it for autocomplete/description lookup).
 
-**`TAG_RENAME_MAP` is migration plumbing, not a permanent structure.** It exists solely to let `migrateTagArray()` (plain JS block) fix up old ids sitting in existing `.tags` arrays on load. Once every affected character/lorebook/collection/world has been opened at least once post-update, every mapped old id is gone from the data and the map does nothing further — it's safe to leave in place indefinitely (the scan is cheap and a no-op once nothing matches), but it should not be extended for anything other than actual id renames confirmed against source data.
+**`TAG_ID_REPAIR` is migration plumbing, not a permanent structure.** It exists solely to let `migrateTagArray()` (plain JS block) fix up old ids sitting in existing `.tags` arrays on load. Once every affected character/lorebook/collection/world has been opened at least once post-update, every mapped old id is gone from the data and the map does nothing further — it's safe to leave in place indefinitely (the scan is cheap and a no-op once nothing matches), but it should not be extended for anything other than actual id renames confirmed against source data.
 
 **`CW_TAGS` is derived, not hand-maintained**, as of this session: `Object.keys(SAUCEPAN_TAGS).filter(id => SAUCEPAN_TAGS[id].c === "Content Warnings")`. Verified exactly equal to the previous hardcoded 21-tag list before the change. Any future CW tag addition to `SAUCEPAN_TAGS` needs no corresponding edit here.
 
-## Babel Block Budget (session 32)
+## Electron Gotchas (session 35m)
 
-**Current: 485.9 KB babel / ~190 KB plain, ~14 KB headroom under the ~500 KB ceiling.** (439.3 KB after the session-32 reclaim; the session-35 HelpPage reclaim brought it to 456.4 KB; sessions 35h–35k — timeline, replace, highlighting, banner focus, site crop — spent nearly all of it.)
+**`window.prompt` does not exist.** Chromium removed it and Electron never reinstated it, so the call is **silently ignored** — no error, the button simply does nothing. `alert()` and `confirm()` still work. Use an inline input instead; the Timeline's Add/Rename strand does this.
 
-**Reclaim before the next feature of any size.** At 14 KB a single component can cross the line, and the failure is silent: click handlers stop working app-wide with no console error. The obvious next candidate is `SAUCEPAN_TAGS` (704 entries), which is pure data and could move to the plain-JS block exactly as the Help content did — it is referenced by `TagInput`, `CW_TAGS` and `progressMissing`, all of which would keep working unchanged.
+**`getDataPath` returns the data FILE, `getDataDir` returns the FOLDER.** `get-data-path` resolves to `DATA_FILE` because Settings displays the full file path. Appending `Companions\<folder>` to it produces a path *through* `lorekeeper-data.json`, which cannot exist — so `fs.existsSync` fails, no `defaultPath` is passed, and the file dialog silently falls back to whatever folder Windows had open last. `get-data-dir` was added in session 35m for exactly this.
 
-**Session-35 reclaim: HelpPage (24.2 KB -> 1.9 KB).** By this point the two earlier levers were exhausted — an automated scan found **zero** movable declarations (every remaining top-level item genuinely uses JSX or hooks) and **zero** unreferenced components. Session 32 had already taken both. What was left was restructuring, and `HelpPage` was the obvious target: ~24 KB of static prose being parsed by Babel at every app start for no benefit.
+**Method note worth keeping.** That bug cost three speculative patches against a Windows "last visited folder" quirk that was never happening. One round of logging the resolved path showed the real cause immediately. **When a dialog, path or file operation misbehaves, log the actual value before theorising** — the main process can `fs.appendFileSync` to a scratch file in `DATA_DIR` and the answer arrives in one round trip.
 
-The content now lives in `HELP_SECTIONS` in the plain-JS block, with `HelpPage` reduced to a renderer that walks it. Inline markers are `**bold**`, `` `code` ``, `_italic_`; item types are `p`, `tip`, `step`, `warn`, `note`. The two bespoke callouts became typed items rather than raw JSX so the data block stays pure data.
-
-**The transform was scripted, not retyped**, then verified by word-multiset diff of the old JSX against the new data. Thirteen words came back unaccounted for and all were artefacts: JSX syntax tokens, and the intro line deliberately kept hardcoded in the renderer. Targeted probes confirmed the risky strings survived — `{{user}}`/`{{char}}` and `lorekeeper-data.preshrink-{date}.json`, where JSX brace escaping (`{'{{user}}'}`) could have silently eaten characters. **Do the text diff on any future content extraction; Help is a page where silent loss would not be noticed for months.**
-
-Next lever if headroom tightens again: `ImageMigrationPanel` (17.2 KB) is the largest remaining candidate, but it is live UI rendered on two pages and still does ongoing rescanning, so it cannot simply be deleted.
-
-The ceiling is real and its failure mode is silent — past ~500 KB Babel deoptimises and click handlers stop working app-wide with no console error (session 23). Two things bought the room back:
-
-**1. Babel only needs to see JSX.** Any top-level declaration with no JSX and no hooks can live in the plain `<script type="text/javascript">` block, which is not just for data arrays — pure helper *functions* belong there too. 77 declarations (34.1 KB) moved in session 32: `callAI`, `CS`, `applyMerge`, `planMerge`, `generateTheme`, `renderMd`, `parseTimestamp`, the theme/colour helpers, the rework helpers, and the remaining data constants.
-
-Cross-block references work in both directions because classic scripts share one global lexical environment, and every call happens during render, after both blocks have evaluated. The one hard constraint: **a moved `const` initialiser must not reference anything left in the Babel block**, since the plain block evaluates first. Verify this before moving, not after.
-
-**2. Dead components.** 20.1 KB of never-rendered code was still being transpiled: `LoreboookEditor` (superseded session 11), `CollEditPanel` (session 12), `BackupRestorePanel` (session 25), `SchedulePage`. Two of them contained free `setModal` references that would have thrown `ReferenceError` had they ever been mounted — a latent bug hidden by the fact that they were unreachable.
-
-**Verification procedure — do not skip.** Session 26 removed 9 arrays from Babel and silently failed to append them to the plain block; they had to be recovered from the test environment. Any future extraction must be checked by parsing both blocks and diffing the *set* of top-level declaration names before and after. Name-set equality is the check, not byte counts and not `useState` counts — removing dead components legitimately lowers the raw `useState` count (5, in session 32) while every unique state name survives, so compare unique names.
-
-**Next levers if headroom is needed again:** 1068 inline `style={{...}}` objects remain, 77.1 KB total, densest in `CharDetailPage` (7.2 KB), `BatchImportPage` (5.8 KB), `SettingsPage` (5.3 KB), `DashboardPage` (5.2 KB). The session-28 sweep only covered CharDetailPage/LorebookEntryTab/LoreItemRestoreCard. Do **not** reach for stripping comments (16.2 KB) or indentation (48.9 KB) — the file is hand-edited and manually deployed, so readability is worth more than the bytes.
+**`main.js` changes need a full app restart.** Reloading the window (Ctrl+R) reloads only the renderer; the main process keeps running the old code, so an IPC or dialog fix appears to do nothing.
 
 ---
+
+## Babel Block Budget — SOLVED by splitting (session 35n)
+
+**The ceiling is per SCRIPT BLOCK, not per file.** Babel standalone transforms each `text/babel` script separately, so splitting one oversized block into two puts each comfortably under the limit. This was discovered at 490 KB, when the compiler began emitting `[BABEL] Note: The code generator has deoptimised the styling as it exceeds the max of 500KB` — the canary for the silent app-wide click-handler failure described below.
+
+`index.html` now has **two** Babel blocks, split at `CollectionPicker`: roughly 250 KB and 241 KB. Rules:
+
+- **The `ReactDOM.createRoot(...).render()` call must stay in the LAST block.**
+- Split only at a top-level declaration boundary.
+- Top-level `function` and `const` declarations in classic scripts share one global scope, so either block can reference the other. Nothing is called until render, so ordering between blocks does not matter.
+- **If either block nears 400 KB, split again.** A third block is free; this scales indefinitely.
+- Do not merge them back. The comment at the top of block 1 says so.
+
+**Consequence for planning:** the Babel ceiling is no longer a reason to adopt a build step. Headroom went from ~11 KB to effectively unlimited. A build step is still worth doing for faster startup, modules and npm packages, but it is no longer urgent.
+
+### History (the reclaims that preceded the split)
+Kept because it explains several existing design choices — why `SAUCEPAN_TAGS`, `HELP_SECTIONS`, the export builders and `estimateTokens` live in the plain-JS block rather than beside the components that use them.
 
 ## Babel Standalone Gotchas (hard-won, do not relitigate)
 These caused repeated regressions across sessions — treat as fixed rules:
@@ -941,13 +1110,24 @@ Takes one of the two variants from `generateTheme` and calls `document.documentE
 An App-level `useEffect` (same pattern as the font-size `zoom` effect — must live in `App`, not inside `SettingsPage`, or the theme would revert the moment you navigate away) watches `data.settings.theme` and calls `generateTheme()` + `applyTheme()` whenever it changes, including on initial load. This is what makes the theme survive an app restart.
 
 ### Known gaps / not yet done
-- **Colorblind mode** is still a separate placeholder, unbuilt — distinct from this feature (theme = accent color choice; colorblind mode = remapping specific hues like red/green that look identical to certain colorblindness types, which would need either its own palette adjustments or CSS filters, not yet designed)
+- **Colorblind mode was built in session 24** and is distinct from this feature: theme is accent-colour choice, colorblind mode remaps specific hues that read as identical to some people. It works by putting `cb-rg` or `cb-by` on `<html>` and redefining a few CSS variables — `cb-rg` (deuteranopia/protanopia) sends red to orange and green to blue; `cb-by` (tritanopia) sends amber to red-orange, teal to pink and green to blue. It is a variable remap, not a palette or a filter.
 - No "save multiple custom themes" / theme gallery — only one active theme at a time, overwritten each time Apply is clicked
 - Generated themes aren't currently exported/backed up anywhere beyond living in `data.settings.theme` inside the main data file (same backup coverage as any other setting — fine for global/per-world backups since those copy `data` wholesale, but worth knowing if a dedicated settings-export feature is ever built)
 
 ---
 
 ## CSS Gotchas (hard-won, do not relitigate)
+
+**CSS `zoom` on `<html>` breaks every pointer calculation in the app, and it has caused the same bug twice.** The font-size setting applies `document.documentElement.style.zoom` (0.9 / 1 / 1.125 / 1.25). Under CSS zoom, Chromium reports `offsetX` / `offsetY` in the **unzoomed** space while `clientWidth` / `clientHeight` and `getBoundingClientRect()` are in the **zoomed layout** space. Mixing them inflates every coordinate by the zoom factor.
+
+**The error is proportional to distance from the origin**, which is what makes it so hard to recognise: anything near the top-left works perfectly and everything further away drifts. It does not look like a coordinate bug, it looks like "the bottom half is broken".
+
+- First occurrence: crop handles. Only the top-left corner could be grabbed. Measured at zoom 1.125, a click 810 units in registered at 921.
+- Second occurrence (session 40): the colour picker refused to sample the lower part of an image. At zoom 1.25 the computed row ran past the end of a 468-row bitmap at about 81% down, so every click below that clamped to the last row and returned the same colour.
+
+**`appZoom()` and `pointerFraction()` in the plain JS block are the one correct implementation.** Every pointer-to-content calculation must go through them. The second occurrence happened precisely because a new tool did its own coordinate maths instead of reusing the fix that already existed — the same consolidation failure recorded elsewhere in this document.
+
+
 - **`vh` units don't reliably scale with CSS `zoom`.** The font-size feature (Settings → Appearance) is implemented via `document.documentElement.style.zoom` (chosen because the app's CSS uses ~435 hardcoded pixel values and almost no `rem`/`em`, so changing the root font-size alone does nothing — see Performance Notes). `zoom` scales rendered pixels, but `vh` is computed against the raw device viewport in a way that doesn't reliably co-scale with it. `.sidebar` was set to `height: 100vh` to fix a header-scrolls-off-screen bug (session 18) — that fix was correct in isolation, but at any font size other than "Normal," the sidebar's rendered height would exceed the actually-visible area, recreating the exact same header-scrolling bug it was meant to fix (session 19 root-caused this). Fixed by using `height: 100%` instead (inherited from `.app`, itself `100%` of `#root`'s `100vh`) — percentage units are relative to the parent's computed box, not the raw viewport, so they scale correctly under `zoom`. **Any future "fixed-height sidebar/panel" CSS should use `%` chained from a `100vh` ancestor, never `vh` directly on an element that needs to coexist with the zoom-based font scaling.**
 
 ---
@@ -967,7 +1147,7 @@ A `dataLoaded` state flag starts `false`. The autosave `useEffect` (which writes
 ### Layer 3 — rolling last-known-good backup (`main.js`)
 Every write that passes the Layer 2 check also writes a copy to `lorekeeper-data.lastgood.json`. This is a second, independent fallback file separate from the main save, useful as a manual recovery point if something Layers 1–2 didn't anticipate ever happens.
 
-> **Layers 1–5 protect against software failure only.** Every one of them writes to the same disk as the data it protects, so none of them survive losing the drive. That is what Git Backup Sync (session 35) is for — see its own section. The two are complementary and neither replaces the other.
+> **Layers 1–5 protect against software failure only.** Every one of them writes to the same disk as the data it protects, so none of them survive losing the drive. That is what Backup is for — see its own section. The two are complementary and neither replaces the other.
 
 ### Layer 4 — standalone per-item backups: notes, templates, personas (`main.js` + `index.html`)
 Notes (global scratchpad and per-world) previously had **no** independent backup — they only ever lived inside the single big data file, unlike characters/lorebooks/collections which each already auto-save to their own JSON. Every world's notes (and the global scratchpad) now also debounce-write to a plain-text file at `Notes\{WorldName}.md` / `Notes\_global.md`, completely independent of the main data file write. A "Notes Backups" panel on the Batch Import page explains this and has an "Open Notes folder" button. Wired from both the right-panel Notes tab and the World Info tab's Notes field (same backend file, same backup).
@@ -1012,11 +1192,33 @@ Typing lag returned, identical in every field regardless of which one. Root caus
 
 ## Windows Installer (session 31)
 
+### Verifying a build — and a trap in the verification itself
+
+**A clean electron-builder log does not prove the build is good.** The one file worth checking afterwards is `resources\app.asar`, which holds the entire application: it should be roughly 1.2 MB and dated after the build started. An empty or stale one would mean an installer that puts a codeless app on someone's machine, and nothing in the build output would say so.
+
+**Check it from PowerShell, NOT through any tool that runs inside Electron.** Electron patches Node's filesystem so a path containing `.asar` is treated as an archive rather than a file, and a `stat` through that shim returns a synthetic result — in session 41 it reported **0 bytes with a two-day-old timestamp** for two different builds, both of which were in fact 1,180,600 bytes and minutes old. That reading sent a session into deleting build output and rebuilding to fix a problem that did not exist.
+
+```powershell
+Get-Item dist\win-unpacked\resources\app.asar | Select-Object Length, LastWriteTime
+```
+
+**Two files reporting the same size AND the same timestamp is the tell.** A freshly written file cannot share an mtime with one from days earlier; that combination means the measurement is synthetic, not that the build is broken.
+
+**`app.asar` is often locked** by antivirus or the search indexer after a build, which makes `dist\win-unpacked` undeletable and unrenamable even from an elevated shell — it is a file-handle lock, so administrator rights do not help. Build somewhere else instead of fighting it:
+
+```powershell
+npx electron-builder --config.directories.output=dist2
+```
+
+The lock clears on its own; the stray folder can be deleted later.
+
+
+
 `package.json` at the repo root (alongside `src/`) with an `electron-builder` NSIS config.
 
 ```
 npm install
-npm run build      ->  dist/Lorekeeper Setup 1.1.0.exe
+npm run build      ->  dist/Lorekeeper Setup 1.2.0.exe
 ```
 
 - `allowToChangeInstallationDirectory: true` — the user picks the install folder, and **data lives next to the exe**, so app and data end up on the same drive. This was a deliberate choice over `Documents\Lorekeeper`: a system-drive default gets wiped on a reformat.
@@ -1025,6 +1227,14 @@ npm run build      ->  dist/Lorekeeper Setup 1.1.0.exe
 - On startup main creates all eight standard folders if missing: root, Companions, Lorebooks, Collections, Worlds, Personas, Templates, Notes.
 - Icons: `assets/icon.ico` (installer + shortcuts), `assets/icon.png` (window). Both already existed.
 - `dist/` is gitignored; the installer ships as a **GitHub Release asset**, not committed to the repo.
+
+### Versioning
+
+One number, in one place: `version` in `package.json`. electron-builder names the installer from it, and `app.getVersion()` reads the same value back at runtime — exposed over IPC as `getAppVersion` and rendered by the `AppVersion` component at the foot of Settings. So the number on the installer and the number in the app cannot disagree.
+
+**Bump it before any build intended to leave this machine**, so a copy in someone else's hands can be identified. There are no tags, no changelog file and no release notes: `lorekeeper-sessions.md` is the changelog, and the installer ships as a GitHub Release asset where the version in the filename is the whole story.
+
+Current: **1.2.0** — the first build carrying the bundled rclone binary.
 
 ### Environment gotcha (Ine's machine)
 Electron's post-install binary download fails silently — `node_modules/electron/dist/` ends up containing only `locales/`, and `npx electron` reports "Electron failed to install correctly". Neither `npm install` nor running `install.js` directly produces any error output.
@@ -1045,43 +1255,27 @@ Lorekeeper as full local backup and source of truth — independent of Saucepan.
 
 ---
 
-## What's Next (Priority Order)
+## Mobile Companion App — designed, nothing built
 
-### A. Sync pull guard — BUILT (session 35)
-`lorekeeper-sync.bat` is **push-only**. That is safe exactly as long as nothing else writes to the repo, and unsafe the moment something does.
+**Where the live plan lives:** `lorekeeper-roadmap.md`, Stage 4. This section is the design detail that plan refers to.
 
-The failure: a second device commits a change. Later the desktop closes, robocopies its own version over the backup folder, stages it and pushes. The push is rejected (remote ahead), a pull merges, and the working tree now holds the desktop's copy staged over the other device's. **The other device's edit survives in history but disappears from current state, with no warning.**
-
-Implemented at the top of the script, before any mirroring:
-- `git fetch`, then `git rev-list --count HEAD..origin/main`
-- If the remote is ahead, **abort with a loud error** and touch nothing — no automatic merge
-- If the remote is unreachable, warn and continue (committing locally and pushing later is safe)
-
-**`setlocal EnableDelayedExpansion` is required** and is the trap here: `!BEHIND!` is read inside the same parenthesised block where it is set, and `%BEHIND%` would expand at parse time to its pre-loop value. A naive version of this check silently never fires — which looks identical to a working guard. Tested both paths: normal sync, and a deliberate remote-ahead commit made through GitHub's web editor.
-
----
-
-### B. Mobile companion app (design agreed session 35, nothing built)
-
-**The actual need:** the office machine restricts AI tooling, so there is no usable environment there. The phone is the only option for editing on the go — creating and editing characters, intros and lorebooks, plus notes.
+**The actual need:** the office machine restricts AI tooling, so there is no usable environment there. The phone is the only option for editing on the go — characters, intros, lorebooks and notes.
 
 **Scope decisions already made:**
 - **No Saucepan import/export from the phone.** Editing and creating only. This removes the worst risk on the table: the phone would otherwise need its own copy of the export strip list, and the two would drift silently until an import was rejected months later. Export stays a desktop action where the rules already live.
 - **Sideloaded APK.** No Play Store. Rebuild and reinstall by hand; fine for one user.
-- **Per-item files, not the main JSON.** The phone never reads `lorekeeper-data.pretty.json` (21 MB and desktop-authoritative). It works with individual item files, kilobytes each.
+- **Per-item files, not the main JSON.** The phone never reads `lorekeeper-data.pretty.json` (now 33 MB and desktop-authoritative). It works with individual item files, kilobytes each.
 - **Never used concurrently.** Realistic worst case is forgetting to close one app, not genuine simultaneous editing. This is what makes the whole design tractable.
-- **Storage is not a constraint** (~160 GB free on device). Sparse-checkout is available if wanted but not required — images are already excluded from the repo, so the whole corpus is ~16 MB.
+- **Storage is not a constraint** (~160 GB free on device). Images are already excluded from the repo, so the whole corpus is small.
 
 **Conflict handling:** given non-concurrent use, conflicts are rare and do not need automatic merging. Present both versions with timestamps and let the user pick one and discard the other. Explicit choice, never silent resolution.
 
-**Babel is not a constraint here — and this is worth understanding.** The 500 KB ceiling exists because `index.html` compiles JSX *in the browser at runtime* via Babel standalone. A mobile app would use a normal build step (Vite or similar) that compiles ahead of time, so there is no standalone parser, no runtime compile cost and no budget. The corollary: **do not reuse `index.html` as-is inside a WebView.** Runtime Babel on a phone CPU would be markedly slower than on desktop. Build the mobile app properly with a bundler; reuse React *components* if useful, not the single-file runtime-compiled architecture.
+**Babel is not a constraint here — and this is worth understanding.** The 500 KB ceiling exists because `index.html` compiles JSX *in the browser at runtime* via Babel standalone. A mobile app would use a normal build step that compiles ahead of time, so there is no standalone parser, no runtime compile cost and no budget. The corollary: **do not reuse `index.html` as-is inside a WebView.** Runtime Babel on a phone CPU would be markedly slower than on desktop. Reuse React *components* if useful, not the single-file runtime-compiled architecture. Capacitor is the sensible wrapper if components are being reused.
 
-Capacitor is the sensible wrapper if components are being reused.
-
-**Build the prototype against the git repo without touching Lorekeeper.** The desktop app works and should not be destabilised for an experiment. The repo is already a complete, readable text corpus, so a mobile client can be developed and tested end to end against it with **zero changes to `main.js` or `index.html`**. Only the pull guard (item A) is needed on the desktop side, and that is in the script, not the app.
+**Build the prototype against the git repo without touching Lorekeeper.** The desktop app works and should not be destabilised for an experiment. The repo is already a complete, readable text corpus, so a mobile client can be developed and tested end to end against it with zero changes to `main.js` or `index.html`.
 
 **Open questions, deliberately unresolved:**
-1. Per-item files do not currently carry world membership, collections or linked lorebooks — `saveCompanionJson` strips them. A character viewed on the phone would appear context-free. Either write a `local.json` sidecar per item holding exactly the stripped fields (keeps `companion.json` Saucepan-clean, gives those fields an independent backup they currently lack), or accept the missing context on mobile.
+1. Per-item files do not carry world membership, collections or linked lorebooks — `saveCompanionJson` strips them. A character viewed on the phone would appear context-free. Either write a `local.json` sidecar per item holding exactly the stripped fields (keeps `companion.json` Saucepan-clean, and gives those fields an independent backup they currently lack), or accept the missing context on mobile.
 2. **Lorekeeper has no import path.** Every file in the repo is written *out* of the app; nothing reads them back. Until desktop-side ingest exists, a phone edit sits in the repo looking applied while the app never sees it. This is the real work, and it is larger than the mobile app itself.
 3. Deletions: an absent file is ambiguous between "deleted" and "not yet created". Trust git's diff rather than folder state, or use tombstones.
 
@@ -1089,103 +1283,93 @@ Capacitor is the sensible wrapper if components are being reused.
 
 ---
 
-~~### 0. Babel headroom~~ ✓ **done session 32** — 493.5 KB -> **439.3 KB**, ~61 KB headroom. See "Babel Block Budget" below.
+## Handing the App to Someone Else
 
-~~### 0b. Image Prompt Generator sends content-warning tags~~ ✓ **done session 32**
-CW tags plus a new `IMG_SKIP_TAGS` set (POV/format/genre metadata) are now stripped before building the prompt — `dead_dove, violence, male, any_pov, male_pov, jock, athlete` becomes `male, jock, athlete`. Tags still export to Saucepan normally; this only affects what reaches the image model.
+**Terminology, because the old heading caused confusion:** a *packaged* build already exists and works — `electron-builder` + NSIS produces an installer that runs on a machine with no dev tooling. That is done. What this section is about is **safe to hand to another person**, and the blockers were never packaging. The live checklist is in `lorekeeper-roadmap.md`, Stage 3b.
 
-Two further fixes found while testing against local models:
-- **The character's name is no longer sent at all.** Every model wrote it into the prompt verbatim. An image model cannot render "Jamal Ferret", so it is dead tokens at best, and a surname like Ferret actively biases the composition.
-- **The no-character branch was sending the literal string `(character)` as a name.** Exaone took that at face value and invented a fully-specified character — silver hair, blue eyes, a library — and presented it as the answer. The branch now states plainly that no character was provided and asks for a generic prompt from style/mood/notes alone.
-- Output is passed through `stripWrappingQuotes()`; all three local models wrapped the prompt in quotes despite being told not to.
-
-### 0c. LM Studio model switching ✓ **done session 32**
-The Model field is a dropdown of everything currently loaded in LM Studio, auto-populated on opening Settings with LM Studio selected (`/v1/models`). Loading several models in LM Studio means switching between them is one click, with no restart. Falls back to a text input when the server is unreachable so a saved model name is never lost, and warns when the saved model is not among those loaded.
-
-~~1. CharDetailPage UI cleanup~~ ✓ **done session 28**
-
-~~2. UI consistency check~~ ✓ **done session 28** — all pages verified, scenario drag cursor fixed
-
-~~3. Design backup/restore flows~~ ✓ **decided session 28**
-
-~~4. Build "Import from backup" (Option C)~~ ✓ **built + tested session 29**
-
-~~5. Help page update~~ ✓ **done session 30** — all sections updated (11 tabs, image tools, Import/Export, Data Safety, drag-to-reorder tip, GitHub backup removed)
-
-~~6. Packaged `.exe` / installer~~ ✓ **done session 31** — NSIS installer, data next to exe, see Windows Installer section
-
-### Character completeness unified ✓ **done session 32**
-The dashboard ran three separate definitions of "complete". **In progress** (`progressMissing`) checked 10 fields; **Rework** (`reworkChecks` over `REWORK_FIELDS`) checked 7; they overlapped on only 3. A draft could therefore display `✓ ready to post` while missing formatting instructions, example dialogue, advanced prompt and voice — the four fields only Rework looked at. Nothing gated the status dropdown either, so draft → ready was always allowed regardless.
-
-Replaced with a single `CHAR_CHECKS` list of 14 `[label, predicate]` pairs in the plain JS block. `progressMissing`, `reworkChecks` and the new `charIsComplete` all derive from it, so the three panels can no longer drift apart. Setting status to ready or posted with anything missing now opens an `incomplete-status` modal listing the gaps, with an explicit "Set anyway" override rather than a hard block.
-
-**Design note — resolved session 35, keep as is.** The union treats `advanced_prompt` and `voice_catalog_id` as required. Confirmed correct in practice: the advanced prompt can be overridden by the user on Saucepan anyway, and flagging the voice catalogue is precisely what stops it being forgotten. The previously-noted option of splitting `CHAR_CHECKS` into required and recommended groups is **not** wanted — do not implement it.
-
-### Help page audit ✓ **done session 32**
-Verified section by section against the code rather than read for plausibility. Nine corrections, most predating session 32:
-- **Characters** claimed 11 tabs and documented 8. Full Description, Lorebooks and Collections were missing entirely.
-- **Lorebooks** described an "Edit tab" and "Export tab". The actual tabs are Chapters / Settings / Export — the Edit tab has not existed since the chapters refactor.
-- **Dashboard Today Banner** still described the old today-only behaviour and did not mention that mark-posted stamps the scheduled date.
-- **Data Safety** said "three layers" and listed three. There are five (flush-on-close and the pre-shrink snapshot were undocumented, so nobody would know the snapshot files are safe to delete).
-- **AI assistant** listed four providers, omitted LM Studio, and still claimed the Assistant always sends the full world — the context scope selector was undocumented.
-- The API-key warning stated a key is required, with no exception noted for LM Studio.
-- Cost estimate did not mention that local models are free per message.
-
-**Lesson:** Help drifts silently because nothing links it to the code. Tab lists and layer counts are the parts that rot first, since they are stated as totals ("11 tabs", "three layers") that stay plausible after the underlying list changes. Check counts against the actual arrays.
-
-### 7. Shareable / Public Version
-
-**Terminology, because the old heading caused confusion:** a *packaged* build already exists and works — `electron-builder` + NSIS produces `Lorekeeper Setup 1.1.0.exe`, which installs and runs on a machine with no dev tooling. That is done. What this item means is **safe to hand to another person**, and the blockers are not packaging.
-
-Remaining: a README, a decision on whether to strip Saucepan-specific UI, and **the backup sync portability problem** — hardcoded machine paths and a git-only backend, see Git Backup Sync > Portability. A packaged build today ships a visibly broken sync panel.
-
-**Resolved session 31 — author IDs are not a blocker.** Concern was that exports would carry Ine's `author_id`. In practice: characters created in Lorekeeper default `author_id` to `''`, lorebooks and collections have no such field, and Saucepan sets authorship from the authenticated session on upload. Ine has been uploading Lorekeeper-created companions for months with no author field and they attribute correctly. So exports are already clean.
+**Resolved session 31 — author IDs are not a blocker.** The concern was that exports would carry Ine's `author_id`. In practice: characters created in Lorekeeper default `author_id` to `''`, lorebooks and collections have no such field, and Saucepan sets authorship from the authenticated session on upload. Exports are already clean.
 
 **Open question:** whether to strip Saucepan-specific fields (tags, platform export, image UUIDs, voice catalogue) for a general-purpose build, or leave them. Current lean is to leave them — the intended audience is Saucepan friends, for whom those fields are the point.
 
-**Before shipping to other users — backup/restore model needs rethinking:**
+### The backup/restore model still needs rethinking before anyone else uses it
 
-Current behavior: full backup restore is a **total replace** (wipes everything, loads backup). This is safe for a solo user who knows their workflow, but for general users it's a footgun — someone takes a backup, creates new content, then restores and loses everything made since.
+Full backup restore is a **total replace** — it wipes everything and loads the backup. That is safe for a solo user who knows their workflow, and a footgun for anyone else: take a backup, create new content, restore, lose everything made since.
 
-**Option C (built session 29):** "Import from backup" — a third path on the Import/Export page distinct from full Restore. Full merge strategy documented in What's Next section 4. In brief: content fields (worlds/characters/lorebooks/etc.) merge by `id` with `updated_at` as tiebreaker; `schedule_notes` merges by date key; `map_positions` and `release_cycle` merge intelligently; `notes` uses a safe append strategy; `settings` always stays local. Conflicts where `updated_at` is identical/missing prompt the user to choose Keep Local or Take Backup. Merge never deletes local-only items.
+**Option C (built session 29): "Import from backup."** A third path on the Import/Export page, distinct from full Restore. Content fields merge by `id` with `updated_at` as tiebreaker; `schedule_notes` merges by date key; `map_positions` and `release_cycle` merge intelligently; `notes` uses a safe append strategy; `settings` always stays local. Conflicts where `updated_at` is identical or missing prompt for Keep Local or Take Backup. Merge never deletes local-only items.
 
-**Option D (long-term architectural direction):** Split `lorekeeper-data.json` into content file (mergeable) + workspace files (non-mergeable, stored separately — e.g. `settings.json`, `Notes/world_id.md`, `Maps/world_id.json`). Full restore then only touches content by definition. Already partially done — per-world `.md` notes are already external. Real cost: every IPC read/write touches multiple files, data safety system needs rethinking, backup ZIPs get more complex, existing installs need migration. Worth doing properly rather than rushing.
+**Option D (long-term architectural direction):** split `lorekeeper-data.json` into a content file (mergeable) and workspace files (non-mergeable, stored separately — `settings.json`, `Notes/world_id.md`, `Maps/world_id.json`). Full restore would then only touch content by definition. Already partially done: per-world `.md` notes are external. Real cost: every IPC read/write touches multiple files, the data safety system needs rethinking, backup ZIPs get more complex, existing installs need migration. Worth doing properly rather than rushing.
 
-For now: the UI already warns clearly that full restore replaces all data. Keep Option C and D noted here for the shareable build.
+**Note the overlap with the mobile app.** Option D and mobile ingest are substantially the same work. Both need the per-item files to become readable back into the app rather than write-only, and both need the mergeable-content / non-mergeable-workspace split. If ingest gets built for mobile, design it with Option D in mind rather than building it twice.
 
-**Note the overlap with the mobile app (section B):** Option D and mobile ingest are substantially the same work. Both need the per-item files to become readable back into the app rather than write-only, and both need the mergeable content / non-mergeable workspace split. If ingest gets built for mobile, design it with Option D in mind rather than building it twice.
+---
 
-~~### Import/Export — remaining gaps to verify~~ ✓ **done session 32**
-- **`importJSON` full-backup footgun fixed.** `if(json.worlds !== undefined) { setData(json); return; }` replaced the entire dataset with no prompt and no undo, bypassing `update()` so it went straight to state and autosaved. Now routed through a `confirm-full-restore` modal that shows the file's contents (worlds/characters/lorebooks/collections counts) against the current data's, marks the action destructive, and points at Import & merge from backup as the non-destructive path.
-- **Export path parity verified — one real discrepancy found and fixed.** Strip lists were diffed mechanically across all three content types. Characters matched. Lorebooks and collections did not: the world ZIP stripped `site_last_synced_at` but the individual `exportLore`/`exportColl` paths did not, leaking an app-only sync marker into files uploaded to Saucepan. Individual paths now match the ZIP.
+## Verified Behaviour
+
+Confirmed working end to end, not merely read in the code. Kept here rather than in the roadmap, which is only for what is still to do. **Do not re-test these without a reason**, and do not move them back to the roadmap as open items.
+
+**Exports and the platform** — companion and lorebook exports accepted by Saucepan on upload, not just inspected on disk (session 35e). Collection export confirmed after the `lorebook_display` fix. World Export ZIP confirmed separately, because its three per-type loops were the paths that had diverged furthest and could not be assumed to follow the individual exports. Site crop round-trip confirmed: a crop set on Saucepan reads back and previews identically here. Highlight stripping confirmed — `==marks==` never reach an export.
+
+**Editing** — find-and-replace, highlighting, Roll, name generation, the Add strand input on Timeline, drag-to-reorder on collections, and the portrait picker opening in the character's own folder. Crop handles confirmed working on all four corners; the diagnostic readout added while chasing that has been removed, the pixel dimensions stay.
+
+**Dashboard and scheduling** — the Drafts / Ready to schedule split, banner focus, and Timeline strands rendering as columns.
+
+**Token meter** — calibrated against Saucepan's own numbers (session 35o). It had been undercounting the site by about 6%, so cards now read roughly 6% higher than they used to. The caps did not move; they finally measure the same thing the site measures.
+
+**Backup over the GitHub API** (session 37) — first run uploaded 1 file of 176, recognising the 175 the script route had already pushed as identical, which proves the hash comparison works against a repository it did not create. The 32.9 MB pretty data file uploads in 15-20 seconds. A repeat run reports no changes instantly. Files on the remote that Lorekeeper does not own — `ComfyUI/`, `LMStudio/`, `README.md`, the sync scripts — are left untouched.
+
+**Posting through the dashboard banner** (9 October 2026) — a scheduled character posted from the banner and went public. This was the last piece of Stage 0 that needed a real cycle rather than more code.
+
+**Still unconfirmed:** that a cycle skip clears itself after the next post. One item, in the roadmap.
+
+**Backup runs unattended** (9 October 2026) — `Lorekeeper.exe --backup` completes with no window, through the same `runBackup` the button uses. Both scheduled tasks confirmed with `LastTaskResult: 0`.
+
+**The rclone engine, against the real rclone binary** (9 October 2026) — text uploaded, images and the raw data file excluded, a second run a no-op, a deleted character removed from the destination, and files at the destination that Lorekeeper did not put there left untouched. The connection verifier was tested against a working destination, an unwritable one and a nonexistent remote.
+
+**A fresh install does nothing** (11 October 2026) — a packaged build launched with no configuration shows backup **None** with an empty repo folder, writes no `sync-paths.cmd`, writes no pretty data file and launches no script. Confirmed after the three writers above were fixed. This was the exit condition for the packaging pass.
+
+**The bundled rclone resolves in a packaged build** (11 October 2026) — `resolveRclone()` found the binary under `resources\rclone\` in `dist`, not merely on `PATH` as in dev. This was the last item that could only be tested by packaging.
+
+**Google Drive, end to end** (11 October 2026) — the browser sign-in completed, the remote was saved, and the round-trip check wrote a file to Drive, read it back and matched it. This was the last untested path in the backup system. OneDrive and Dropbox go through the identical rclone flow and are expected to work, but have not been run.
+
+---
+
+## Decisions That Stay Decided
+
+Things that have been settled, where the temptation to revisit them is predictable. Each was argued out once; the reasoning is in `lorekeeper-sessions.md` under the session named.
+
+**Character completeness is one list, and it is not splitting (session 32, confirmed session 35).** The dashboard once ran three separate definitions of "complete" — `progressMissing` checked 10 fields, `reworkChecks` checked 7, and they overlapped on only 3. A draft could show as ready to post while missing formatting instructions, example dialogue, advanced prompt and voice. All three now derive from a single `CHAR_CHECKS` list of 14 `[label, predicate]` pairs in the plain JS block, so they cannot drift apart again. The union treats `advanced_prompt` and `voice_catalog_id` as required, and that is correct in practice: the advanced prompt can be overridden on Saucepan anyway, and flagging the voice catalogue is precisely what stops it being forgotten. **Splitting `CHAR_CHECKS` into required and recommended groups is not wanted — do not implement it.**
+
+**Help drifts silently, because nothing links it to the code (session 32).** An audit found nine corrections, most of them predating that session: Characters claimed 11 tabs and documented 8; Lorebooks described an Edit tab that had not existed since the chapters refactor; Data Safety said "three layers" and listed three when there were five. **Tab lists and layer counts rot first**, because they are stated as totals that stay plausible after the underlying list changes. Check counts against the actual arrays, not against whether the sentence reads sensibly.
 
 ### Won't do
 - Per-world color theming
-- Age calculator in tools
 - Text stats in tools
-- Schedule page (replaced by dashboard calendar)
+- Schedule page (replaced by the dashboard calendar)
 - Relationship dynamic generator
 - Map generator
 
-### Very long term
-- Android build — **superseded, see What's Next section B**, where the design was worked through in session 35 (sideloaded APK, no Saucepan export from the phone, per-item files, pick-a-copy conflict handling). Kept here only as a pointer so this heading is not mistaken for the live plan.
+*The age calculator was on this list until session 37. Timeline gave characters dates to be an age against, so it moved to the roadmap as something to build — see Reconsidered there.*
 
----
 
 ## GitHub
 
 ### Repository
-**There are two private repos and they hold opposite things. Do not confuse them.**
+**There are two repos, they hold opposite things, and only one of them is private. Do not confuse them.**
+
+**The source repo is PUBLIC** — `github.com/yosoyines/Lorekeeper`. Earlier versions of this section called both repos private, which was wrong in the one way that matters: the app's data folders sit *inside* the source repo's working tree, so `.gitignore` is not housekeeping there, it is the only thing standing between a public repo and every character, note and persona on the drive. Treat a change to that file as a privacy change.
+
+**The backup repo is private and must stay that way.** It holds the data on purpose.
 
 | | `lorekeeper` (source) | `lorekeeper-data` (backup) |
 |---|---|---|
+| Visibility | **public** | **private** |
 | Created | June 2026 | Session 35 |
 | Working tree | `I:\Lorekeeper` | `I:\LorekeeperBackup` |
 | Tracks | source files and documentation | notes, templates, personas, companions, lorebooks, collections, the pretty data file, ComfyUI and LM Studio configs |
 | Excludes | **all personal data** | **all images, model weights and credentials** |
-| Committed | manually at session end | automatically on app close, plus the Sync now button |
+| Committed | manually at session end | by the app itself, over the GitHub API: the Back up now button and the scheduled `--backup` run |
 
-The two `.gitignore` files are close to **inverses of each other**. The source repo excludes `Companions/`, `Notes/`, `Templates/` and so on as personal data; in the data repo those folders are the entire point. Copying the source `.gitignore` into the data repo produces a repo that faithfully syncs nothing — this was nearly done during session 35 setup. The `.gitignore` listed below is the **source repo's**; see Git Backup Sync for the other.
+The two `.gitignore` files are close to **inverses of each other**. The source repo excludes `Companions/`, `Notes/`, `Templates/` and so on as personal data; in the data repo those folders are the entire point. Copying the source `.gitignore` into the data repo produces a repo that faithfully syncs nothing — this was nearly done during session 35 setup. The `.gitignore` listed below is the **source repo's**; see Backup for the other.
 
 Separate repos are also a hard requirement, not a preference: `I:\Lorekeeper` is already the source repo's working tree, and two repos cannot share one folder.
 
@@ -1204,9 +1388,14 @@ Personas/
 Templates/
 Notes/
 node_modules/
-dist/
+dist*/
+vendor/
 ```
-*(Verified against the real file, session 35c.)*
+*(Verified against the real file, session 41.)*
+
+**`dist*/`, not `dist/`.** `app.asar` gets locked after a build and the workaround is to build into `dist2`, `dist3` and so on — each one a full unpacked Electron app. Only `dist/` was ignored, so the alternates sat untracked in a public repo, kept out of it solely by the explicit `git add` list below. One `git add .` and they are in.
+
+**`vendor/` holds the 81.5 MB rclone binary.** A redistributable third-party executable, placed by hand from rclone.org, reaching the installer through `extraResources`. It is not source and does not belong in the repo — and at 81.5 MB it is past the size GitHub warns about.
 
 **`assets/` is deliberately tracked.** `icon.ico` and `icon.png` are committed on purpose — they are small, stable, and the NSIS installer build needs them present to reproduce without regenerating. An earlier version of this block listed `assets/`, `*.ico`, `*.png` and `*.svg` as excluded, which was wrong; the real file has never excluded them. Do not add those patterns back.
 
@@ -1278,50 +1467,7 @@ This has happened multiple times this project: a chat session's fixes only exist
 
 ## Session Log
 
-| # | Date | Summary |
-|---|---|---|
-| 1 | Jun 17 | Core app: worlds/characters/lorebooks/collections/personas, auto-save to disk, image relpath system, batch import with badges, dashboard, character templates, backup/restore, basic tools, markdown preview, drag-reorder, sidebar collapse, quick find |
-| 2 | Jun 18 | Collections top-level page, TagSelector (659 tags + 21 CW), tag templates, world tag suggestions, personality/plot/nationality/color/diff tools, site checklist, custom HSL color picker |
-| 3 | Jun 18 | Claude integration, lorebook entry templates, help page (13 sections), Settings page, auto-fill folder/filename on creation |
-| 4 | Jun 18 | Fixed all Babel syntax errors; extracted ScanBadge/ScanTagChips; batch import tag chips |
-| 5 | Jun 18 | Sidebar Export -> Backup; world topbar Export ZIP (platform-ready stripped JSONs); `exportPlatformZip` IPC handler |
-| 6 | Jun 18 | Export to Markdown for characters/lorebooks/collections (CharExportTab, LoreExportPanel, CollExportPanel); Edit/Export tab bars |
-| 7 | Jun 19 | Persona + Template Export MD buttons |
-| 8 | Jun 19 | EsperTool, HockeyTool, SwimTool added to Tools panel |
-| 9 | Jun 19 | WesternZodiacTool, ChineseZodiacTool; RelationshipsPage (SVG map, draggable nodes, labeled edges) added to right panel Map tab |
-| 10 | Jun 19 | Relationship map fixes: collection-aware character filter, draggable edit popup, correct Tabler 2.44 icons, esper ranks changed to F-S letters |
-| 11 | Jun 19 | LorePage full-page (replaces inline LoreboookEditor): char-detail layout with Chapters/Settings/Export tabs; world lorebooks tab -> card grid; `openLore`/`openChar` navigation helpers |
-| 12 | Jun 19 | CollPage full-page (replaces inline collection detail): char-detail layout with Edit/Export tabs; world collections tab -> card grid; `openColl` helper; navigation pattern now unified across all four content types |
-| 13 | Jun 19 | UI consistency pass: TemplatesPage/TemplateEditor CSS classes, PersonaDetailPage tab bar chrome, World Info tab CSS classes, portrait cards bumped to 200px, world/collection banners aligned to 80px, filter buttons cleaned of emoji+counts |
-| 14 | Jun 19 | Settings and World Info tabs made full-width (removed max-width caps); font size fix — now applied globally via App-level effect setting `document.documentElement.style.fontSize` directly (previous version set an unused CSS variable); Notes field added to World Info tab |
-| 15 | Jun 19 | Performance fix for Notes/text-field lag: `update()` switched from `JSON.parse(JSON.stringify())` to `structuredClone()`; `main.js` `saveData` switched from sync to async write with compact (non-pretty-printed) JSON; spec fully reviewed and cleaned up — removed duplicate/out-of-order entries, added Relationship Map section, added Babel Gotchas reference section, added Performance Notes section |
-| 16 | Jun 19 | **Data-loss incident and recovery.** A race condition (autosave firing before initial load resolved) overwrote the real 30MB+ data file with the empty default shape. Recovered characters via independent Companions/Lorebooks/Collections auto-save files; notes and app-only fields (schedule status etc.) were not recoverable. Built three-layer data safety architecture: (1) `dataLoaded` guard blocks autosave until load completes, (2) `main.js` shrink-refuse check rejects any write under 50% of the existing file's size and redirects it to a `.SUSPICIOUS.json` file instead, (3) rolling `lastgood.json` backup on every successful write. Added independent standalone `.md` notes backup per world + global scratchpad (`Notes\` folder), wired from both the right-panel Notes tab and World Info tab, with a "Notes Backups" panel on Batch Import. Also fixed a separate pre-existing bug surfaced during this incident: the inline Site Checklist IIFE inside `DashboardPage` called `useState` after a conditional early-return, violating React's Rules of Hooks and crashing the Dashboard whenever the checklist's item count changed between zero and nonzero — extracted to its own `SiteChecklistPanel` component. Fixed Site Checklist to also flag posted/public items that have never been synced (previously required `site_last_synced_at` to already exist, so never-synced items could never be flagged no matter how many edits). Fixed Schedule tab's status dropdown to auto-stamp `posted_dates` when set to Posted (previously only the Dashboard banner button did this). Discovered and fixed `parseTimestamp()` bug: Saucepan's timestamp format is unparseable by native `Date()`, silently breaking every "local newer" comparison involving a site-imported timestamp. Fixed batch import to preserve the platform image UUID from site exports (was being discarded in favor of local file paths), derive `posted_dates` from the site's `posted_at`/`updated_at` instead of leaving it empty, and use the site's real `updated_at` instead of overwriting it with import time. Added force-import overrides (per-item "Import anyway" button + global "Force import all" toggle) for restoring from a Saucepan companion backup export. Re-fixed four UI width regressions that had silently reverted across project re-uploads (Settings, World Info, Template editor, Persona "New" button) — root cause identified as chat-session fixes not yet being re-synced to project knowledge between turns. |
-| 17 | Jun 19 | Fixed dead "add in Settings" link in the Claude panel's no-API-key nudge (was a no-op `onClick={()=>{}}` stub; threaded `setPage` through `RightPanel` -> `ClaudePanel`). Fixed `export-file` IPC handler in `main.js`, which was hardcoded to always show a "JSON" filter in the save dialog regardless of the actual file being exported — affected every Export MD button in the app (characters, lorebooks, collections, personas, templates); now picks the filter from the file's real extension and defaults the save dialog to `I:\Lorekeeper\`. Updated `.gitignore` to include the new `Templates\` and `Notes\` auto-save folders and the safety-net backup files. Rewrote the GitHub section of this spec with an explicit, repeatable, verified command sequence (status check -> explicit `git add` of named files, never `git add .` -> commit -> push -> status verify -> optional tag), plus a "how to tell if project knowledge is stale" troubleshooting note, directly in response to the repeated-regression problem from session 16. |
-| 18 | Jun 19 | **Export field-accuracy pass, found by diffing real Lorekeeper-vs-Saucepan exports of the same items.** Fixed `exportChar`'s incomplete strip list (was missing `posted_dates`/`companion_folder`/`site_last_synced_at`/`lorebook_entry_text`/`lorebook_entry_title`/`voice_catalog_id` — only `exportWorldPlatformZip` had the complete list). Fixed `exportColl`'s field-name bug: Lorekeeper's `definition` field was never renamed to the platform's `description` field, meaning every collection export before this fix had no description on the site's side. Fixed `exportLore`'s stale `collaboration_type`: now derived fresh from `access_level` at export time instead of passed through a potentially-contradictory stored value. Added export warnings to `exportLore` (missing image UUID, no tags, Open definition protection) matching the existing character warning pattern, which lorebooks never had before. Fixed Site Checklist to catch brand-new public lorebooks/collections that have never been synced (previously gated on `has_been_public`, which only becomes true *after* a first successful export, creating a chicken-and-egg gap for first-time exports). Added an app-only `status` field (Draft/Ready) for lorebooks, shown in Quick Info and excluded from export, to give new lorebooks a way to signal "still in progress" since `access_level` only distinguishes private/public. Added drag-and-drop chapter reordering to `LoreChaptersTab` (was click-to-select only). Fixed the lorebook MD export Preview button, which had been silently broken since session 11: `LorePage` was passing a hardcoded `loreMdPreview={false}` and a no-op `setLoreMdPreview={()=>{}}` into `LoreExportPanel` instead of real state, so clicking Preview updated nothing. Added a "Last updated" row to the character Quick Info sidebar. Added a shared `WorldFilterDropdown` component and migrated Characters/Lorebooks/Collections/Templates list pages to use it instead of one-button-per-world inline rows, which would have broken visually as the world count grows; Characters also got a matching funnel-style status filter dropdown (Draft/Ready/Posted). |
-| 19 | Jun 20 | **Integrity check session — found genuine new bugs, not sync regressions.** Fixed the top-level Characters nav page bypassing `openChar` entirely (raw `setSelectedChar(c)=>{...}` call that never set `selectedWorld`, causing the right-panel Notes tab to show the wrong/global notes when opening a character from that specific page — see Navigation helpers note). Fixed the sidebar `height:100vh` fix from session 18 silently breaking again at any font size other than "Normal," because `vh` doesn't reliably co-scale with the `zoom`-based font feature — switched to `height:100%` (see new CSS Gotchas section). Fixed a completely missing required `anthropic-version` header on every Claude API call — every request failed regardless of API key validity, easy to misdiagnose as a key problem. Fixed the sidebar collapse/expand button becoming unreachable (zero remaining width at 52px collapsed) by stacking logo + toggle vertically when collapsed instead of horizontally. Renamed "Batch Import" to "Import/Export," removed the sidebar footer entirely (was contributing to the header-scroll bug) and moved its Import/Backup buttons into a new "Quick Import / Backup" card at the top of that page. Added editable Image ID (UUID) fields for lorebooks (was read-only and only rendered if a UUID already existed — impossible to ever set one) and collections (had no field at all, anywhere). Fixed lorebook_templates being silently dropped from per-world backups (flat top-level array, missing from the per-world backup's custom export object) on both the export and restore sides. Fixed `.export-panel`'s leftover `max-width:600px` making the Export tab look half-width on Characters/Lorebooks/Collections. Added a topbar visual separator between page-action buttons and the Notes panel toggle (Delete was sitting flush against it). Cleaned up the Plot tool: world dropdown now only lists worlds with custom archetypes set up, and removed `WorldPlotEditor`'s always-visible full-archetype-list clutter under the roll buttons. |
-| 20 | Jun 20 | **Theme System.** Built `generateTheme(accentHex)` + `applyTheme(themeVars)`, deriving a full dark+light theme pair from one accent color by reusing the existing `hexToHsl`/`hslToHex` color utilities (same math the Color tool already used for harmony palettes). Feasible specifically because — unlike font-size — the app's color system already runs through ~11 consistent CSS custom properties, so swapping them at the root genuinely re-themes everything with no per-component rewrite. Built `ThemeGenerator` UI component in Settings → Appearance: accent hex input, Dark/Light toggle, live mock preview panel before committing, Apply (disabled when preview matches saved state) and Reset to default. Added an App-level `useEffect` (same pattern as the font-size `zoom` effect) that applies the saved theme from `data.settings.theme` on load and whenever it changes, so it persists across restarts. Added `theme` to the Settings data model. Updated What's Next to mark "Global themes" done, distinguishing it from the still-unbuilt Colorblind mode (a related but separate problem — hue remapping for specific colorblindness types, not accent-color choice). |
-| 21 | Jun 22 | **Lorebook/collection backup-restore panels; portrait profile_pic sync; collection character navigation fix.** Added `LoreItemRestoreCard` component to lorebook Export tab and `CollItemRestoreCard` to collection Export tab — paste-area + drag-drop JSON zone + validation + Restore Data button. Validation is deliberately minimal: lorebooks only check `name` (string) and `content` (array); collections only check `name` (string). `selected_chapter_index` is never validated in restore (Saucepan's import validator requires it, but older backup exports may not include it — see session 22b for the full correction; restore just ignores its presence or absence). `lorebooks` is never validated on collections (collections have `companions`, not `lorebooks` — a wrong field check in a previous implementation was the root cause of the "lorebooks: Invalid input: expected array" error). Restore merges platform fields only; preserves `world_id`, `lorebook_filename`/`collection_filename`, `selected_chapter_index`, `image_relpath`, and all other app-only data. Added bidirectional UUID sync between the sidebar "Profile Pic / Portrait 1 ID" field and the portrait slot named exactly `profile_pic`: typing in either writes to both `charData.image.id` and `portrait.image.id`. Sync is name-based (`p.name === 'profile_pic'`), not position-based. Portrait display shows each slot's own stored UUID with no override — `profile_pic` displays `p.image.id`, not `charData.image.id` (overriding the display with `charData.image.id` caused a visible bug where a different portrait that happened to be at index 0 would show the wrong UUID). This means if existing data has `charData.image.id` inconsistent with `profile_pic.image.id` (due to the old position-0 sync that contaminated index-0 portrait UUIDs in earlier sessions), the user sees the real stored values and can fix them via a site re-import (Update from JSON). Fixed `CollSettingsTab` causing a full-app crash: it referenced `openChar` as a free variable (not a prop), causing a `ReferenceError` the moment any collection was opened — `openChar` is defined in App scope, not in `CollSettingsTab`'s component scope. Fixed by threading `openChar` through `CollPage` → `CollSettingsTab` → `CollectionCharPicker`. Previously `CollectionCharPicker` in both `CollPage` and `CollSettingsTab` was hardcoded to `setSelectedChar={()=>{}}` (no-op), so clicking a character in a collection's member list did nothing. Now navigates via `openChar`. Also fixed a Babel crash (`function(){}` inside a JSX attribute causes the parser to fail for the entire file); replaced with a direct prop reference. |
-| 22 | Jun 23 | **Lorebook/collection backup-restore validation fix; portrait profile_pic sync (name-based); collection character navigation; data safety improvements; portrait import overhaul; release cycle fix.** Validation errors fixed: `validateLore` checks only `name`+`content`, never `selected_chapter_index`; `validateColl` checks only `name`, never `lorebooks`. Both `LoreItemRestoreCard` and `CollItemRestoreCard` use minimal correct validators. Portrait profile_pic sync is now name-based (`p.name === 'profile_pic'`), not position-based — sidebar ↔ profile_pic portrait are bidirectional on edit; display shows stored UUID, no overrides. Position-based sync (portraits[0] ↔ image.id) removed entirely after it contaminated portrait UUIDs. `CollPage` and `CollSettingsTab` now receive `openChar` as a prop (was referencing it as a free variable → ReferenceError crash). `CollectionCharPicker` now navigates to characters. `function(){}` in JSX attributes crashes Babel; replaced with arrow function. Data safety: `load-data` now auto-recovers from lastgood if data.json < 50% of lastgood size; `save-data` checks against lastgood size too (closes hole where data.json was already cleared before the write); new IPC `restore-lastgood` + `get-lastgood-info`; UI shows lastgood date/size with one-click restore button; amber banner if auto-recovery happened on startup. Portrait import (batch): replaced broken index-based forEach (caused all images to be assigned to wrong portrait slots) with two-pass name-based matching: Pass 1 exact normalized name match (`normName` collapses spaces/underscores/parens), Pass 2 pushes unmatched files as extras. `profile_pic` portrait auto-gets description "Profile picture" on import. `image.relPath` is set from `profile_pic` portrait relPath on import so character cards show images without manual Set Portrait. On startup, portrait link repair migration runs automatically: re-matches relPaths by normalized name, removes no-UUID spurious duplicates, fixes `image.relPath`. `profile_pic` description and `image.id` are also auto-filled via `useEffect` when a character is opened. Gallery portrait picker added to sidebar: grid icon next to Set Portrait shows portrait thumbnails to pick sidebar image from. `getNextCycleWorld` fix: when a world has no future scheduled chars, check `posted_dates` for recent posts (within 7 days); if recently posted, skip and continue to next world. Previously, a world that just posted would immediately show as "needs scheduling" since its scheduled date had passed. |
-| 22b | Jun 23 | **`selected_chapter_index` correction — not app-only, required by Saucepan on import.** The spec previously stated `selected_chapter_index` is app-only and must be stripped from platform exports. This was wrong: the Baccarat lorebook exported from Saucepan includes `selected_chapter_index: 0`, and Saucepan's import validation requires it. It was removed from all three export paths in session 21/22; this caused Saucepan to reject lorebook imports with "selected_chapter_index: Invalid input: expected number, received undefined". Fixed: `selected_chapter_index: l.selected_chapter_index \|\| 0` is now included in `exportLore`, `LoreItemRestoreCard.handleLoreBackup`, and the batch/world ZIP export path. The `validateLore` restore validator correctly does NOT require it (for backward compat with old exports), but the export always includes it. The export strip list in `exportChar` is unaffected — `selected_chapter_index` only exists on lorebooks, not characters. |
-| 22c | Jun 23 | **`lorebooks` field correction — required by Saucepan on collection import.** Same pattern as `selected_chapter_index` for lorebooks: Saucepan's collection import validator requires a `lorebooks` field (array). Lorekeeper's collection data model uses `companions` for character IDs; `lorebooks` is a separate platform field (lorebooks directly attached to a collection, as opposed to lorebooks from companions). The export was silently omitting it, causing Saucepan to reject collection imports with "lorebooks: Invalid input: expected array, received undefined". Fixed: `lorebooks: c.lorebooks || []` added to all three collection export paths — `exportColl`, `CollItemRestoreCard.handleCollBackup`, and the world ZIP export path. For collections that don't have a `lorebooks` field stored in Lorekeeper, this defaults to `[]`. **General lesson documented:** Saucepan's import validator requires fields that Lorekeeper's internal model doesn't always store. Both `selected_chapter_index` (lorebooks) and `lorebooks` (collections) must always be included in exports, defaulting to safe empty values. The export strip logic should default-include required platform fields rather than silently omitting them. |
-| 22d | Jun 23 | **Sidebar polish and FOUC fix.** Sidebar icon alignment in collapsed state: `.sidebar.collapsed .nav-item` and `.sidebar.collapsed .world-item` now have `justify-content: center; padding: 8px 0` so all icons are centered in the 52px strip. Collapse/expand button placed side by side with logo in collapsed state (was stacking vertically). The `collapse-btn` CSS now has `display: flex; align-items: center; justify-content: center; line-height: 1` to control its own height. Dedicated `.sidebar.collapsed .sidebar-header` CSS rule: `padding: 0; justify-content: center; gap: 4px`. Sidebar header fixed height: `height: 56px; padding: 0 12px` on base `.sidebar-header` so expanded and collapsed states have identical header heights — previously `padding: 16px 12px 12px` in expanded vs `height: 52px` in collapsed created a visible 4px jump. "Navigate" and "Worlds" section labels are now always in DOM (not conditionally rendered) with `.sidebar.collapsed .nav-section { visibility: hidden }` — previously their removal caused nav items to shift vertically when toggling. FOUC fix: `body { opacity: 0 }` initially; `useEffect` adds `body.app-ready` class (triggering `opacity: 1; transition: opacity 0.15s ease`) after `dataLoaded` is true — prevents the flash of default browser styles during Babel transpilation. `<html>` tag gets `style="background:#0f0e13;color:#f2f0ff;"` so the native window background is correct before any CSS applies (Electron `backgroundColor: '#0f0e13'` was already set on BrowserWindow). |
-| 23 | Jun 24 | **Portrait multi-add; image display from top; view full image lightbox; export relPath fix; Babel 500KB fix; lorebook world ordering.** `import-images` IPC now accepts `{ defaultPath }` opts — file dialog opens directly in the character's `Companions\Name\` folder. Each selected image is copied to the companion folder via `copyImageToFolder` and stored as `relPath` (not base64 in JSON), keeping the data file lean. `object-position: top` added to all portrait/card image CSS rules (`.char-portrait img`, `.char-portrait-lg img`, `.gallery-item img`, portrait grid inline styles) so heads are no longer cropped. `LightboxModal` component added: `position: fixed` overlay, `ResolvedImg` (handles relPath via IPC like all other app images), Escape key close, × button. Rendered at App-component level (not inside CharDetailPage/WorldDetailPage) to avoid stacking-context clipping. `setLightboxSrc` threaded down as a prop to `CharDetailPage` (zoom button in portrait card control row) and `WorldDetailPage` (`onViewFull` prop on `GalleryItem`). `ImgFromPath` accepts `onClick` prop. `exportChar` now strips `relPath` from portrait objects (was only stripping `data`; `relPath` is app-local and must not reach Saucepan). **Babel 500KB fix:** file was 508KB, causing the "code generator has deoptimised the styling" error that silently broke click handlers app-wide; fixed by extracting 6 pure-data arrays (LITERARY_ARCHETYPES, NATIONALITIES, MBTI_TYPES, JUNGIAN_ARCHETYPES, ATTACHMENT_STYLES, GLOBAL_PLOT_ARCHETYPES — no JSX, no hooks) into a `<script type="text/javascript">` block before the Babel block; Babel script reduced 508 → 482KB. **Linked lorebooks world ordering:** character's own world now appears first in the lorebook picker, then other worlds alphabetically, "No World" last; world emoji shown in section headers. Pill labels unchanged (lorebook name · world name). |
-| 24 | Jun 24 | **Plot archetype fix; relationship map world-switch + position persistence; colorblind mode.** Plot archetype tool: `lastRoll` state tracks which roll button was last clicked; `primary` class applied only to that button instead of always highlighting Roll (any). Relationship map: (1) world-switch bug — `initialWorld` prop was ignored after mount; added `useEffect` to sync it to `worldId` so switching worlds in the sidebar now updates the map immediately. (2) position persistence — `posRef` mirrors positions state (avoids stale closure); `onSvgMouseUp` writes `data.map_positions[worldId]` with all current positions; init `useEffect` loads saved positions first, falling back to auto-grid only for new characters; `map_positions:{}` added to `initData()`. Colorblind mode: Settings → Appearance replaces ComingSoon placeholder with three-button picker (Off / Red-Green / Blue-Yellow); App-level `useEffect` adds/removes `html.cb-rg` or `html.cb-by` CSS class; Red-Green overrides `--red:#fb923c` and `--green:#60a5fa`; Blue-Yellow overrides `--amber:#f87171`, `--teal:#e879a9`, `--green:#60a5fa`; help page note updated. |
-| 25 | Jun 24 | **Import/Export page reorganisation; character tab reduction.** Import/Export page ("Batch Import") rebuilt into three side-by-side cards — **Backup** (export full ZIP + per-world dropdown+button, replacing individual per-world buttons that would overflow with many worlds), **Restore** (from backup ZIP with explicit note that full backup replaces all / world backup merges; from last-good auto-save), **Import** (single item JSON + batch scan + how-it-works). Duplicate "Backup everything" button removed (was identical to "Export full backup"). All action buttons now use standard `btn` style (no `primary` colouring). Backup/restore state inlined from old `BackupRestorePanel` component which is no longer rendered. Character detail page tab count reduced from 13 to 11: **Example Dialogue** tab removed — textarea moved into Formatting tab below Advanced Prompt. **Export** tab removed — `CharExportTab` (Update from JSON / Export JSON / Export Markdown) moved into Settings tab above Delete Character button. |
-| 26 | Jun 24 | **Image tools (Format Converter, Paste & Save, Crop); data array recovery; Babel size management.** Added three image tools to the right panel Tools section. Format Converter: load any image → select output format (JPEG/PNG/WebP) + quality slider → convert via canvas `toBlob()` → save via new `save-image` IPC (binary save with dialog). Paste & Save: paste from clipboard via `paste-image` IPC (`clipboard.readImage()` in main process) or drag-and-drop → preview with dimensions → set filename → save as PNG. Crop: interactive canvas crop with corner handles, aspect ratio presets (1:1/3:4/16:9/4:1/Free), rule-of-thirds grid; `applyCrop` loads a fresh clean `Image()` from stored `imgSrc` base64 to avoid drawing the overlay; all style objects inside `&&` conditionals pre-defined as variables (Babel deoptimisation fix). Added `save-image` IPC to main.js + `saveImage` to preload.js; added `clipboard` to electron imports + `paste-image` IPC. Data array recovery: extraction script bug caused 9 arrays (SAUCEPAN_TAGS 61KB, PLOT_DESCRIPTIONS, WESTERN_SIGNS, CHINESE_SIGNS, HOCKEY_POSITIONS, SWIM_EVENTS, MACROS, NAMES_MASC, NAMES_FEM) to be removed from Babel but silently fail to append to the plain JS block — recovered from test environment file. Fixed two comment+const merge bugs (HOCKEY_HANDEDNESS, SWIM_ROLES) left by extraction. Plain JS block now 110KB (15 arrays total); Babel block 425KB. |
-| 27 | Jun 24 | **Image Prompt Generator; map generator cancelled.** Added `ImagePromptTool` to right panel Tools section (Img Prompt pill). Receives `currentChar` prop threaded from App → RightPanel → ToolsPanel → tool. Shows current character name/description auto-populated; art style dropdown (10 options); mood/lighting dropdown (8 options); optional extra notes textarea. Calls `claude-sonnet-4-6` via Anthropic API; builds prompt as `parts.join(nl)` array to avoid multiline JS string literals (Babel restriction). Copy button with 2-second confirmation flash. Map generator removed from What's Next → Won't do (design too open-ended). |
-| 28 | Jun 24 | **CharDetailPage inline style cleanup.** All 49 Babel-risky inline styles (inside `&&`/ternary JSX) eliminated from CharDetailPage, LorebookEntryTab, and LoreItemRestoreCard. Added 57 CSS utility classes (`.cd-col12`, `.cd-portrait-card`, `.cd-lorebook-row.linked`, `.cd-flag-label`, `.cd-restore-drop`, etc.) to the style block. Added `CS` pre-defined style object (32 entries) before CharDetailPage for complex one-off styles. Tab bar, portrait grid, lorebook linked state, flags checkboxes, scenario drag handles, settings/schedule tab wrappers, banner preview, gallery picker — all now use CSS classes. LorebookEntryTab and LoreItemRestoreCard cleaned to use `CS.*` references and new classes. 117 remaining inline styles in component are in always-rendered JSX (no Babel risk). Babel: 430KB. |
-| 29 | Jun 26 | **Import from backup (merge); delete confirmations; CS object restore; bug fixes.** Built `planMerge` + `applyMerge` + `MergePreviewModal` — the full "Import & merge from backup" flow on the Import/Export page. Preview modal shows adds/updates/conflicts before committing; per-item Keep Local / Take Backup for conflicts; workspace fields merged silently. Removed destructive "Restore from backup zip" — merge is now the primary restore path; lastgood restore remains for emergencies. Fixed `bt.getTime is not a function` in `planMerge` (`parseTimestamp` returns a number, not a Date). Fixed `world is not defined` in `main.js` `exportBackup` — `const world` was block-scoped to first `if(worldId)` block but referenced in second; hoisted to module-level `let`. Delete world confirmation modal added — warning covers all cascading deletes (characters, lorebooks, collections, lorebook_templates, gallery); `deleteWorld` helper defined in App scope and passed as prop to Modal component (direct inline callback in JSX caused Babel syntax error). CS style object was missing from the file (lost during data array recovery session) — restored before CharDetailPage. Delete lorebook and delete collection converted from `window.confirm` to app modal — `deleteLore` and `deleteColl` helpers added to App; `setModal` threaded through LorePage → LoreSettingsTab and CollPage → CollSettingsTab. Test environment icon generated (lime green book with T badge) as SVG + PNG 512/256 + ICO. Babel: 444KB. |
-| 30 | Jun 26 | **World order drag-to-reorder; help page update; export filename standardisation; bug fixes.** Removed right-click context menu (Pin to top) from sidebar worlds. Added `world_order: []` to initData; `sortedWorlds(data)` module-level helper replaces all 12 pinned sorts throughout app. Migration effect on first load: builds `world_order` from pinned-first → alpha. Sidebar world drag-to-reorder implemented with `setPointerCapture` on grip icon — multiple approaches tried (HTML5 DnD does not work in sidebar container); final approach: `onPointerDown`/`onPointerMove`/`onPointerUp` with `elementFromPoint` + `data-sw-idx` attributes. Bug: refs and migration effect were placed inside `CharDetailPage` instead of `App` (wrong anchor — `scenarioDragIdx` lives in CharDetailPage); fixed by moving to App. Bug: `const sortedWorlds=sortedWorlds(data)` self-reference in BatchImportPage from general replacement; fixed to `swWorlds`. Help page updated: 11-tab character section, image tools section added, Import/Export section updated for 3-card layout and merge flow, Backup & Restore → Data Safety, GitHub backup section removed, drag-to-reorder tip in Worlds section. Export filename standardisation: all exports now follow `{name}-{type}.{ext}` — character.json/.md, lorebook.json/.md, collection.json/.md, persona.md. Removed -companion, -sheet, -backup suffixes. Babel: 446KB. |
-| 31 | Jul 30 | **Multi-provider AI; Windows installer; dashboard rework queue; the 190 MB data file; voice catalogue.** Multi-provider AI via shared `callAI()` (Anthropic/OpenAI/Google/OpenRouter), per-provider keys in Settings, "Claude" tab renamed **Assistant**; fixed Image Prompt Generator never sending its API key. NSIS installer via `electron-builder`, `DATA_DIR` next to the exe using `process.execPath` (**not** `app.getPath('exe')` — kills the process pre-ready), all 8 folders created on first run; documented Ine's silent Electron-download failure and its manual workaround. **Performance:** diagnosed typing lag as a ~190 MB data file being `structuredClone`d on every keystroke; root cause was portraits stored as base64 from two bugs — `handlePortrait` never calling `copyImageToFolder`, and the Add-portraits handler passing an object where preload takes positional args. Extended Audit base64 to characters/portraits/banners, migration now **links** existing folder files rather than writing duplicates, with a per-item dropdown to choose the file or write a new one (auto-guessing from unclaimed files was rejected — portrait numbering has gaps). Batched migration into one `update()`. **Dashboard:** "Drafts in progress" → **In progress** (now includes `ready`, real status badges, show-all toggle); new **Rework** queue of posted characters with a 7-point depth checklist, cleared by exporting (`reworked_at`). **Release cycle:** after several failed date-window and head-tracking approaches, settled on matching characters to cycle slots by **world name** (`worldIdToName` + `cycleNames.indexOf`) to bypass systemic world-ID mismatches; added Skip button (`cycle_skipped`). **Collections:** local-only `is_community` flag + collection image UUID field; companions in a community collection now inherit its banner automatically via `resolveBannerId()` at export time. Banner UUID input added (the banner had never been exportable — nothing ever set `.id`). **Back navigation:** `navStack` replaces inferring from `selectedWorld`, so Back returns where you actually came from. **Naming:** auto-save and export both use `companion.json` (Saucepan's name). **Export hygiene:** all four character export paths now strip an identical 12-field list; `reworked_at`, `voice_catalog_id`, `posted_dates`, `site_last_synced_at` and `lorebook_entry_*` had been leaking from two of them. Added `SAUCEPAN_VOICES` (33 voices, plain-JS block) + voice picker, wired into the rework checklist. Bug fixes: `sortedWorlds` self-reference in BatchImportPage, `dataLoaded`/refs in the wrong component scope, `updateLoreFromJSON` parameter shadowed by an inner `const existing`, TagSelector needing 3–4 clicks (fixed with `onMouseDown`+`preventDefault`), collection image cache returning the deleted image, temperature field clamping. **Local LLM support:** added LM Studio as a fifth provider (OpenAI-compatible, no auth) with a Test connection button; discovered the CSP exists in *two* places — `main.js` header and an `index.html` `<meta>` tag — and both must allow `http://localhost` or the fetch is blocked with the old policy quoted. Measured the Assistant prompt at 27,327 tokens against an 8192 local window and built a three-tier context scope selector with **per-chapter** lorebook inclusion (lorebook-level was tried first and was useless — one lorebook is 10–14k on its own), live token estimates per chapter and in total, and injection of the world's template as a HOUSE FORMAT block so output comes back pre-shaped. Babel: 484 KB. |
-| 32 | Jul 31 | **Base64 migration actually completed (134 MB -> 7 MB); audit blind spot; shrink-guard escape hatch; banner scheduling fix; shutdown flush.** The session-31 migration had never run to completion, and the audit was reporting the data file as clean when it was not. Two separate causes. **(1) Audit blind spot:** `checkItem` returned early on anything holding a relpath, so an item with a working local file *and* a stale base64 blob still in the JSON was bucketed `relpath_ok`. 49 of 50 blobs were invisible to the tool meant to find them. Added a fourth `leftover_data` bucket plus a one-click clear (no file write needed, only nulling the stale field). **(2) Shrink guard:** clearing those blobs is a ~95% shrink, so Layer 2 refused the write and dropped it in `SUSPICIOUS.json` while the real file stayed bloated — the UI showed it applied and it was gone on restart. Added `saveDataAllowShrink`, which snapshots to `lorekeeper-data.preshrink-{ISO}.json` and **resets `lastgood`**; without that reset the next ordinary autosave would itself be refused against a stale 134 MB baseline. Also fixed the picker gap: only companions ever had their folder scanned, so lorebooks/collections/worlds/personas always fell through to "write a new file" even with a matching image sitting in the folder — added `listFolderImages` IPC. Migrate button now states what it will actually do (`Link 1 image to existing file` vs `Write N images out from base64`) instead of always saying "Migrate". **Dashboard banner:** was matching the scheduled day exactly, so missing that one day left a companion at `ready` forever; now fires for any `ready` char scheduled on or before today, with no overdue/warning treatment — a passed date is normal, since scheduling happens on the site and posts run regardless of whether Lorekeeper was open. Mark-posted now stamps the **scheduled** date into `posted_dates` rather than the click date, which also fed cycle head detection. **Shutdown flush (Layer 5):** no `before-quit` handler or `beforeunload` flush existed anywhere; closing the window killed the debounced save timer and any in-flight write. Main now intercepts `close`, waits for a renderer flush handshake and for `saveInFlight`, with an 8s timeout. Found while investigating a companion stuck at `ready`; **not** established as the cause of that (the record had no `posted_dates` key at all, and under the old banner logic there was no banner to click that day) — logged as an independent defect. **Process note:** two rounds of changes this session were made on assumptions that were not checked with Ine first (banner wording, and a timing story invented to link the flush bug to the stuck companion). Confirm intent before changing behaviour, and do not build causal narratives past the evidence. **Post-cleanup image regression (same session).** Clearing the leftover base64 blanked world and collection images app-wide — display only, no data lost. Nine sites were reading base64 fields with no `*_relpath` fallback, plus two rendering banners via CSS `url()`, which cannot resolve a relpath at all. All routed through `ImgFromPath`; Site Checklist warnings and thumbnails fixed too. See Image System for the full list and the lesson. **Measurement note:** Windows PowerShell 5.1 `Get-Content -Raw` decodes as CP1252, inflating the Babel byte count by ~3 KB on this file (1,978 non-ASCII bytes from Japanese world names, arrows, em-dashes). Always pass `-Encoding UTF8`, or the ceiling looks closer than it is. Babel: 493.5 KB of ~500 at the point the feature work stopped; then reduced to **439.3 KB** by moving 77 non-JSX/non-hook declarations (34.1 KB) to the plain JS block and deleting 20.1 KB of never-rendered components (`LoreboookEditor`, `CollEditPanel`, `BackupRestorePanel`, `SchedulePage` — two of which held free `setModal` references that would have thrown if ever mounted). Name-set diff before/after confirms only those four were removed. See Babel Block Budget. |
-| 33 | Aug 13 | **Portrait revert bug, spell check, Ctrl+F, Img UUID tool, LM Studio model switching, image-prompt fixes.** **Portrait revert (took three attempts — read this before touching the load migration).** Setting a character's main portrait reverted on every app restart, for some characters and not others. The load-time migration recomputed `char.image.relPath` from a portrait named `profile_pic`, or failing that the *first* portrait, and overwrote whenever it differed. First fix narrowed it to "only when the current path is not among the portraits" — still wrong, because **the main image does not have to be a portrait at all**: Set Portrait imports a standalone file, so `image.relPath` outside the gallery is a normal state. Chris Mori proved it: `image.relPath` was `chris1.png` with a single portrait named `chris2`, so the narrowed condition still fired and still fell back. The fallback is now gone entirely — the migration only follows renames (path matches a portrait's file under name normalisation), and otherwise leaves the value alone. A genuinely missing main image now shows blank rather than being silently replaced, which is the right trade. **Diagnosis note:** the decisive evidence was dumping the character's `image` and `portraits` from the data file *while the app was closed*, which separated "save path is wrong" from "load path is wrong". Do that first next time instead of reasoning about which branch might fire. **profile_pic UUID is one-way.** A portrait named exactly `profile_pic` mirrors `char.image.id`; the profile pic field is the source, the slot follows. The reverse write (editing the slot's UUID pushed back up to the profile pic) was removed, and a load-time sync makes existing data converge. **Spell check** — Electron flags misspellings by default but ships no context menu, so right-clicking a red-underlined word did nothing. Added a `context-menu` handler with `dictionarySuggestions`, `replaceMisspelling`, add-to-dictionary, and the usual edit actions. **Ctrl+F** — a `FindBar` component taking a `[{tab,label,text}]` field list, wired into characters (description, card, formatting, each intro), lorebooks (short description, each chapter) and collections (definition, lorebook display). Custom rather than Electron's `findInPage`, which cannot see inside textarea values — where all this content lives. **Img UUID tool** — extracts the UUID from any of Saucepan's three image copy formats, deduplicated. **Also:** the `Quick find… (Ctrl+K)` placeholder advertised a shortcut that was never bound; label removed. Import/Export full-backup footgun, export parity, Help audit, and `CHAR_CHECKS` unification all landed this session too — documented in their own sections above. Babel: 439.3 -> 458.4 KB (~42 KB headroom). |
-| 35 | Aug 31 | **Git backup sync; disk failure recovery; test environment retired.** Session opened with an `I:` drive failure. Notes, templates, ComfyUI workflows and LM Studio presets were all on it; the drive recovered after a reseat, but the gap it exposed was real and none of Layers 1–5 addressed it, since every one of them writes to the same disk as the data it protects. **Audit of what actually has an independent backup found two things worth recording.** `Worlds\` and `Personas\` are created at startup by `main.js` line 16 but **nothing ever wrote to them automatically**. `Worlds\` is genuinely empty. `Personas\` held five `.md` files, but those were manual "Export MD" saves from June — formatted documents that cannot be reimported, and three months stale. Fixed later in the session with `savePersonaFile` (see Auto-Save to Disk). And `companion.json` is a *Saucepan export*, not a local backup: `saveCompanionJson` strips `world_id`, `status`, `schedule_dates`, `posted_dates`, `collections`, `linked_lorebooks`, `companion_folder`, `site_last_synced_at`, `export_filename`, `lorebook_entry_text`, `lorebook_entry_title`, `voice_catalog_id`, `reworked_at` and portrait `relPath` before writing. So the session-16 recovery restored character *content* but not which world each belonged to, which collections they were in, or their schedule state — that had to be rebuilt by hand. The whole organisational layer (worlds, personas, gallery, schedule, `schedule_notes`, `release_cycle`, `cycle_head_world_id`, `cycle_skipped`, `lorebook_templates`, `map_positions`, `world_order`, `relationships`, `settings`) still lives only in `lorekeeper-data.json`. **Built Git Backup Sync** — private `lorekeeper-data` repo, robocopy mirror into `I:\LorekeeperBackup`, commit and push. Images excluded so the whole corpus is ~16 MB packed and can be pushed after every session, unlike the full ZIP which is gigabytes and therefore only run occasionally. Runs automatically on app close (hooked into the Layer 5 flush handshake, spawned detached so `git push` can't delay quitting) plus a Sync now button. Added `writePrettyData()` emitting a key-sorted pretty copy, because git can't diff `saveData`'s single-line output — one note edit went from a fresh 16 MB blob to a two-line diff. Extended to ComfyUI (`user\default` + `__manager\snapshots`, which is the node reinstall manifest) and LM Studio (`config-presets` only). **`credentials\` excluded in both the script and `.gitignore`** — git history is permanent, so a key committed once is recoverable forever. Model and image exclusion is layered — path scope, extension filter, `/MAX:5242880` size cap, `.gitignore` — because a wrong path here fails silently by mirroring tens of GB rather than erroring. First run leaked one `.avif`: the script's extension list didn't match `IMAGE_EXTS` in `main.js`, which includes it. Fixed and extended with `tif`/`tiff`/`mov`. Two setup traps worth remembering: the source repo's `.gitignore` excludes exactly the folders this repo exists to hold (copying it over yields a repo that syncs nothing), and `I:\Lorekeeper` is already the source working tree so the backup repo must live elsewhere. **Test environment at `I:\Test` deleted** — build considered stable. Untested builds now hit live data, mitigated by syncing before installing a new build. Babel: 471.8 -> 475.3 KB (~25 KB headroom — tighter than the 439 KB of session 32, worth reclaiming before the next feature). |
-| 35b | Sep 2 | **Portrait site flags; sync pull guard; HelpPage Babel reclaim; world tags and custom character tags removed.** Continuation of session 35. **Portrait flags (`very_sus` / `gallery_only` / `caption`)** — found by diffing Lorekeeper's `companion.json` against Saucepan's export for the same character: the Extra Spicy flag existed in both and disagreed. Locally-added portraits were hardcoded `very_sus:false` with no UI, so exporting un-blurred an image that was spicy on the site. Added chips on the Portraits tab and badges on the Gallery tab. See Portrait Fields. **Export leak found while checking whether `temperature_offset_percentage` exports (it does, in all paths):** `CharDetailPage.updChar` carried its own inline copy of `saveCompanionJson`'s logic that stripped only `data`, leaking local `relPath` into the export-shaped file, and read `companion_profile_banner_image` directly instead of calling `resolveBannerId`, so inherited world banners were written as `undefined`. Both fixed to match the shared function. **Lesson: duplicated export logic drifts.** The inline copy had silently fallen behind the canonical one; a first pass wrongly dismissed the `relPath` leak as a stale file because only the shared function was checked. **Sync pull guard** built — see What's Next A, including the `EnableDelayedExpansion` trap. **Babel reclaim 478.2 -> 456.4 KB** via the HelpPage restructure; an automated scan first confirmed zero movable declarations and zero unreferenced components remained, so restructuring was the only lever left. See Babel Block Budget. **World tags removed** (unused field) from the editor, world card previews and the AI context builder; description kept. **Custom character tags removed** — gated inside `addCustom` rather than at the call site so the Enter key cannot bypass it. Rationale: Saucepan silently drops tags it does not recognise, so a typo'd custom tag looked applied in Lorekeeper and vanished on the site. **Character completeness confirmed as-is** — `advanced_prompt` and `voice_catalog_id` stay required; the required/recommended split is explicitly not wanted. |
-| 35c | Sep 2 | **Two full audits (app, then spec), and the export-drift bug class closed by hand.** Ran a read-only audit of the code, then of the spec against the code. The app audit found the character export shape reconstructed in **four** places, lorebook in **two**, collection in **two**, each with a hand-maintained strip list, all drifted. Cross-checking the strip lists **as sets** rather than reading them found three more copies the audit itself missed — a fifth lorebook copy in `handleLoreBackup`, and `export_filename` left unstripped in `saveCompanionJson` and `updChar`. **Fixed:** `setCol` never renamed `definition`->`description` (the exact bug `exportColl`'s comment documents having fixed in session 18) so every auto-saved collection file had been shipping without its description text; `exportChar` and the ZIP character loop leaked portrait `relPath` — the two paths that actually reach Saucepan were the two still broken two sessions after the fix was written; `updLore` and `handleLoreBackup` were five fields behind `exportLore` and omitted the derived `collaboration_type` and `selected_chapter_index` entirely; `export_filename` added to all three ZIP strip lists. Also fixed the character banner preview gating visibility on `.data` alone, which hid a valid banner once the base64 migration cleared it. All strip lists now collapse to one field set per type (character 13, lorebook 8, collection 8). **Spec audit findings corrected:** tag count 540->659; the hardcoded 21-item CW tag list replaced with a note that it is derived live and currently 31 (it had drifted twice); character strip list 11/12->13 fields in all four places it appears; `initData` sample regenerated from real code (`relationships` is deliberately absent and reached through a defensive fallback; `schedule[]` and `map_positions{}` were missing); world `tags[]`/`fandom_tags[]` marked vestigial; Settings page's stale single-provider "Claude API" bullet replaced with a pointer to the AI Integration section; Tools table 14->18 rows; IPC table gained `saveImage`, `pasteImage`, `getLastgoodInfo`, `restoreLastgood`; `icon.svg`, installer version and plain-block size corrected. **Method note worth keeping:** the audit was told to produce a report and make no changes. That was the right call — it surfaced far more than could have been safely auto-fixed, and the set-comparison cross-check that caught the extra three copies only happened because a human read the report first. `.gitignore` block regenerated from the real file and `assets/` documented as deliberately tracked (icons are needed for the installer build). **Still open at the time:** consolidation of the export builders — done in 35d, which found a fourth collection copy that this session's set-comparison had missed. |
-| 35d | Sep 2 | **Export shapes consolidated into three shared builders.** `buildCompanionExport`, `buildLoreExport`, `buildCollExport` in the plain-JS block; 12 call sites converted, zero inline strip lists left in the Babel block. Consolidation immediately found a fourth collection copy (`handleCollBackup`) that both the code audit and the set-comparison cross-check had missed — its strip list was shorter and differently ordered, so it matched no grep pattern, and it destructured without `definition`, meaning every collection backup file shipped **both** `definition` and `description`. See Export Shape Builders for the full history and the three-step account of how copies were found. Babel 457.4 -> 451.9 KB as a side effect, since the builders live outside the compiled block (~48 KB headroom). **Not yet verified against real export output** — compile-clean and runs without crashing, but no export was available to test against; the outstanding checks are listed in that section. Remaining known duplication: `ResolvedImg` and `ImgFromPath` are near-identical image components and are the next consolidation candidate. |
-| 35e | Sep 2 | **`ResolvedImg` merged into `ImgFromPath`.** The two were near-identical — same state, same effect, same `data:`-or-path branch, same placeholder — differing only in that one supported `onDims` and the other `onClick`. Flagged by the session-35c app audit as the remaining duplication of the same kind that let the export strip lists drift across four sessions, so it was merged before it could diverge rather than after. `ImgFromPath` now takes both props; all 28 call sites use it; `ResolvedImg` deleted. Babel unchanged at 451.9 KB (the merged component is slightly larger, the deleted one slightly more so). **Also corrected the "Standalone / Public Version" heading**, which read as though no packaged build existed — the NSIS installer has worked since session 27. Renamed to "Shareable / Public Version" and the distinction stated explicitly: mechanically distributable, not yet safely so, because full restore is still a total replace. |
-| 35f | Sep 2 | **Release cycle Skip fixed — two bugs, one compounding the other.** Tamsin (Events) was posted and Next up jumped to Moncton Stars instead of Swim Team. Diagnosed from `cycle_skipped` in the backup repo's pretty JSON, which held three permanently-skipped worlds — an unplanned but useful application of the session-35 backup system. **Bug 1:** `cycle_skipped` was written by the Skip button and cleared nowhere; the read site's comment said "skipped this cycle" but no cycle-completion reset existed, so every Skip was permanent and invisible. Skip is one-shot by design — removing a world permanently is what the x button is for. **Bug 2, the compounding one:** `advanceCycleHeadInDraft` computed the next due world as `headIdx + 1` with no regard for skips, so after skipping a world, posting the world *after* it did not match and the head never advanced at all. The skip broke the mechanism meant to move past it, which is why this accumulated across three worlds instead of self-correcting. **Fix:** the walk now steps over skipped worlds to find what is genuinely due, and spends each skip it passes at that moment (plus the posted world's own skip, if it had one). Out-of-order posts are still ignored. **Verified by simulation across seven scenarios** rather than by reading — which caught a case that would otherwise have shipped: posting a world you had previously skipped left its own skip in place, so Next up would keep stepping over it. UI now shows skipped worlds struck through with an amber chip to un-skip, plus a Clear all. **In progress panel sorted** — it had no sort at all, so order was underlying array order (creation/import) and the collapsed top-5 showed the five oldest rather than the five most actionable. Now drafts first by fewest missing fields, ready ones last, ties by name; reuses `progressMissing` so the sort can never disagree with the gap chips it renders. **Known and unfixed:** the cycle head is tracked twice — `cycle_head_world_id` advances on posting and is recalculated on load with a 45-day cutoff, while `getNextCycleWorld` derives its own head from posted dates with no cutoff and never reads that field. They can disagree. Not the cause of this bug, but the same shape of latent problem; worth unifying. |
-| 35g | Sep 15 | **Assistant house rules; token estimator; Roll tool; backup portability recorded as a blocker.** **House rules** — the Assistant's base instruction was two sentences, so local models were violating standing rules nobody had told them. A real Mistral Nemo 12B rework of Yuri Yamato narrated `{{user}}` repeatedly, dropped the example-dialogue rewrite it was asked for, appended "please use the provided character sheet", and replaced specific prose ("makes a room with forty people in it feel like a booth with two") with generic register ("reigns as the number one host", "beneath his polished exterior lies"). Seven rules now ship with every request, phrased as concrete prohibitions with named banned phrases — small models follow "do not write *reigns as*" far better than "avoid purple prose". Plus a user-editable extra-instructions box appended after them. **Token estimator** — `estimateTokens` in the plain-JS block, calibrated against a real BPE tokenizer (gpt-tokenizer, used here for calibration only, not shipped: BPE merge ranks are ~1 MB and this is a single-file app). **chars/4 is unusable for cards**: measured at 2600 tokens of dense card markdown it reads 1953, a 25% UNDERcount, so a card at its cap looks like it has 650 tokens spare; on plain prose it overcounts by 23%. The shipped form models what BPE does — short words cost one token, long words split per 4 chars, punctuation runs collapse — and holds within 3.8% across dense-markdown, prose and mixed at card length, erring consistently HIGH, the safe direction for a cap. Verified by extracting the function back out of `index.html` and re-running it against the tokenizer. Wired to a meter on the Character Card field (2600 green / 2900 amber / red) and to the Assistant's context readout, which also gained a configurable context-window setting replacing a hardcoded 7000 threshold that assumed 8k forever. **Roll tool** — random pick from a comma or newline separated list, with recent-picks history because on a short list the same result twice reads as the button not working. **Backup sync portability recorded as an unresolved blocker** — see Git Backup Sync > Portability. A configurable-path version was built and then **deliberately reverted**: making the path configurable without first deciding whether the backend is pluggable (git vs Drive vs rclone vs nothing) would half-solve it and leave an awkward shape to build on. Also corrected an earlier wrong claim that `lorekeeper-sync.bat` lived outside both repos — it is tracked in the data repo, though not in the source repo beside the code that calls it, which is its own drift risk. |
-| 35h–k | Sep 29 – Oct 1 | **Timeline tab; find-and-replace; text highlighting; banner focus; Saucepan crop fields recovered; 45 tags added; crop-tool and posting fixes.** **Timeline** — per-world tab with parallel strands so two couples' histories can be read side by side. `when` (free text, displayed) is deliberately separate from `sort` (optional, orders); one field cannot serve real dates, season/game labels and invented chronologies at once. Events link to characters and lorebook chapters and copy out as markdown for a chapter. **Find-and-replace** on all three Ctrl+F bars. Field descriptors gained a `write` instruction so one implementation serves character, lorebook and collection; scenario text keys are resolved per scenario (`message`/`text`/`content`/`body`/plain string) because writing to the wrong key silently creates a duplicate field. No undo — the bar says so. **Custom character tags removed** and gated inside `addCustom` so Enter cannot bypass it. **Highlighting** — see Text Highlighting. **Banner focus and Saucepan crop** — see Image Cropping. The crop discovery began as "Saucepan doesn't store it, I suspect it does it online"; the test exports showed nine crop fields that Lorekeeper was silently discarding on every import. **45 new tags** (659 → 704) added with **real IDs taken from test exports, not derived from display names** — the IDs confirmed why guessing would have failed: `events_gatherings` drops the ampersand, `step_child` converts the hyphen, `ftm`/`mtf`/`cyoa` lowercase acronyms. A wrong ID passes Lorekeeper's own check and is then silently dropped by the site. **Crop tool** gained zoom-out, Fit, and blur/solid/transparent fill; the first version scaled the stage uniformly and was caught by simulation exporting 4:1 banners at 3.33:1. **Posting consolidated** — three routes marked a character posted, each doing a different subset; the incomplete-fields modal skipped the posted date and cycle advance entirely. Now one function, and private becomes public while unlisted is left alone. **Release-cycle head unified** onto `cycle_head_world_id` after an out-of-order post made Next up appear to restart; three different definitions of the head existed and only the incremental one was right. **World edit fields** fixed: `selectedWorld` was a stale snapshot, so every keystroke reset the caret; now derived live, and text fields buffer locally because `update` deep-clones the whole data file per keystroke. **In progress panel** split into Drafts and Ready. **`ImageMigrationPanel` trimmed** to Rescan only (17.6 → 3.4 KB), keeping the one function that repairs missing `image_relpath` and dropping the completed base64 migration machinery. Babel 456.4 → 485.9 KB; see Babel Block Budget, reclaim needed. |
-| 34 | Aug 19 | **Saucepan tag database audit and migration.** Ine's tag reference had drifted to 540 entries against the site's current 658. Source was a 51-page PDF export (`All Tags`) rather than a screenshot — the screenshot originally supplied was 455px wide for an 8000px page and genuinely unreadable at any zoom, and was correctly declined rather than transcribed by guesswork; the PDF has real embedded text. **Parsing was not trivial.** A first pass using plain sequential text extraction corrupted 22 entries — one tag's name/description bleeding into the next — because the PDF's text run order doesn't always follow visual order when a description is short enough to share a line with the relative-time label. Switched to `pdfplumber`'s `layout=True` mode, which preserves column position as whitespace, and parsed by treating only name+date lines and category headers as hard boundaries, stripping the relative-time phrase out of content wherever it lands rather than trusting it as a line-terminator. Verified via three independent signals: per-category counts against the page's own declared totals (exact 658/658 across all 15 categories), a scan for emoji leaking into a description (only ever appears at the start of a real name), and duplicate-name detection. **Result:** 297 unchanged, 204 same-id with description/category updates, 35 genuine renames, 118 new tags, 0 removed (three that looked deleted were renames with heavily reworded descriptions: `scenario`→`premise`, `regency_era`→`regency`, `plus_sized_bot`→`plus_sized`). One entry, `mythological`, has no match anywhere in the new 658 and was deliberately left in `SAUCEPAN_TAGS` unchanged rather than deleted on a guess — flagged for Ine to check directly on the site. **Two automated fuzzy-matches were caught and corrected by hand before writing anything:** `mythological`→`perfectionist` was pure word-overlap coincidence (myths/folklore vs. a personality trait) and `feral`→`sentient_fictional_creature` picked the wrong candidate — the real match, `sentient_animal`, scored lower only because the matching was greedy nearest-neighbour per source tag rather than a true one-to-one assignment. A full manual read of all candidate pairings, not just the two that got fixed, is what caught these; the lesson is that automated similarity scoring on data destined for a live migration needs a human pass on every pairing, not just the low-confidence ones. **Also caught:** three POV tags (`first_person_pov` etc.) generated garbled ids (`1️⃣_first_person_pov`) because the icon-stripping logic treated a digit inside a keycap emoji sequence (U+0031 U+FE0F U+20E3) as real content — `isalnum()` is true for that digit. Fixed by stripping until the first ASCII letter instead of the first alphanumeric character; all three turned out to be reworded-description-only, not real renames, once fixed. **Migration:** `TAG_RENAME_MAP` (35 entries) plus `migrateTagArray()` in the plain JS block, called once per load against `characters[].tags`, `worlds[].tags`, `lorebooks[].tags`, and `collections[].tags` — idempotent, so it's a no-op scan after the first run. **`CW_TAGS` is no longer hand-maintained** — verified byte-for-byte identical to "every tag whose category is Content Warnings" before being replaced with a live derivation from `SAUCEPAN_TAGS`, so it can't drift again and automatically picked up the two new CW tags (Medical Trauma, Scat). `IMG_SKIP_TAGS`'s one stale reference (`scenario`) updated to `premise`. Full before/after detail for every tag is in `tag_audit.md`, delivered as a standalone reference file rather than pasted into the spec, since the spec tracks architecture and this is data. All growth landed in the plain JS block (SAUCEPAN_TAGS is pure data, no JSX/hooks) — Babel unchanged at 469.8 KB. |
+Moved to **`lorekeeper-sessions.md`** on 9 October 2026. It was 71 KB of this file — a third of it — in a single table whose rows ran to 5,700 characters, which is what made previews give up and render raw markdown.
+
+Session labels referenced throughout this document resolve there. From session 37 on, numbering is plain: one number per session, no letters.
+

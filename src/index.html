@@ -375,7 +375,9 @@
 .tl-spine{width:18px;flex-shrink:0;position:relative;display:flex;justify-content:center}
 .tl-spine:before{content:'';position:absolute;top:0;bottom:0;width:1px;background:var(--border)}
 .tl-dot{width:9px;height:9px;border-radius:50%;margin-top:12px;position:relative;z-index:1;border:2px solid}
-.tl-card{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;margin:4px 0 8px 10px;min-width:0}
+.tl-lanes{flex:1;display:grid;gap:0 10px;margin-left:10px;min-width:0;align-items:start}
+.tl-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;margin:4px 0 8px 0;min-width:0}
+.tl-span{opacity:.95}
 .tl-card-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .tl-label{font-size:13px;font-weight:600;color:var(--text);flex:1;min-width:0}
 .tl-lane{font-size:9px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
@@ -387,6 +389,7 @@
 .tl-chip{font-size:10px;padding:2px 7px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer}
 .tl-chip:hover{color:var(--text);border-color:var(--text3)}
 .tl-chip-lore{cursor:default;opacity:.75}
+.tl-colhead{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:3px 0 5px;border-bottom:1px solid var(--border);text-align:center}
 .tl-lane-chip{font-size:10px;padding:2px 9px;border-radius:99px;background:transparent;border:1px solid;cursor:pointer;font-weight:600}
 .tl-editor{background:var(--bg2);border:1px solid var(--accent2);border-radius:var(--rl);padding:12px;margin-bottom:16px}
 .tl-sub{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
@@ -684,11 +687,19 @@ const HELP_SECTIONS = [
    },
    {
     "t": "p",
-    "x": "**Calendar** — Shows scheduled characters (purple chips) and posted dates (green ✓). Click any day to expand it and see what is scheduled. Click a day to open the scheduler and add characters."
+    "x": "**Calendar** — Shows scheduled characters (purple chips) and posted dates (green ✓). Click any day to expand it and see what is scheduled, or to open the scheduler and add characters."
    },
    {
     "t": "p",
     "x": "**Today Banner** — Any character marked ready whose scheduled date has arrived or already passed, with a Mark Posted button. It keys off the scheduled date, not the day you set the status, so scheduling a month ahead and marking them later behaves the same. Marking posted stamps the _scheduled_ date, not the day you clicked, so a late-marked character still lands on the right calendar day."
+   },
+   {
+    "t": "p",
+    "x": "**Drafts** and **Ready to schedule** — Everything not yet posted, in two groups. The split is by what is _missing_, not by the status you set: anything with a gap shows under Drafts with amber chips naming the gaps (example dialogue, tags 3/5, voice, intros), and anything complete shows under Ready to schedule with a green ✓ ready to post. So a character you marked ready still appears under Drafts if a field is empty — that is deliberate, and it is the same check that warns you when setting the status."
+   },
+   {
+    "t": "p",
+    "x": "Drafts are sorted fewest-gaps-first, so nearly-finished work is at the top, and collapse to five with a Show all button. Ready to schedule is never collapsed — it is the shorter list and the one you scan when planning."
    },
    {
     "t": "p",
@@ -704,11 +715,7 @@ const HELP_SECTIONS = [
    },
    {
     "t": "p",
-    "x": "**Lorekeeper Checklist** — Pre-export validation for public items. Flags missing fields, missing portrait UUIDs, etc."
-   },
-   {
-    "t": "p",
-    "x": "**Drafts in Progress** — All draft characters with a visual indicator for missing required fields."
+    "x": "**Lorekeeper Checklist** — Pre-export validation for public items. Flags missing fields, missing portrait UUIDs, and similar."
    },
    {
     "t": "tip",
@@ -738,11 +745,15 @@ const HELP_SECTIONS = [
    },
    {
     "t": "p",
+    "x": "A **token meter** sits above the card: it counts in the same units Saucepan counts in, so the number here is the number the site will show. Target is 2,600 tokens; the bar turns amber past that and red past the 2,900 ceiling. Over the target is workable, over the ceiling is not."
+   },
+   {
+    "t": "p",
     "x": "**Formatting** — Formatting instructions, advanced prompt, and example dialogue."
    },
    {
     "t": "p",
-    "x": "**Scenarios** — Up to 7500 characters. Drag the grip handle to reorder scenarios."
+    "x": "**Scenarios** — Up to 7,500 characters each, with a live counter that turns red at the limit; typing stops there rather than silently truncating later. Drag the grip handle to reorder scenarios."
    },
    {
     "t": "p",
@@ -778,7 +789,7 @@ const HELP_SECTIONS = [
    },
    {
     "t": "tip",
-    "x": "Export JSON strips all app-only fields automatically. Images export as UUID references only — make sure portrait UUIDs are set first."
+    "x": "Export JSON strips all app-only fields automatically — including highlights, banner focus and schedule state. Images export as UUID references only, so set portrait UUIDs first."
    }
   ]
  },
@@ -788,27 +799,65 @@ const HELP_SECTIONS = [
   "items": [
    {
     "t": "p",
-    "x": "Each world groups characters, lorebooks, collections, and gallery images together."
+    "x": "Each world groups characters, lorebooks, collections, gallery images and a timeline together. Six tabs: Characters, Lorebooks, Collections, Gallery, Timeline, World Info."
    },
    {
     "t": "p",
-    "x": "**Characters / Lorebooks / Collections tabs** — Browse and manage content in this world. Characters from other worlds that belong to a collection in this world also appear here."
+    "x": "**Characters / Lorebooks / Collections** — Browse and manage content in this world. Characters from other worlds that belong to a collection in this world also appear here."
    },
    {
     "t": "p",
-    "x": "**Gallery tab** — All images associated with this world."
+    "x": "**Gallery** — All images associated with this world."
    },
    {
     "t": "p",
-    "x": "**World Info tab** — Edit world name, description, tags, banner image, notes, plot archetypes (for the Plot tool), and lorebook templates."
+    "x": "**Timeline** — A per-world event timeline. See the Timeline section below."
    },
    {
     "t": "p",
-    "x": "**Export ZIP** — The Export ZIP button in the topbar packages all posted characters + public lorebooks + public collections for this world into a dated zip file, stripped of app-only fields and ready to upload. Stamps site_last_synced_at on everything exported."
+    "x": "**World Info** — Edit world name, description, tags, banner image, notes, plot archetypes (for the Plot tool), and lorebook templates."
+   },
+   {
+    "t": "p",
+    "x": "**Banner focus** — A world or collection banner is cropped to a wide strip, and the interesting part is rarely the middle. Banner focus sets which part stays visible. It is a Lorekeeper display setting only and never reaches the site."
+   },
+   {
+    "t": "p",
+    "x": "**Export ZIP** — The Export ZIP button in the topbar packages all posted characters, public lorebooks and public collections for this world into a dated zip, stripped of app-only fields and ready to upload. Stamps site_last_synced_at on everything exported."
    },
    {
     "t": "tip",
     "x": "Drag the grip handle (⠿) next to a world in the sidebar to reorder worlds. The order is saved and used throughout the app."
+   }
+  ]
+ },
+ {
+  "title": "Timeline",
+  "icon": "ti-timeline",
+  "items": [
+   {
+    "t": "p",
+    "x": "A per-world timeline of events, on the Timeline tab of any world. Built for working out what happened when, and for seeing two storylines run alongside each other."
+   },
+   {
+    "t": "p",
+    "x": "**Strands** are the columns. Each strand is a parallel thread down the same time axis, so two characters' histories can be read side by side and seen to intertwine. A world starts with one strand called Main; add, rename and remove them above the timeline. An event with no strand spans all of them — use that for things that affect everyone."
+   },
+   {
+    "t": "p",
+    "x": "**Two date fields, and the difference matters.** **When** is free text and is what gets displayed: `1864-07-08`, `Summer, Year Two`, `Game 12` are all fine. **Sort** is optional and is the only thing that orders events. One field cannot do both jobs — a historical world needs real dates that sort correctly, a sports world needs season and game labels, and an invented world may have no numbers at all."
+   },
+   {
+    "t": "p",
+    "x": "Events with a Sort value come first, in order. Numbers sort numerically, and text sorts naturally, so `S02E05` lands after `S02E04` rather than alphabetically. Events with **no** Sort value keep the position you dragged them to, so a world with no usable dates can be ordered entirely by hand."
+   },
+   {
+    "t": "p",
+    "x": "**Linking** — An event can reference characters and lorebooks in the world. Linked characters appear on the event and can be clicked to jump to them."
+   },
+   {
+    "t": "tip",
+    "x": "If the ordering looks wrong, check the Sort field rather than When. When is only ever displayed; it is never read for ordering."
    }
   ]
  },
@@ -842,7 +891,7 @@ const HELP_SECTIONS = [
    },
    {
     "t": "p",
-    "x": "**Auto-save filename** — Set a filename (e.g. `MyLorebook.json`) and Lorekeeper auto-saves the lorebook to `Lorebooks\\` on every edit."
+    "x": "**Auto-save filename** — Set a filename, for example `MyLorebook.json`, and Lorekeeper auto-saves the lorebook into the Lorebooks folder on every edit."
    },
    {
     "t": "tip",
@@ -930,32 +979,32 @@ const HELP_SECTIONS = [
   "items": [
    {
     "t": "p",
-    "x": "Lorebook templates let you define a structured format for character entries in a world lorebook — e.g. a hockey player profile for all team members."
+    "x": "Lorebook templates let you define a structured format for character entries in a world lorebook — for example a hockey player profile for all team members."
    },
    {
     "t": "step",
-    "n": 1,
-    "x": "Go to the world → World Info tab → Lorebook Templates section."
+    "x": "Go to the world → World Info tab → Lorebook Templates section.",
+    "n": 1
    },
    {
     "t": "step",
-    "n": 2,
-    "x": "Click New template. Give it a name, pick the target lorebook, set a chapter title template (e.g. CHARACTER NAME | POSITION | ROLE), and paste the template text."
+    "x": "Click New template. Give it a name, pick the target lorebook, set a chapter title template (e.g. CHARACTER NAME | POSITION | ROLE), and paste the template text.",
+    "n": 2
    },
    {
     "t": "step",
-    "n": 3,
-    "x": "Use {{CHARACTER NAME}} for the character's name in uppercase, and {{CHAR}} for normal case."
+    "x": "Use {{CHARACTER NAME}} for the character's name in uppercase, and {{CHAR}} for normal case.",
+    "n": 3
    },
    {
     "t": "step",
-    "n": 4,
-    "x": "Open any character in that world → Lorebook Entry tab. The template appears pre-filled with their name."
+    "x": "Open any character in that world → Lorebook Entry tab. The template appears pre-filled with their name.",
+    "n": 4
    },
    {
     "t": "step",
-    "n": 5,
-    "x": "Edit the chapter title and fill in the template body, then click Save to Lorebook."
+    "x": "Edit the chapter title and fill in the template body, then click Save to Lorebook.",
+    "n": 5
    },
    {
     "t": "tip",
@@ -977,7 +1026,7 @@ const HELP_SECTIONS = [
    },
    {
     "t": "p",
-    "x": "**Drawing connections** — Click **+ connect** under a character, then click another character. A prompt asks for a relationship label (e.g. rivals, lovers, siblings)."
+    "x": "**Drawing connections** — Click **+ connect** under a character, then click another character. A prompt asks for a relationship label (rivals, lovers, siblings)."
    },
    {
     "t": "p",
@@ -989,7 +1038,7 @@ const HELP_SECTIONS = [
    },
    {
     "t": "tip",
-    "x": "Characters that belong to this world via a collection (not just world_id) also appear — cross-world characters like shared cast members show up correctly."
+    "x": "Characters that belong to this world via a collection, not just world_id, also appear — shared cast members show up correctly."
    }
   ]
  },
@@ -999,7 +1048,7 @@ const HELP_SECTIONS = [
   "items": [
    {
     "t": "p",
-    "x": "Open the Tools tab in the right panel."
+    "x": "Open the Tools tab in the right panel. Twenty-one tools; the image ones are described in Image Tools below."
    },
    {
     "t": "p",
@@ -1035,11 +1084,11 @@ const HELP_SECTIONS = [
    },
    {
     "t": "p",
-    "x": "**Esper Powers** — Rolls an ability type, rank (F through S), drawback, and codename for an esper character."
+    "x": "**Esper Powers** — Rolls an ability type, rank (F through S), drawback, and codename."
    },
    {
     "t": "p",
-    "x": "**Hockey** — Rolls a position, role description, handedness, and character trait for a hockey player."
+    "x": "**Hockey** — Rolls a position, role description, handedness, and character trait."
    },
    {
     "t": "p",
@@ -1055,11 +1104,27 @@ const HELP_SECTIONS = [
    },
    {
     "t": "p",
-    "x": "**Img UUID** — Saucepan offers three copy formats for every image (markdown, an img tag, a CSS background rule) and the UUID is usually the only part you want. Paste any of them — or all three at once — and this pulls the UUID out. Results are deduplicated, so pasting all three formats of the same image gives one UUID, not three."
+    "x": "**Roll** — A general-purpose picker for anything the other tools do not cover. Paste options one per line or comma-separated and press Ctrl+Enter. Keeps the recent results underneath, so you can see what it already gave you."
    },
    {
     "t": "p",
-    "x": "**Image Prompt Generator** — Generates an image generation prompt for the current character using whichever AI provider is set in Settings, including a local model via LM Studio. Art style and mood dropdowns; optional extra notes; copy button."
+    "x": "**Pick from image** — Drop, paste or choose a picture, then click anywhere on it to take that colour. It averages a small square rather than a single pixel, because one pixel of a compressed image is usually noise rather than the colour you can see. Click a result to copy it; the last eight stay below."
+   },
+   {
+    "t": "p",
+    "x": "**Palette** — Two ways round. *From an image* pulls out the colours that actually dominate it, collapsing shades of the same thing into one entry so a portrait does not return six near-identical browns. *From one colour* builds a palette around a colour you choose, in four schemes: Tonal, Warm / cool, Muted + accent, and Analogous."
+   },
+   {
+    "t": "tip",
+    "x": "Palettes are built so that lightness varies deliberately and only one or two colours carry strong saturation — that is what makes a set look considered rather than loud. Rotating hue alone, which is what most colour-wheel tools do, is exactly what makes a palette feel cheap."
+   },
+   {
+    "t": "p",
+    "x": "**Img UUID** — Saucepan offers three copy formats for every image (markdown, an img tag, a CSS background rule) and the UUID is usually the only part you want. Paste any of them, or all three at once, and this pulls the UUID out. Results are deduplicated, so pasting all three formats of the same image gives one UUID, not three."
+   },
+   {
+    "t": "p",
+    "x": "**Img Prompt** — Generates an image generation prompt for the current character using whichever AI provider is set in Settings, including a local model via LM Studio. Art style and mood dropdowns; optional extra notes; copy button."
    },
    {
     "t": "p",
@@ -1073,23 +1138,31 @@ const HELP_SECTIONS = [
   "items": [
    {
     "t": "p",
-    "x": "Found in the right panel → Tools tab → Image Tools section."
+    "x": "In the right panel → Tools tab, alongside the others."
    },
    {
     "t": "p",
-    "x": "**Format Converter** — Convert images between PNG, JPEG, and WebP. Drag or paste an image, pick a format, download the result."
+    "x": "**Img Convert** — Convert images between PNG, JPEG, WebP and AVIF. Drag or paste an image, pick a format, download the result."
    },
    {
     "t": "p",
-    "x": "**Paste &amp; Save** — Paste a screenshot or image from clipboard and save it directly to a character's portrait folder. Useful for quickly capturing site images."
+    "x": "**Paste & Save** — Paste a screenshot or image from the clipboard and save it straight into a character's portrait folder. Useful for capturing site images quickly."
    },
    {
     "t": "p",
-    "x": "**Crop** — Crop any image to an exact pixel region. Drag to define the crop area, adjust handles, download the result."
+    "x": "**Crop** — Crop to a fixed ratio (1:1, 3:4, 16:9, 4:1) or freehand. Drag to define the area and pull any of the four corner handles to adjust."
    },
    {
     "t": "p",
-    "x": "**Image Prompt Generator** — See Tools panel section above."
+    "x": "The crop box is **not** confined to the image. A tall portrait can be fitted into a wide banner without cutting it: zoom out and the image shrinks inside a larger stage, and whatever the box covers beyond the edges is filled — blurred, black, white, or left transparent. Zoom at 1 behaves the way it always did."
+   },
+   {
+    "t": "p",
+    "x": "**This is a different thing from the site crop.** Crop here makes a new image file. The portrait crop fields on a character (x, y and zoom) do not touch the file at all — they tell Saucepan how to frame the image it already has, and Lorekeeper previews the same framing so what you see here matches the site."
+   },
+   {
+    "t": "p",
+    "x": "**Img Prompt** — See the Tools panel section above."
    }
   ]
  },
@@ -1099,11 +1172,19 @@ const HELP_SECTIONS = [
   "items": [
    {
     "t": "p",
-    "x": "**Ctrl+F — find in long text.** On a character, searches Full Description, Character Card, Formatting, and every intro. On a lorebook, searches the short description and every chapter. On a collection, the definition and lorebook display. Matches appear as buttons showing the count per field; clicking one jumps to that tab. Esc closes."
+    "x": "**Ctrl+F — find in long text.** On a character, searches Full Description, Character Card, Formatting, and every intro. On a lorebook, the short description and every chapter. On a collection, the definition and lorebook display. Matches appear as buttons showing the count per field; clicking one jumps to that tab. Enter steps forward, Shift+Enter back, Esc closes."
    },
    {
     "t": "tip",
     "x": "This is a Lorekeeper search, not the browser's. It has to be, because the browser's find cannot see text inside editable fields — which is where all of this content lives."
+   },
+   {
+    "t": "p",
+    "x": "**Find and replace.** Open the replace row from the find bar. Replace just the highlighted match, or every match at once, with a match-case toggle. It reports how many it changed. Available on characters, lorebooks and collections — the three pages that can write back to their own fields."
+   },
+   {
+    "t": "p",
+    "x": "**Highlighting (Ctrl+Shift+H).** Select text and mark it. Highlights are stored in the text itself as `==double equals==`, so they survive saving, travel with per-item files, and can be searched for. They are **stripped from every export**, so a highlight never reaches Saucepan — they are reading marks, not content. The button clears every highlight in a field after confirming, and clearing marks never changes the text itself."
    },
    {
     "t": "p",
@@ -1117,27 +1198,102 @@ const HELP_SECTIONS = [
   "items": [
    {
     "t": "p",
-    "x": "The Import/Export page has three sections: **Backup**, **Restore**, and **Import**."
+    "x": "The Import/Export page has four sections: **Backup**, **Restore**, **Import**, and the backup status panel."
    },
    {
     "t": "p",
-    "x": "**Backup** — Export a full ZIP of everything (data + all images), or export a single world as a ZIP. Store backups somewhere safe outside the Lorekeeper folder."
+    "x": "**Backup** — Export a full ZIP of everything (data plus all images), or export a single world as a ZIP. Store these somewhere outside the Lorekeeper folder."
    },
    {
     "t": "p",
-    "x": "**Restore** — Two options: **Import &amp; merge from backup** reads a ZIP and shows a preview of adds, updates, and conflicts — nothing is deleted, local-only data is preserved, and you choose Keep Local or Take Backup per conflict. **Restore from last good backup** is the emergency option: replaces all data with the auto-saved lastgood file (no zip needed)."
+    "x": "**Restore** — Two options. **Import & merge from backup** reads a ZIP and shows a preview of adds, updates and conflicts; nothing is deleted, local-only data is preserved, and you choose Keep Local or Take Backup per conflict. **Restore from last good backup** is the emergency option: it replaces all data with the auto-saved lastgood file, no zip needed."
    },
    {
     "t": "p",
-    "x": "**Import (single items or batch)** — Paste a JSON directly, or click Scan Folders to scan `Companions\\`, `Lorebooks\\`, and `Collections\\`. Each item shows a badge: new / update ↓ / local newer ↑ / up to date. Assign worlds and click Import."
+    "x": "**Import (single items or batch)** — Paste a JSON directly, or click Scan Folders to scan the Companions, Lorebooks and Collections folders. Each item shows a badge: new / update ↓ / local newer ↑ / up to date. Assign worlds and click Import."
    },
    {
     "t": "tip",
-    "x": "Items marked 'local newer' are skipped by default. Click 'Import anyway' on that item, or check 'Force import all', to override. Images alongside JSONs are automatically linked as image_relpath."
+    "x": "Items marked 'local newer' are skipped by default. Click 'Import anyway' on that item, or tick 'Force import all', to override. Images alongside JSONs are automatically linked as image_relpath."
    },
    {
     "t": "p",
-    "x": "If the JSON you pick turns out to be a full Lorekeeper backup rather than a single item, Lorekeeper now stops and says so, showing what the file holds against what you currently have. Confirming replaces everything — use Restore → Import &amp; merge from backup instead if you only wanted part of it."
+    "x": "If the JSON you pick turns out to be a full Lorekeeper backup rather than a single item, Lorekeeper stops and says so, showing what the file holds against what you currently have. Confirming replaces everything — use Restore → Import & merge from backup instead if you only wanted part of it."
+   },
+   {
+    "t": "p",
+    "x": "**The backup panel** at the bottom is the continuous backup, as opposed to the ZIPs above. It is described in its own section below."
+   }
+  ]
+ },
+ {
+  "title": "Backup",
+  "icon": "ti-cloud-upload",
+  "items": [
+   {
+    "t": "p",
+    "x": "A ZIP you remember to make is not a backup. This runs on its own and covers the gap the ZIPs leave: everything text, continuously, somewhere that is not this disk."
+   },
+   {
+    "t": "p",
+    "x": "**What travels** — notes, templates, companions, lorebooks, collections, personas, worlds, and a readable copy of the main data file. **Images are excluded**, which is what keeps it small enough to run constantly. Images are re-downloadable from Saucepan; notes are not, and that is the whole reason this exists."
+   },
+   {
+    "t": "p",
+    "x": "**Choose a destination in Settings → Backup.** Three options:"
+   },
+   {
+    "t": "p",
+    "x": "**None** is the default and means exactly that — nothing is copied, nothing is uploaded, nothing is written."
+   },
+   {
+    "t": "p",
+    "x": "**GitHub** uploads to a private repository. There is no git to install, no folder to prepare, nothing to type into a terminal: paste a token, pick a repository, done. Unchanged files are skipped, so the first backup sends everything and later ones send only what you actually edited. A backup with nothing to do finishes in about a second."
+   },
+   {
+    "t": "p",
+    "x": "**A synced folder** copies the same files into a folder you choose — one another program already keeps in sync, a second drive, or a network share. Restoring means copying them back; no special knowledge needed."
+   },
+   {
+    "t": "p",
+    "x": "**Files in the destination that Lorekeeper did not put there are left alone.** It only ever adds, changes or removes things inside its own folders, so sharing a repository or folder with something else is safe."
+   },
+   {
+    "t": "note",
+    "h": "Setting up GitHub backup:",
+    "x": "",
+    "s": [
+     {
+      "n": 1,
+      "x": "On GitHub: Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token."
+     },
+     {
+      "n": 2,
+      "x": "Repository access: Only select repositories, and pick the one you want backups in. Lorekeeper never creates a repository, so make it first if you have not."
+     },
+     {
+      "n": 3,
+      "x": "Permissions: expand Repository permissions, find Contents, set it to Read and write. Nothing else is needed."
+     },
+     {
+      "n": 4,
+      "x": "Copy the token — GitHub shows it once — then paste it into Lorekeeper → Settings → Backup and pick the repository from the dropdown."
+     }
+    ]
+   },
+   {
+    "t": "warn",
+    "h": "Tokens expire",
+    "x": "A fine-grained token expires on a date you choose when creating it, and backups stop when it does. The panel warns you three weeks out and turns red once it has passed. Pick the longest expiry you are comfortable with.",
+    "s": []
+   },
+   {
+    "t": "p",
+    "x": "**Back up now**, on the Import/Export page, runs it immediately and reports what it sent. It also runs on a schedule if you have set one up, whether or not Lorekeeper is open. Closing the app only refreshes the data file it will send — it does not upload, because a large upload cannot finish inside the moment between clicking close and the window going away."
+   },
+   {
+    "t": "tip",
+    "x": "The panel shows when the last backup actually succeeded, and turns amber after a week. A backup that quietly stopped is invisible until you need it, which is exactly when finding out is too late."
    }
   ]
  },
@@ -1147,53 +1303,53 @@ const HELP_SECTIONS = [
   "items": [
    {
     "t": "p",
-    "x": "Characters, lorebooks, and collections can auto-save to `I:\\Lorekeeper\\` on every edit."
+    "x": "Characters, lorebooks and collections can auto-save to their own file on every edit, separately from the main data file. The folder they go in is shown under Settings → Data."
    },
    {
     "t": "p",
-    "x": "Set a **Folder Name** on a character (Settings tab) and it saves to `Companions\\FolderName\\companion.json`."
+    "x": "Set a **Folder Name** on a character (Settings tab) and it saves to `Companions` → that folder → `companion.json`."
    },
    {
     "t": "p",
-    "x": "Set a **Lorebook Filename** on a lorebook and it saves to `Lorebooks\filename.json`."
+    "x": "Set a **Lorebook Filename** on a lorebook and it saves into the `Lorebooks` folder under that name."
    },
    {
     "t": "p",
-    "x": "Set a **Collections Filename** on a collection and it saves to `Collections\filename.json`."
+    "x": "Set a **Collections Filename** on a collection and it saves into the `Collections` folder under that name."
    },
    {
     "t": "p",
-    "x": "New items get a filename auto-generated from their name. Clear the field to disable auto-save."
+    "x": "Notes, templates and personas write their own files automatically, with no field to set."
+   },
+   {
+    "t": "p",
+    "x": "New items get a filename generated from their name. Clear the field to disable auto-save for that item."
    },
    {
     "t": "tip",
-    "x": "Auto-saved files have app-only fields stripped — they are clean platform-format JSONs ready to upload."
+    "x": "Auto-saved files have app-only fields stripped — they are clean platform-format JSONs ready to upload. That also means they are not complete backups: world membership, collections, schedule state and linked lorebooks live only in the main data file."
    }
   ]
  },
  {
-  "title": "Image Storage Audit",
+  "title": "Rescan images",
   "icon": "ti-photo-scan",
   "items": [
    {
     "t": "p",
-    "x": "Keeps images stored as local files instead of base64 blobs in the data JSON."
+    "x": "On the Import/Export page. **Rescan images** looks through the Lorebooks and Collections folders and reconnects image files to the records that lost track of them."
    },
    {
     "t": "p",
-    "x": "**Rescan images** — Scans folders for image files and links them to existing items. Use after dropping images into `Lorebooks\\` or `Collections\\` manually."
+    "x": "Use it after a restore or a merge, or after dropping images into those folders by hand. It fills in a missing image link and nothing else — it will never overwrite a link that already works, so running it when nothing is broken does nothing at all."
    },
    {
     "t": "p",
-    "x": "**Audit base64** — Sorts every image into four states: already using a local file; has a path but the file is missing; still base64 with no file yet; and has a working file but is _also_ still carrying leftover base64 in the data."
+    "x": "**Why images live as files and not inside the data.** An image stored as text inside the data file is about a third larger than the file it came from, and it sits in the one file everything else depends on. That is how the data file once reached 134 MB. Images are kept on disk and referenced by path instead."
    },
    {
-    "t": "p",
-    "x": "**Clear leftover base64** — For that last group. No file is written, since the image is already on disk — this only drops the redundant copy out of the JSON. This is usually where the bulk of a large data file goes."
-   },
-   {
-    "t": "p",
-    "x": "**Link / Write** — For items with no file yet. Where a matching image is already sitting in the folder, the button offers to link it rather than write a duplicate; the button text says which it will do."
+    "t": "tip",
+    "x": "There used to be Audit base64, Migrate and Clean up leftover buttons here. They were one-time tooling for converting old embedded images into files; that conversion finished long ago and the buttons were removed."
    }
   ]
  },
@@ -1203,31 +1359,35 @@ const HELP_SECTIONS = [
   "items": [
    {
     "t": "p",
-    "x": "Lorekeeper protects your data with several layers:"
+    "x": "Five layers protect the data file itself:"
    },
    {
     "t": "p",
-    "x": "**Auto-save** — Data is written after every change (600ms debounce). A load guard prevents saving until data is fully loaded."
+    "x": "**1. Auto-save** — Data is written after every change (600ms debounce). A load guard prevents saving until data is fully loaded."
    },
    {
     "t": "p",
-    "x": "**Shrink-refuse** — If a save would shrink the data file beyond a safety threshold, it is refused. Prevents runaway autosaves from overwriting real data with an empty shape."
+    "x": "**2. Shrink-refuse** — If a save would shrink the data file past a safety threshold, it is refused and the attempted write is set aside for inspection instead. This is what stops a runaway autosave replacing real data with an empty shape."
    },
    {
     "t": "p",
-    "x": "**Last-good backup** — On every successful save, the previous file is copied to `lorekeeper-data.lastgood.json`. Use Restore → Restore from last good backup to recover it without a zip."
+    "x": "**3. Last-good backup** — Every successful save also writes `lorekeeper-data.lastgood.json`. Use Restore → Restore from last good backup to recover it without a zip. If the main file is ever found suspiciously small on startup, Lorekeeper recovers from this automatically."
    },
    {
     "t": "p",
-    "x": "**Flush on close** — Closing the window used to kill a pending save mid-write. Lorekeeper now holds the window open until the last change has actually reached disk."
+    "x": "**4. Flush on close** — Closing the window used to kill a pending save mid-write. Lorekeeper now holds the window open until the last change has actually reached disk."
    },
    {
     "t": "p",
-    "x": "**Pre-shrink snapshot** — Operations that legitimately shrink the data file a lot, such as clearing base64 images, copy the old file to `lorekeeper-data.preshrink-{date}.json` first. These are safe to delete once you have confirmed everything looks right; nothing removes them automatically."
+    "x": "**5. Pre-shrink snapshot** — Operations that legitimately shrink the file a lot, such as clearing base64 images, copy the old file to `lorekeeper-data.preshrink-{date}.json` first. These are safe to delete once you have confirmed everything looks right; nothing removes them automatically."
    },
    {
     "t": "p",
-    "x": "**Export ZIP (world topbar)** — Platform-ready zip for upload to Saucepan. Not the same as a backup — only includes posted characters, public lorebooks, and public collections."
+    "x": "**All five write to the same disk**, so none of them survive losing the drive. That is what the Backup section is for, and the two are complementary — neither replaces the other."
+   },
+   {
+    "t": "p",
+    "x": "**Export ZIP (world topbar)** is not a backup. It only includes posted characters, public lorebooks and public collections, stripped for upload."
    },
    {
     "t": "tip",
@@ -1245,7 +1405,15 @@ const HELP_SECTIONS = [
    },
    {
     "t": "p",
-    "x": "**AI provider &amp; API key** — Used by the Assistant and the Image Prompt Generator. Choose Anthropic, OpenAI, Google, OpenRouter, or LM Studio, then paste the matching key. LM Studio runs locally and needs no key — start its server, load one or more models, and pick from the Model dropdown, which lists whatever is currently loaded. Loading several means switching between them without leaving Lorekeeper."
+    "x": "**AI provider & API key** — Used by the Assistant and Img Prompt. Choose Anthropic, OpenAI, Google, OpenRouter, or LM Studio, then paste the matching key. See the AI assistant section for where to get each one."
+   },
+   {
+    "t": "p",
+    "x": "**LM Studio needs no key.** Start its server, load one or more models, and pick from the Model dropdown, which lists whatever is currently loaded. Loading several means switching between them without leaving Lorekeeper."
+   },
+   {
+    "t": "p",
+    "x": "**Backup** — Where a continuous copy of your text data goes: nothing, GitHub, or a folder. See the Backup section."
    },
    {
     "t": "p",
@@ -1253,11 +1421,11 @@ const HELP_SECTIONS = [
    },
    {
     "t": "p",
-    "x": "**Data file** — Shows where data is stored. Click to open the folder."
+    "x": "**Data** — Shows where your data is stored. Click to open the folder. This is discovered at startup, not configured."
    },
    {
     "t": "p",
-    "x": "**Theme and colorblind mode** — Settings → Appearance. Pick an accent color to generate a full dark/light theme. Colorblind mode adjusts red/green or blue/yellow pairs: Red-Green mode (deuteranopia/protanopia) swaps red→orange and green→blue; Blue-Yellow mode (tritanopia) swaps amber→red-orange and teal→pink."
+    "x": "**Theme and colorblind mode** — Pick an accent color to generate a full dark/light theme. Colorblind mode adjusts red/green or blue/yellow pairs: Red-Green mode (deuteranopia/protanopia) swaps red→orange and green→blue; Blue-Yellow mode (tritanopia) swaps amber→red-orange and teal→pink."
    }
   ]
  },
@@ -1267,7 +1435,7 @@ const HELP_SECTIONS = [
   "items": [
    {
     "t": "p",
-    "x": "The Assistant tab in the right panel gives you an AI writing assistant that knows your world context. Powered by whichever provider you choose in Settings: Anthropic, OpenAI, Google, OpenRouter, or a local model via LM Studio."
+    "x": "The Assistant tab in the right panel is an AI writing assistant that knows your world context. Powered by whichever provider you choose in Settings: Anthropic, OpenAI, Google, OpenRouter, or a local model via LM Studio."
    },
    {
     "t": "p",
@@ -1287,7 +1455,7 @@ const HELP_SECTIONS = [
    },
    {
     "t": "tip",
-    "x": "Click any suggested prompt on the empty chat screen to pre-fill it. Or just type — 'write a short description for this character', 'suggest scenarios based on the card', etc."
+    "x": "Click any suggested prompt on the empty chat screen to pre-fill it. Or just type — 'write a short description for this character', 'suggest scenarios based on the card'."
    },
    {
     "t": "warn",
@@ -1296,35 +1464,32 @@ const HELP_SECTIONS = [
     "s": []
    },
    {
-    "t": "note",
-    "h": "Setup (Anthropic example):",
-    "x": "",
-    "s": [
-     {
-      "n": 1,
-      "x": "Go to console.anthropic.com and create an account (separate from claude.ai)."
-     },
-     {
-      "n": 2,
-      "x": "Add credits — minimum $5. There is no free tier."
-     },
-     {
-      "n": 3,
-      "x": "Go to API Keys → Create Key. Copy the key (starts with sk-ant-)."
-     },
-     {
-      "n": 4,
-      "x": "In Lorekeeper → Settings → AI Provider → select Anthropic → paste the key → Save."
-     }
-    ]
+    "t": "p",
+    "x": "**Where to get a key, by provider:**"
    },
    {
     "t": "p",
-    "x": "Other providers follow the same pattern: create an account at the provider's developer console (platform.openai.com, aistudio.google.com, or openrouter.ai), add credits, generate a key, and paste it in the matching Settings field."
+    "x": "**Anthropic** — console.anthropic.com. Account separate from claude.ai; add credits (minimum $5, no free tier); API Keys → Create Key. Keys start with `sk-ant-`."
    },
    {
     "t": "p",
-    "x": "**Cost estimate:** roughly $0.05–0.15 per conversation with a capable cloud model, depending on world size. Lighter models (Haiku, GPT-4o mini, Gemini Flash) are cheaper but less capable. A local model through LM Studio costs nothing per message, at the price of a much smaller context window."
+    "x": "**OpenAI** — platform.openai.com. Separate from a ChatGPT subscription; add credits under Billing, then API keys → Create new secret key. Keys start with `sk-`."
+   },
+   {
+    "t": "p",
+    "x": "**Google** — aistudio.google.com. Get API key. Gemini has a free tier with rate limits, which is often enough for occasional use; paid billing lifts them."
+   },
+   {
+    "t": "p",
+    "x": "**OpenRouter** — openrouter.ai. One key reaching many models from different companies, useful for trying several without separate accounts. Add credits, then Keys → Create Key. Takes a small cut on top of each model's own price."
+   },
+   {
+    "t": "p",
+    "x": "**LM Studio** — lmstudio.ai. Free, runs on your own machine, no account and no key. Download it, download a model inside it, start the local server, and point Lorekeeper at it. The trade-off is a much smaller context window and prose quality that varies by model."
+   },
+   {
+    "t": "p",
+    "x": "**Cost estimate:** roughly $0.05–0.15 per conversation with a capable cloud model, depending on world size. Lighter models (Haiku, GPT-4o mini, Gemini Flash) are cheaper but less capable. A local model costs nothing per message."
    }
   ]
  }
@@ -1608,12 +1773,26 @@ const SWIM_EVENTS = [
   {stroke:"Open Water",distances:["5km","10km","25km"],desc:"No walls, no lane lines. Sighting, drafting, and pack swimming replace pure technique. Physical and psychological endurance over speed."},
 ];
 
+// Macros, as a REFERENCE rather than an allowlist. Saucepan accepts more than this —
+// every pronoun form resolves, and the conditionals take any two words — so nothing
+// should ever validate text against this list. A checker built on it would flag
+// {{him}} as broken, and a checker that cries wolf gets ignored within a week.
+//
+// Each group carries a `note` because the two things most easily got wrong here are
+// RULES, not names: which pronoun forms are allowed, and which way round the
+// singular/plural conditionals go. Listing examples without the rule is what the
+// panel used to do, and it taught neither.
 const MACROS = [
   {group:'User', items:[['{{user}}',"User's name"],['{{yn}}','Short alias']]},
   {group:'Companion', items:[['{{char}}',"Companion's name"],['{{cn}}','Short alias']]},
-  {group:'Pronouns', items:[['{{they}}','Subjective'],['{{them}}','Objective'],['{{their}}','Possessive'],['{{theirs}}','Poss. pronoun'],['{{themselves}}','Reflexive']]},
+  {group:'Pronouns',
+   note:'Write whichever form comes to mind — it resolves by grammatical role, not by the word you typed. The canonical names are {{sub}} {{obj}} {{poss}} {{poss_p}} {{ref}}; the they-forms below are aliases for them, and the gendered forms work the same way.',
+   tip:'Prefer the they-forms. If a macro ever fails to resolve it falls back to the literal word, and "their" is still right for anyone — "his" is wrong for half your readers.',
+   items:[['{{they}}','Subjective — he / she / they'],['{{them}}','Objective — him / her / them'],['{{their}}','Possessive — his / her / their'],['{{theirs}}','Poss. pronoun — his / hers / theirs'],['{{themselves}}','Reflexive — himself / herself / themselves']]},
   {group:'Gender word', items:[['{{mfx|male|female|person}}','Picks by pronoun']]},
-  {group:'Plurality', items:[['{{plural?are:is}}','are/is'],['{{p?have:has}}','have/has (short)']]},
+  {group:'Singular / plural',
+   note:'A pattern, not a fixed macro — it takes any two words. THE FIRST VALUE IS THE ONE THAT GETS USED. So a singular subject is {{s?was:were}}, and the same sentence for a plural subject is {{p?were:was}}. Getting this backwards reads fine until someone with plural pronouns opens the chat.',
+   items:[['{{s?was:were}}','Singular — "was" is what shows'],['{{p?were:was}}','Plural — "were" is what shows'],['{{s?has:have}}','Any verb works'],['{{plural?are:is}}','Long form of p?']]},
   {group:'Time & Date', items:[['{{time}}','HH:MM AM/PM'],['{{date}}','YYYY-MM-DD'],['{{day_of_week}}','Monday…']]},
   {group:'Formatting', items:[['*text*','Italics'],['**text**','Bold'],['~text~','Strikethrough'],['_text_','Underline'],['>!text!<','Spoiler']]},
   {group:'Alignment', items:[['(left default)','Left (no tag)'],['>>text>>','Right align'],['>>text<<','Center align']]},
@@ -1685,9 +1864,41 @@ const parseTimestamp = (s) => {
   return isNaN(t) ? 0 : t;
 };
 
-const loreHint = (filename) => "I:" + BS + "Lorekeeper" + BS + "Lorebooks" + BS + filename;
+// No drive letter and no machine path. These used to begin with a hardcoded
+// I:\Lorekeeper, which is wrong on every machine but one and was already wrong on
+// this one: under DATA_DIR = I:\Test the hint named a folder that did not exist.
+// The app discovers its own data folder at runtime and the install can live
+// anywhere, so the root is not the renderer's to state. Folder and filename are
+// the part that tells the user anything.
+// The install's real data folder, fetched once and cached. A copyable path has to
+// be the actual path or it is worse than useless, so this one is resolved from main
+// rather than dropped like the hints above. Fired at script load, so it is resolved
+// long before a gallery is ever rendered; if it somehow is not, the path degrades to
+// a relative one rather than naming a folder that may not exist.
+let DATA_ROOT = '';
+let dataRootPromise = null;
+function loadDataRoot() {
+  if (dataRootPromise) return dataRootPromise;
+  if (!window.lorekeeper || !window.lorekeeper.getDataDir) { dataRootPromise = Promise.resolve(''); return dataRootPromise; }
+  dataRootPromise = window.lorekeeper.getDataDir()
+    .then(function (d) { DATA_ROOT = d || ''; return DATA_ROOT; })
+    .catch(function () { return ''; });
+  return dataRootPromise;
+}
+loadDataRoot();
 
-const charFolderHint = (folder) => "Saves to: I:" + BS + "Lorekeeper" + BS + "Companions" + BS + folder + BS + "companion.json";
+// Joins a stored image_relpath onto the real data folder, in Windows separators.
+function fullImagePath(relpath) {
+  const rel = String(relpath || '').split('/').join(BS);
+  if (!DATA_ROOT) return rel;
+  let root = DATA_ROOT;
+  while (root.length && (root.charAt(root.length - 1) === BS || root.charAt(root.length - 1) === '/')) root = root.slice(0, -1);
+  return root + BS + rel;
+}
+
+const loreHint = (filename) => "Lorebooks" + BS + filename;
+
+const charFolderHint = (folder) => "Saves to: Companions" + BS + folder + BS + "companion.json";
 
 const now = () => new Date().toISOString();
 
@@ -1781,26 +1992,56 @@ function buildCollExport(c) {
   // The platform's field is "description"; Lorekeeper's internal model calls it
   // "definition". Forgetting this rename sent collections to the site with no
   // description text at all.
-  return stripHighlights({...rest, description: definition || '', lorebooks: c.lorebooks || []});
+  // lorebook_display is an ENUM on the site: companion_lorebooks | custom_lorebooks | none.
+  // Lorekeeper created new collections with `false` (a boolean) and imports defaulted to
+  // '' (empty string), so every collection made here was rejected on import to Saucepan
+  // with "Invalid option". Coerced here rather than migrated, so existing bad data is
+  // fixed on the way out without touching the stored records.
+  const LD_OK = ['companion_lorebooks', 'custom_lorebooks', 'none'];
+  const ld = LD_OK.includes(c.lorebook_display) ? c.lorebook_display : 'none';
+  return stripHighlights({...rest, description: definition || '', lorebooks: c.lorebooks || [], lorebook_display: ld});
 }
 
 
 // ── Token estimation ─────────────────────────────────────────────────────
-// Calibrated against a real BPE tokenizer (gpt-tokenizer) on card-shaped text.
-// Why not chars/4, the usual rule of thumb: it is tuned for plain English prose
-// and breaks badly on card markdown. Measured at ~2600 tokens of dense markdown
-// (tables, ###, **, {{macros}}, dividers) chars/4 reads 1953 — a 25% UNDERcount,
-// so a card at its cap would look like it had 650 tokens to spare. On pure prose
-// it overcounts by 23% in the other direction.
+// CALIBRATED AGAINST SAUCEPAN ITSELF (October 8, 2026). The meter now reads in the
+// same units as the site's Tokens and Temperature panel, so a card that reads 2600
+// here reads about 2600 there.
 //
-// This form instead models what BPE actually does: short common words cost one
-// token regardless of length, long words split roughly per 4 chars, and runs of
-// punctuation collapse. Within 3.4% across dense-markdown, plain-prose and mixed
-// content at card length, and it errs HIGH — the safe direction for a cap.
+// Why the shape of this function and not chars/4, the usual rule of thumb: chars/4
+// is tuned for plain English prose and breaks badly on card markdown. Measured at
+// ~2600 tokens of dense markdown (tables, ###, **, {{macros}}, dividers) chars/4
+// reads 1953 — a 25% UNDERcount, so a card at its cap would look like it had 650
+// tokens to spare. On pure prose it overcounts by 23% in the other direction.
 //
-// Still an estimate: the number that matters is whatever tokenizer the site's
-// model uses, which differs per model and is not knowable here. Treat as a budget
+// So this models what a BPE tokenizer actually does: short common words cost one
+// token regardless of length, long words split roughly per 4 chars, runs of
+// punctuation collapse.
+//
+// THE CALIBRATION. The word/punctuation model above was originally fitted against
+// gpt-tokenizer (cl100k) and was accurate to it — but the site does NOT report
+// cl100k. Saucepan serves four models that tokenize differently, so it shows its
+// own blended estimate, which sits consistently ABOVE cl100k. Measured against six
+// real companions (Dylan, Naka, Nagakura, Sebastien, Rob, Don Pedro — card field
+// and example-dialogue field, twelve texts in all), this function undercounted the
+// site by 4.5% to 6.7% every single time. One scale error, not a shape error.
+//
+// SAUCEPAN_CAL corrects it. 1.072 is the TOP of the measured ratio range, not the
+// mean (1.062), which keeps the long-standing property that the meter errs HIGH —
+// the safe direction for a cap. Result across the twelve texts: never under, at
+// most 2.5% over.
+//
+// Three- and seven-parameter refits were tried and REJECTED. Both beat this
+// in-sample and both lost under leave-one-out cross-validation (2.36% and 2.16%
+// worst case, against 1.74% for the single constant), and the seven-parameter fit
+// produced a negative newline weight — it was fitting noise, not structure. With
+// twelve data points one constant is all the data supports. If more real numbers
+// are ever collected, retune SAUCEPAN_CAL first and only add parameters if
+// cross-validation actually improves.
+//
+// Still an estimate — the site's own number is an estimate too. Treat as a budget
 // indicator with margin, not a precise count.
+const SAUCEPAN_CAL = 1.072;
 function estimateTokens(text) {
   if (!text) return 0;
   let tok = 0;
@@ -1816,7 +2057,7 @@ function estimateTokens(text) {
       tok += Math.max(1, Math.ceil(p.length / 3));
     }
   }
-  return Math.round(tok);
+  return Math.round(tok * SAUCEPAN_CAL);
 }
 
 // Ine's working caps for the character card: 2600 hard, up to 2900 tolerated when
@@ -1870,6 +2111,206 @@ const ASSISTANT_HOUSE_RULES = `
    characters, short description 140 characters including spaces.
 `;
 
+
+// ── Colour from an image ────────────────────────────────────────────────
+// Two tools, one job: get usable colour out of a picture. Both read pixels from a
+// canvas, so the image never leaves the app and nothing is uploaded anywhere.
+//
+// WHY OKLCH AND NOT HSL
+// The existing Color tool works in HSL, where "lightness" is a lie: yellow at 50%
+// looks far brighter than blue at 50%. That is why mathematically correct harmonies
+// — triadic, complementary — so often come out looking unbalanced. OKLCH is
+// perceptually uniform: equal L really does read as equally bright across hues. The
+// palette builder below works in OKLCH for exactly that reason, then converts back
+// to hex for display.
+
+// sRGB -> linear, the gamma step every conversion below depends on.
+function srgbToLinear(c) { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }
+function linearToSrgb(c) { const v = c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+  return Math.max(0, Math.min(255, Math.round(v * 255))); }
+
+function rgbToOklch(r, g, b) {
+  const R = srgbToLinear(r), G = srgbToLinear(g), B = srgbToLinear(b);
+  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
+  const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
+  const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
+  const L = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s;
+  const a = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s;
+  const bb = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s;
+  const C = Math.sqrt(a * a + bb * bb);
+  let h = Math.atan2(bb, a) * 180 / Math.PI;
+  if (h < 0) h += 360;
+  return { L: L, C: C, h: h };
+}
+
+function oklchToRgb(L, C, h) {
+  const hr = h * Math.PI / 180;
+  const a = C * Math.cos(hr), b = C * Math.sin(hr);
+  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+  const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+  const l = l_ * l_ * l_, m = m_ * m_ * m_, s = s_ * s_ * s_;
+  return {
+    r: linearToSrgb(+4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+    g: linearToSrgb(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+    b: linearToSrgb(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)
+  };
+}
+
+const hex2 = (n) => n.toString(16).padStart(2, '0');
+function rgbToHex(r, g, b) { return '#' + hex2(r) + hex2(g) + hex2(b); }
+function oklchToHex(L, C, h) { const c = oklchToRgb(L, C, h); return rgbToHex(c.r, c.g, c.b); }
+
+// A colour out of gamut converts to something clipped and wrong, so chroma is pulled
+// down until it fits rather than silently producing a different colour.
+function fitChroma(L, C, h) {
+  let lo = 0, hi = C;
+  for (let i = 0; i < 18; i++) {
+    const mid = (lo + hi) / 2;
+    const c = oklchToRgb(L, mid, h);
+    const back = rgbToOklch(c.r, c.g, c.b);
+    (Math.abs(back.L - L) < 0.02 && Math.abs(back.h - h) < 2) ? (lo = mid) : (hi = mid);
+  }
+  return lo;
+}
+
+// Plain-language name for a hue, so a swatch reads as something rather than a number.
+function hueName(h, C, L) {
+  if (C < 0.03) return L > 0.88 ? 'near-white' : L < 0.22 ? 'near-black' : L < 0.5 ? 'dark grey' : 'grey';
+  // Boundaries MEASURED against real colours rather than guessed from RGB intuition.
+  // OKLCH hue angles do not line up with the HSL wheel at all: pure red sits at 29,
+  // not 0, and yellow at 110. Naming by RGB habit put scarlet in the orange bucket.
+  const names = [[20,'crimson'],[42,'red'],[70,'orange'],[98,'amber'],[120,'yellow'],
+                 [138,'lime'],[168,'green'],[198,'teal'],[225,'cyan'],[255,'sky'],
+                 [278,'blue'],[296,'indigo'],[312,'violet'],[332,'purple'],[348,'magenta'],[361,'pink']];
+  for (const [edge, name] of names) if (h < edge) return name;
+  return 'crimson';
+}
+
+// ── Palette ──────────────────────────────────────────────────────────────
+// Two ways in: pull the palette out of a picture, or build one from a single
+// colour. Both work in OKLCH, which is the part that makes the difference.
+//
+// Harmony rules — triadic, complementary and the rest — only decide HUE. A palette
+// built by rotating hue while holding saturation and lightness fixed is exactly
+// what looks cheap, because the colours all shout at the same volume. What reads as
+// designed is a deliberate spread of lightness with at most one or two colours
+// carrying real chroma. That is what these schemes do.
+
+// Groups similar pixels together and returns the ones that actually dominate.
+// Buckets in OKLCH rather than RGB, so "two shades of the same skin tone" collapse
+// into one entry instead of being counted as different colours.
+function extractPalette(data, count) {
+  const buckets = new Map();
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 128) continue;
+    const o = rgbToOklch(data[i], data[i + 1], data[i + 2]);
+    // Coarse bins: lightness in 10 steps, chroma in 5, hue in 24. Fine enough to
+    // separate real colours, coarse enough to merge gradients and noise.
+    const key = Math.round(o.L * 9) + '|' + Math.round(o.C * 16) + '|' + (o.C < 0.03 ? 0 : Math.round(o.h / 15));
+    const b = buckets.get(key);
+    if (b) { b.n++; b.L += o.L; b.C += o.C; b.hx += Math.cos(o.h * Math.PI / 180); b.hy += Math.sin(o.h * Math.PI / 180); }
+    else buckets.set(key, {n: 1, L: o.L, C: o.C, hx: Math.cos(o.h * Math.PI / 180), hy: Math.sin(o.h * Math.PI / 180)});
+  }
+  const list = [...buckets.values()].map(b => {
+    let h = Math.atan2(b.hy / b.n, b.hx / b.n) * 180 / Math.PI;
+    if (h < 0) h += 360;
+    return {n: b.n, L: b.L / b.n, C: b.C / b.n, h: h};
+  }).sort((a, b) => b.n - a.n);
+
+  // Take the most common, but refuse anything too close to one already chosen -
+  // otherwise a photo of one jumper returns six versions of the same blue.
+  const out = [];
+  for (const c of list) {
+    const tooClose = out.some(p => {
+      const dh = Math.min(Math.abs(p.h - c.h), 360 - Math.abs(p.h - c.h)) / 180;
+      return Math.abs(p.L - c.L) < 0.12 && Math.abs(p.C - c.C) < 0.06 && (c.C < 0.04 || dh < 0.12);
+    });
+    if (!tooClose) out.push(c);
+    if (out.length >= count) break;
+  }
+  return out;
+}
+
+// Build a palette around one colour. Each scheme keeps the seed and varies
+// lightness deliberately; hue moves only where the scheme calls for it.
+const PALETTE_SCHEMES = [
+  {id:'tonal',  label:'Tonal',       hint:'One hue, five weights. The safest, and what most considered designs actually are.'},
+  {id:'warmcool', label:'Warm / cool', hint:'The seed plus its opposite, both muted, with neutrals between. Reads balanced rather than loud.'},
+  {id:'accent', label:'Muted + accent', hint:'Low-chroma base colours carrying one saturated accent. The usual shape of a good UI palette.'},
+  {id:'analogous', label:'Analogous',   hint:'Neighbouring hues at varied lightness. Natural, like something photographed.'}
+];
+
+function buildPalette(seedHex, scheme) {
+  const m = /^#?([0-9a-f]{6})$/i.exec((seedHex || '').trim());
+  if (!m) return [];
+  const int = parseInt(m[1], 16);
+  const seed = rgbToOklch((int >> 16) & 255, (int >> 8) & 255, int & 255);
+  const H = seed.h;
+  const mk = (L, C, h) => {
+    const cc = fitChroma(L, C, h);
+    return {hex: oklchToHex(L, cc, h), L: L, C: cc, h: h, name: hueName(h, cc, L)};
+  };
+  if (scheme === 'tonal') {
+    return [0.22, 0.38, 0.55, 0.72, 0.88].map((L, i) =>
+      mk(L, Math.max(0.03, seed.C * (1 - Math.abs(i - 2) * 0.18)), H));
+  }
+  if (scheme === 'warmcool') {
+    const opp = (H + 180) % 360;
+    return [mk(0.25, seed.C * 0.5, H), mk(0.45, seed.C * 0.9, H), mk(0.65, 0.02, H),
+            mk(0.5, seed.C * 0.8, opp), mk(0.8, seed.C * 0.35, opp)];
+  }
+  if (scheme === 'accent') {
+    return [mk(0.18, 0.015, H), mk(0.34, 0.025, H), mk(0.6, 0.03, H),
+            mk(0.88, 0.02, H), mk(0.62, Math.max(seed.C, 0.14), H)];
+  }
+  const a = (H + 330) % 360, b = (H + 30) % 360;
+  return [mk(0.28, seed.C * 0.7, a), mk(0.45, seed.C * 0.95, H), mk(0.62, seed.C * 0.8, b),
+          mk(0.78, seed.C * 0.5, a), mk(0.9, seed.C * 0.25, H)];
+}
+
+// Bumped whenever the colour picker changes, and shown in its heading. Two rounds
+// were lost to not knowing whether a restart had actually picked up a new build.
+const PICKER_BUILD = 7;
+
+// ── Pointer coordinates under CSS zoom ──────────────────────────────────
+// THE APP SETS CSS `zoom` ON <html> FOR THE FONT-SIZE SETTING, AND THAT BREAKS
+// POINTER MATHS. Chromium reports offsetX/offsetY in the UNZOOMED space while
+// clientWidth/clientHeight and getBoundingClientRect() are in the zoomed layout
+// space, so any coordinate computed by mixing them comes out inflated by the zoom
+// factor. The error is PROPORTIONAL TO DISTANCE FROM THE ORIGIN, so anything near
+// the top-left works and everything further away drifts — which reads as "it works
+// at the top and stops working lower down" rather than as a coordinate bug.
+//
+// Measured in the crop tool: at zoom 1.125, a click 810 units in registered at 921.
+//
+// This has now caused the same bug twice — unreachable crop handles, then a colour
+// picker that refused to sample the lower part of an image. It lives here, once, and
+// EVERY pointer-to-content calculation in the app must divide by it.
+function appZoom() {
+  const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--zoom'));
+  return (v && isFinite(v) && v > 0) ? v : 1;
+}
+
+// Where a click landed inside an element, as fractions of its box (0..1). Correct
+// under zoom, under scaling, and whether or not the page is scrolled.
+function pointerFraction(e, el) {
+  if (!el) return null;
+  const z = appZoom();
+  const ne = e.nativeEvent || e;
+  const w = el.clientWidth, h = el.clientHeight;
+  if (!w || !h) return null;
+  let ox = ne.offsetX, oy = ne.offsetY;
+  if (typeof ox !== 'number' || typeof oy !== 'number') {
+    // Fallback for events with no offset, measured the long way round. Still divided
+    // by zoom, for the same reason.
+    const r = el.getBoundingClientRect();
+    ox = (e.clientX - r.left); oy = (e.clientY - r.top);
+    return {fx: Math.min(1, Math.max(0, ox / r.width)), fy: Math.min(1, Math.max(0, oy / r.height)), z: z, ox: ox, oy: oy, w: Math.round(r.width), h: Math.round(r.height)};
+  }
+  ox = ox / z; oy = oy / z;
+  return {fx: Math.min(1, Math.max(0, ox / w)), fy: Math.min(1, Math.max(0, oy / h)), z: z, ox: Math.round(ox), oy: Math.round(oy), w: w, h: h};
+}
 
 // ── Timeline ────────────────────────────────────────────────────────────
 // Per-world event list, same scoping pattern as relationships/map_positions.
@@ -2745,6 +3186,15 @@ const TEMPLATE_FIELDS = [
 ];
 </script>
 <script type="text/babel">
+// ── Babel block 1 of 2 ──────────────────────────────────────────────
+// The Babel block is SPLIT because Babel standalone transforms each
+// text/babel script separately and deoptimises past ~500 KB per block,
+// at which point click handlers silently stop working app-wide. Two blocks of
+// ~245 KB each sit well under that. Top-level declarations in a classic script
+// share one global scope, so either block can call into the other — nothing runs
+// until ReactDOM.render at the very end.
+// Keep the render call in the LAST block. Rebalance if either nears 400 KB.
+
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 
 
@@ -3084,7 +3534,7 @@ function App() {
     // auto-link characters whose platform id matches companions list
     const companionIds = obj.companions || [];
     update(d => {
-      d.collections.push({id:obj.id||uuid(), world_id:worldId, name:obj.name||'Untitled', definition:obj.description||'', tags:obj.tags||[], fandom_tags:obj.fandom_tags||[], access_level:obj.access_level||'private', image:obj.image||null, companions:obj.companions||[], has_been_public:obj.has_been_public||false, very_nsfw:obj.very_nsfw||false, lorebook_display:obj.lorebook_display||'', posted_at:obj.posted_at||now(), updated_at:now(), hide_on_owner_profile:obj.hide_on_owner_profile||false});
+      d.collections.push({id:obj.id||uuid(), world_id:worldId, name:obj.name||'Untitled', definition:obj.description||'', tags:obj.tags||[], fandom_tags:obj.fandom_tags||[], access_level:obj.access_level||'private', image:obj.image||null, companions:obj.companions||[], has_been_public:obj.has_been_public||false, very_nsfw:obj.very_nsfw||false, lorebook_display:obj.lorebook_display||'none', posted_at:obj.posted_at||now(), updated_at:now(), hide_on_owner_profile:obj.hide_on_owner_profile||false});
       // link matching characters
       companionIds.forEach(cid => { const char = d.characters.find(c=>c.id===cid); if(char) { if(!char.collections) char.collections=[]; if(!char.collections.includes(obj.id)) char.collections.push(obj.id||uuid()); } });
     });
@@ -3461,7 +3911,32 @@ function MdField({value, onChange, style, placeholder, monospace}) {
   const [preview, setPreview] = useState(false);
   const taRef = React.useRef();
   const hlRef = React.useRef();
-  const hits = countHighlights(value);
+
+  // Typing is buffered locally and committed on a pause. update() runs structuredClone
+  // over the WHOLE data file, which at ~30 MB costs a visible freeze per keystroke — the
+  // character's long fields (card, full description, formatting) were close to unusable.
+  const [local, setLocal] = React.useState(value || '');
+  const timer = React.useRef();
+  const lastSent = React.useRef(value || '');
+  React.useEffect(() => {
+    if ((value || '') !== lastSent.current) { setLocal(value || ''); lastSent.current = value || ''; }
+  }, [value]);
+  const commit = (v) => { lastSent.current = v; onChange({target:{value:v}}); };
+  const push = (v, immediate) => {
+    setLocal(v);
+    clearTimeout(timer.current);
+    if (immediate) commit(v); else timer.current = setTimeout(() => commit(v), 400);
+  };
+  // Flush on unmount so navigating away mid-word cannot lose the last few characters.
+  const pending = React.useRef({local, lastSent, onChange});
+  pending.current = {local, lastSent, onChange};
+  React.useEffect(() => () => {
+    clearTimeout(timer.current);
+    const p = pending.current;
+    if (p.local !== p.lastSent.current) p.onChange({target:{value:p.local}});
+  }, []);
+
+  const hits = countHighlights(local);
 
   // The highlight is painted by a mirror div sitting BEHIND a transparent textarea.
   // A textarea cannot render formatting at all, and marks that are only visible in
@@ -3497,21 +3972,21 @@ function MdField({value, onChange, style, placeholder, monospace}) {
 
   const esc = (t) => String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   // Trailing newline keeps the mirror's height in step with the textarea's.
-  const painted = esc(value).replace(/==(?!\s)([^=\n]*[^=\s])==/g, '<mark class="hl-band">==$1==</mark>') + '\n';
+  const painted = esc(local).replace(/==(?!\s)([^=\n]*[^=\s])==/g, '<mark class="hl-band">==$1==</mark>') + '\n';
 
   const applyToggle = () => {
     const el = taRef.current;
     if(!el) return;
     const r = toggleHighlight(el.value, el.selectionStart, el.selectionEnd);
     if(!r) return;
-    onChange({target:{value:r.text}});
+    push(r.text, true); // a deliberate action — commit at once
     setTimeout(()=>{ try{ el.focus(); el.setSelectionRange(r.start, r.end); }catch(e){} }, 0);
   };
 
   const clearAll = () => {
     if(!hits) return;
     if(!window.confirm('Remove all '+hits+' highlight'+(hits===1?'':'s')+' from this field? The text itself is not changed.')) return;
-    onChange({target:{value: stripHighlights(value||'')}});
+    push(stripHighlights(local||''), true);
   };
 
   const onKey = (e) => {
@@ -3532,10 +4007,11 @@ function MdField({value, onChange, style, placeholder, monospace}) {
         </button>}
       </div>
       {preview
-        ? <div className="md-preview" style={style} dangerouslySetInnerHTML={{__html:renderMd(value)}}/>
+        ? <div className="md-preview" style={style} dangerouslySetInnerHTML={{__html:renderMd(local)}}/>
         : <div className="hl-wrap">
             <div ref={hlRef} className="hl-mirror editor-text" style={style} aria-hidden="true" dangerouslySetInnerHTML={{__html:painted}}/>
-            <textarea ref={taRef} className="editor-text hl-input" style={style} value={value||''} onChange={e=>{onChange(e);syncScroll();}}
+            <textarea ref={taRef} className="editor-text hl-input" style={style} value={local} onChange={e=>{push(e.target.value);syncScroll();}}
+              onBlur={()=>{clearTimeout(timer.current); if(local!==lastSent.current) commit(local);}}
               onScroll={syncScroll} onKeyDown={onKey} placeholder={placeholder}/>
           </div>
       }
@@ -3577,9 +4053,11 @@ function MacroReference() {
         <i className={`ti ${open?'ti-chevron-up':'ti-braces'}`}></i>{open?'Hide macros':'Macro reference'}
       </button>
       {open&&<div style={{marginTop:8,background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:'12px 14px',display:'flex',flexDirection:'column',gap:10}}>
-        {MACROS.map(({group,items})=>(
+        {MACROS.map(({group,items,note,tip})=>(
           <div key={group}>
             <div style={{fontSize:10,color:'var(--text3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:5}}>{group}</div>
+            {note&&<div style={{fontSize:10,color:'var(--text3)',lineHeight:1.55,marginBottom:6}}>{note}</div>}
+            {tip&&<div style={{fontSize:10,color:'var(--accent)',lineHeight:1.55,marginBottom:6}}>{tip}</div>}
             <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
               {items.map(([macro,desc])=>(
                 <button key={macro} onClick={()=>copy(macro)} title={desc} style={{background:copied===macro?'var(--accent-dim)':'var(--bg2)',border:copied===macro?'1px solid var(--accent2)':'1px solid var(--border)',color:copied===macro?'var(--accent)':'var(--text2)',padding:'3px 8px',borderRadius:4,fontSize:11,cursor:'pointer',fontFamily:'monospace',transition:'all 0.15s'}}>
@@ -3589,7 +4067,11 @@ function MacroReference() {
             </div>
           </div>
         ))}
-        <div style={{fontSize:10,color:'var(--text3)',marginTop:2,borderTop:'1px solid var(--border)',paddingTop:8}}>{'Click any macro to copy · Full aliases: {{user_name}} {{your_name}} | {{companion_name}} {{character}} | {{sub}} {{obj}} {{poss}} {{poss_p}} {{ref}} | {{singular?...}} {{s?...}}'}</div>
+        <div style={{fontSize:10,color:'var(--text3)',marginTop:2,borderTop:'1px solid var(--border)',paddingTop:8,lineHeight:1.6}}>
+          {'Click any macro to copy. Longer aliases, all equivalent to the short ones above: {{user_name}} {{your_name}} · {{companion_name}} {{character}} · {{sub}} {{obj}} {{poss}} {{poss_p}} {{ref}} · {{singular?a:b}}'}
+          <br/>
+          {'This is a reference, not the complete set — Saucepan accepts more than is listed here.'}
+        </div>
       </div>}
     </div>
   );
@@ -3762,7 +4244,10 @@ function CropTool() {
 
   const RATIOS = {'1:1':1, '3:4':3/4, '16:9':16/9, '4:1':4, 'free':null};
   const FILLS = [['blur','Blur'],['black','Black'],['white','White'],['transparent','None']];
-  const HANDLE = 10; // handle hit radius px
+  // Handle hit radius in CANVAS units, converted from screen pixels at hit time. A fixed
+  // canvas-space value was unusable once the stage grew larger than the image: a 1600-wide
+  // stage displayed at ~600px made a 10-unit handle under 4 real pixels to aim at.
+  const HANDLE_SCREEN_PX = 14;
 
   // Load image via file picker
   const loadFile = async () => {
@@ -3893,19 +4378,54 @@ function CropTool() {
     // Corner handles
     ctx.fillStyle = '#a78bfa';
     const handles=[[box.x,box.y],[box.x+box.w,box.y],[box.x,box.y+box.h],[box.x+box.w,box.y+box.h]];
-    for(let i=0;i<handles.length;i++){ctx.fillRect(handles[i][0]-5,handles[i][1]-5,10,10);}
+    // Draw handles at a constant SCREEN size for the same reason the hit test does.
+    const _s = cv.clientWidth ? (cv.width / cv.clientWidth) : 1;
+    const _h = 9 * _s;
+    for(let i=0;i<handles.length;i++){ctx.fillRect(handles[i][0]-_h/2,handles[i][1]-_h/2,_h,_h);}
   }, [img, box, zoom, fill]);
 
   // Map CSS mouse coords → canvas internal px
+  // offsetX/offsetY and clientWidth/clientHeight are all in the ELEMENT's own layout
+  // space, so this is immune to the CSS `zoom` the app sets on <html> for the font-size
+  // setting. getBoundingClientRect() and event.clientX do not reliably agree under CSS
+  // zoom in Chromium, which made the computed point land short — only the handle nearest
+  // the origin ever matched, so the box could be grabbed by its top-left corner and
+  // nowhere else.
+  // The app sets CSS `zoom` on <html> for the font-size setting. Under CSS zoom Chromium
+  // reports offsetX/offsetY in the UNZOOMED space while clientWidth/clientHeight are in
+  // the zoomed layout space, so every coordinate came out inflated by the zoom factor.
+  // Measured: at zoom 1.125 a click on a handle 810 units in registered at 921. The error
+  // is proportional to distance from the origin, which is why only the top-left handle
+  // ever matched and the other three were unreachable.
+  // appZoom now lives in the plain JS block, shared. See the comment there: the colour
+  // picker hit this same bug because it had its own coordinate maths.
   const cvPt = e => {
-    const rect = cvRef.current.getBoundingClientRect();
-    return { x:(e.clientX-rect.left)*(cvRef.current.width/rect.width), y:(e.clientY-rect.top)*(cvRef.current.height/rect.height) };
+    const cv = cvRef.current;
+    const z = appZoom();
+    const ox = (e.nativeEvent ? e.nativeEvent.offsetX : e.offsetX) / z;
+    const oy = (e.nativeEvent ? e.nativeEvent.offsetY : e.offsetY) / z;
+    return { x: ox * (cv.width / cv.clientWidth), y: oy * (cv.height / cv.clientHeight) };
   };
 
   const hitHandle = (x,y) => {
     if(!box) return null;
     const corners = [{cx:box.x,cy:box.y,t:'tl'},{cx:box.x+box.w,cy:box.y,t:'tr'},{cx:box.x,cy:box.y+box.h,t:'bl'},{cx:box.x+box.w,cy:box.y+box.h,t:'br'}];
-    for(let i=0;i<corners.length;i++){if(Math.abs(x-corners[i].cx)<HANDLE&&Math.abs(y-corners[i].cy)<HANDLE)return corners[i].t;}
+    // Convert the screen-pixel target into canvas units using the current display scale.
+    const cv = cvRef.current;
+    const scale = (cv && cv.clientWidth) ? (cv.width / cv.clientWidth) : 1;
+    const H = HANDLE_SCREEN_PX * scale;
+    // NEAREST corner within range, not the first one found. The hit radius scales with the
+    // stage, so on a large stage several corners are all "within range" of one click and
+    // returning the first match meant top-left always won — the other three handles were
+    // unreachable. Also cap the radius at a quarter of the box so handles cannot overlap.
+    const cap = Math.max(8, Math.min(box.w, box.h) / 4);
+    const R = Math.min(H, cap);
+    let best = null, bestD = Infinity;
+    for(let i=0;i<corners.length;i++){
+      const ddx = Math.abs(x-corners[i].cx), ddy = Math.abs(y-corners[i].cy);
+      if(ddx<R && ddy<R){ const d = ddx*ddx + ddy*ddy; if(d < bestD){ bestD = d; best = corners[i].t; } }
+    }
+    if(best) return best;
     if(x>box.x&&x<box.x+box.w&&y>box.y&&y<box.y+box.h) return 'move';
     return null;
   };
@@ -3983,7 +4503,11 @@ function CropTool() {
   const statusStyle = {fontSize:11,marginTop:4,color:status.startsWith('\u2713')?'var(--green)':'var(--red)'};
   const ratioGrid = {display:'flex',gap:5,flexWrap:'wrap'};
   const ratioBtn = {flex:1,justifyContent:'center',fontSize:11};
-  const cvStyle = {width:'100%',display:'block',cursor:drag?'grabbing':'crosshair'};
+  // height:'auto' is required. A canvas with only a CSS width keeps its ATTRIBUTE height
+  // in CSS pixels, so the horizontal and vertical display scales diverge — and they
+  // diverge most when zoomed out, because that is when the stage grows widest relative
+  // to the image. Mouse coordinates then map correctly on one axis and not the other.
+  const cvStyle = {width:'100%',height:'auto',display:'block',cursor:drag?'grabbing':'crosshair'};
   const loadBtnStyle = {justifyContent:'center'};
   const zoomRow = {display:'flex',alignItems:'center',gap:8,marginTop:10};
   const zoomLbl = {fontSize:10,color:'var(--text3)',minWidth:34,textAlign:'right'};
@@ -4048,6 +4572,362 @@ function CropTool() {
       )}
     </div>
   );
+}
+
+
+// Shared image loading for the two colour tools: drop, paste, or pick a file.
+// Returns a data URL. Nothing is uploaded — every pixel is read locally on a canvas.
+function useImageSource() {
+  const [src, setSrc] = React.useState(null);
+  const [drop, setDrop] = React.useState(false);
+  const [status, setStatus] = React.useState('');
+
+  const fromFile = (file) => {
+    if (!file || !file.type.startsWith('image/')) { setStatus('That is not an image.'); return; }
+    const fr = new FileReader();
+    fr.onload = () => { setSrc(fr.result); setStatus(''); };
+    fr.readAsDataURL(file);
+  };
+  const onDrop = (e) => { e.preventDefault(); setDrop(false); fromFile([...e.dataTransfer.files][0]); };
+  const paste = async () => {
+    const res = await window.lorekeeper.pasteImage();
+    if (!res || !res.base64) { setStatus('Nothing on the clipboard — copy an image first.'); return; }
+    setSrc(res.base64); setStatus('');
+  };
+  const choose = async () => {
+    const res = await window.lorekeeper.importImage({});
+    if (res && res.base64) { setSrc(res.base64); setStatus(''); }
+  };
+  return { src, setSrc, drop, setDrop, status, setStatus, onDrop, paste, choose, fromFile };
+}
+
+function ColourDropZone({img, children}) {
+  const z = {border: '1.5px dashed ' + (img.drop ? 'var(--accent)' : 'var(--border2)'),
+    borderRadius: 'var(--r)', padding: 14, textAlign: 'center', marginBottom: 10,
+    background: img.drop ? 'rgba(124,58,237,0.06)' : 'transparent'};
+  return <div style={z}
+    onDragOver={e => { e.preventDefault(); img.setDrop(true); }}
+    onDragLeave={() => img.setDrop(false)}
+    onDrop={img.onDrop}>
+    {children}
+  </div>;
+}
+
+// Copy-on-click swatch. Shows the hex and a plain name, because a column of hex
+// codes tells you nothing about what the colours actually are.
+function Swatch({hex, name, note, onCopy}) {
+  const [copied, setCopied] = React.useState(false);
+  const click = () => {
+    navigator.clipboard.writeText(hex).then(() => {
+      setCopied(true); setTimeout(() => setCopied(false), 900);
+      if (onCopy) onCopy(hex);
+    }).catch(() => {});
+  };
+  return <button onClick={click} title={'Copy ' + hex}
+    style={{display:'flex',alignItems:'center',gap:10,width:'100%',textAlign:'left',padding:'6px 8px',
+      background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--r)',cursor:'pointer'}}>
+    <span style={{width:28,height:28,borderRadius:4,background:hex,border:'1px solid var(--border2)',flexShrink:0}}></span>
+    <span style={{flex:1,minWidth:0}}>
+      <span style={{display:'block',fontSize:12,fontFamily:'monospace',color:'var(--text)'}}>{copied ? 'copied' : hex}</span>
+      <span style={{display:'block',fontSize:10,color:'var(--text3)'}}>{name}{note ? ' · ' + note : ''}</span>
+    </span>
+  </button>;
+}
+
+// ── Pick from image ──────────────────────────────────────────────────────
+// Click anywhere on the picture to take the colour there. Samples a small square
+// rather than one pixel, because a single pixel in a JPEG is often compression
+// noise rather than the colour you are actually looking at.
+function ImageColourTool() {
+  const img = useImageSource();
+  // DISPLAY IS AN <img>, SAMPLING IS AN OFFSCREEN CANVAS, AND THE MARKER IS A DIV.
+  //
+  // This started as one canvas doing all three, and it cost three rounds of bugs that
+  // were all the same bug: a canvas is sized by its width/height attributes AND by CSS,
+  // and when those disagree the drawn picture and the clickable area are not the same
+  // rectangle. Clicks then land somewhere other than where they look like they landed,
+  // which is exactly what "it does not pick below this line" was.
+  //
+  // An <img> has none of that ambiguity - it always displays its whole self, scaled
+  // proportionally. So the click is measured against the IMAGE's own box as a fraction
+  // of its width and height, and that fraction is multiplied into the sampling canvas.
+  // No shared sizing, nothing to disagree about.
+  //
+  // The marker is a positioned element rather than something painted into the bitmap,
+  // so it can never be sampled by the next click and can never be lost to a re-render.
+  const imgRef = React.useRef(null);
+  const sampleRef = React.useRef(null);   // offscreen canvas, never shown
+  const [picked, setPicked] = React.useState(null);
+  const [history, setHistory] = React.useState([]);
+  const [radius, setRadius] = React.useState(2);
+  const [mark, setMark] = React.useState(null);  // {fx, fy} as fractions, 0..1
+  const [err, setErr] = React.useState('');
+  const [diag, setDiag] = React.useState(null);
+
+  const S = {box:{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:12},
+    label:{fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:6,display:'block'}};
+
+  // NO LOAD-STATE FLAG. The sampler is built on demand, from whatever the <img>
+  // currently is, and cached against the src it was built from.
+  //
+  // The previous version tracked a `ready` flag set by onLoad. React sets src during
+  // render and attaches onLoad at the same moment, so an image that decodes instantly -
+  // a data URL, or anything cached - can finish before the handler is listening. The
+  // event then fires into nothing and the flag never flips, leaving the tool insisting
+  // the image is loading while it is plainly on screen. Asking the element what it is
+  // right now, at the moment it matters, has no such race to lose.
+  const sampler = () => {
+    const el = imgRef.current;
+    if (!el) return null;
+    const cached = sampleRef.current;
+    if (cached && cached._forSrc === img.src) return cached;
+    if (!el.naturalWidth || !el.naturalHeight) return null;
+    const cap = 1600;
+    const scale = Math.min(1, cap / Math.max(el.naturalWidth, el.naturalHeight));
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(el.naturalWidth * scale));
+    cv.height = Math.max(1, Math.round(el.naturalHeight * scale));
+    try { cv.getContext('2d', {willReadFrequently:true}).drawImage(el, 0, 0, cv.width, cv.height); }
+    catch (ex) { setErr('The picture could not be prepared: ' + ex.message); return null; }
+    cv._forSrc = img.src;
+    sampleRef.current = cv;
+    return cv;
+  };
+
+  React.useEffect(() => {
+    sampleRef.current = null;
+    setPicked(null); setMark(null); setDiag(null); setErr('');
+  }, [img.src]);
+
+  const pick = (e) => {
+    const el = imgRef.current;
+    if (!el) { setErr('The image element is missing.'); return; }
+    const cv = sampler();
+    // A failure here reports the ACTUAL state rather than a guess at it. Two rounds
+    // were spent unable to tell "the build did not land" from "the image really has
+    // no size", because both produced the same sentence.
+    if (!cv) {
+      setErr('Could not read the picture. complete=' + el.complete +
+             ' size=' + el.naturalWidth + '×' + el.naturalHeight +
+             ' displayed=' + el.clientWidth + '×' + el.clientHeight);
+      return;
+    }
+    // Through the shared helper, which divides out the app's CSS zoom. Doing this by
+    // hand with getBoundingClientRect and clientX is what made every click below the
+    // top of the picture land somewhere other than where it looked.
+    const pt = pointerFraction(e, el);
+    if (!pt) { setErr('The picture has no size on screen yet.'); return; }
+    const fx = pt.fx, fy = pt.fy;
+    const x = Math.min(cv.width - 1, Math.max(0, Math.round(fx * cv.width)));
+    const y = Math.min(cv.height - 1, Math.max(0, Math.round(fy * cv.height)));
+
+    const r = radius;
+    const x0 = Math.max(0, x - r), y0 = Math.max(0, y - r);
+    const x1 = Math.min(cv.width - 1, x + r), y1 = Math.min(cv.height - 1, y + r);
+    const w = x1 - x0 + 1, h = y1 - y0 + 1;
+
+    let d;
+    try { d = cv.getContext('2d', {willReadFrequently:true}).getImageData(x0, y0, w, h).data; }
+    catch (ex) { setErr('The picture could not be sampled: ' + ex.message); return; }
+
+    // Averaged in LINEAR light. sRGB values are gamma-encoded, so their arithmetic mean
+    // is not the visual mean - it drags everything toward dark mud. Red and green
+    // average to #808000 in sRGB and to #bcbc00 done properly. A flat area is identical
+    // either way, which is why one pixel looked right while the squares came back brown.
+    let R = 0, G = 0, B = 0, n = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 128) continue;
+      R += srgbToLinear(d[i]); G += srgbToLinear(d[i + 1]); B += srgbToLinear(d[i + 2]); n++;
+    }
+    setDiag({cw: cv.width, ch: cv.height, rw: pt.w, rh: pt.h, ox: pt.ox, oy: pt.oy, z: pt.z, x: x, y: y, n: n});
+    if (!n) { setErr('Nothing to sample there — that area is fully transparent.'); return; }
+    R = linearToSrgb(R / n); G = linearToSrgb(G / n); B = linearToSrgb(B / n);
+
+    const hex = rgbToHex(R, G, B);
+    const o = rgbToOklch(R, G, B);
+    const entry = {hex, name: hueName(o.h, o.C, o.L), L: o.L, C: o.C, h: o.h};
+    setErr('');
+    setMark({fx, fy});
+    setPicked(entry);
+    setHistory(prev => [entry, ...prev.filter(p => p.hex !== hex)].slice(0, 8));
+  };
+
+  let body;
+  if (!img.src) {
+    body = <ColourDropZone img={img}>
+      <div style={{fontSize:12,color:'var(--text3)',marginBottom:8}}>Drop an image here</div>
+      <div style={{display:'flex',gap:6,justifyContent:'center'}}>
+        <button className="btn" style={{fontSize:11}} onClick={img.choose}>Choose file</button>
+        <button className="btn" style={{fontSize:11}} onClick={img.paste}>Paste</button>
+      </div>
+    </ColourDropZone>;
+  } else {
+    body = <React.Fragment>
+      <div style={{position:'relative',display:'inline-block',maxWidth:'100%',lineHeight:0}}>
+        <img ref={imgRef} src={img.src} alt="" onClick={pick} draggable={false}
+          style={{display:'block',maxWidth:'100%',height:'auto',borderRadius:'var(--r)',border:'1px solid var(--border)',cursor:'crosshair'}}/>
+        {mark && <span style={{position:'absolute',left:(mark.fx*100)+'%',top:(mark.fy*100)+'%',
+          width:16,height:16,marginLeft:-8,marginTop:-8,borderRadius:'50%',
+          border:'2px solid #fff',boxShadow:'0 0 0 2px rgba(0,0,0,0.75)',pointerEvents:'none'}}></span>}
+      </div>
+      <div style={{fontSize:10,color:'var(--text3)',marginTop:6}}>Click anywhere on the picture to take that colour.</div>
+      {diag && <div style={{fontSize:10,color:'var(--text3)',marginTop:4,fontFamily:'monospace'}}>
+        shown {diag.rw}×{diag.rh} · zoom {diag.z} · at {diag.ox},{diag.oy} → pixel {diag.x},{diag.y} of {diag.cw}×{diag.ch} · {diag.n} read
+      </div>}
+      <div style={{display:'flex',gap:6,alignItems:'center',marginTop:8,flexWrap:'wrap'}}>
+        <span style={{fontSize:10,color:'var(--text3)'}}>Sample size</span>
+        {[0,2,5].map(r => <button key={r} className={'btn' + (radius===r?' primary':'')} style={{fontSize:10,padding:'2px 8px'}}
+          onClick={() => setRadius(r)}>{r===0?'1 pixel':(r*2+1)+'×'+(r*2+1)}</button>)}
+        <button className="btn" style={{fontSize:10,padding:'2px 8px',marginLeft:'auto'}}
+          onClick={() => {img.setSrc(null);}}>New image</button>
+      </div>
+      <div style={{fontSize:10,color:'var(--text3)',marginTop:6,lineHeight:1.5}}>
+        A single pixel in a compressed image is often noise rather than the colour you are looking at, so averaging a small square is usually truer to what you see.
+      </div>
+    </React.Fragment>;
+  }
+
+  return <div style={S.box}>
+    <label style={S.label}>Pick from image <span style={{opacity:0.5,fontWeight:400}}>· build {PICKER_BUILD}</span></label>
+    {body}
+    {err && <div style={{fontSize:11,color:'var(--amber)',marginTop:6}}>{err}</div>}
+    {img.status && <div style={{fontSize:11,color:'var(--amber)',marginTop:6}}>{img.status}</div>}
+    {picked && <div style={{marginTop:10}}>
+      <Swatch hex={picked.hex} name={picked.name} note={'L ' + picked.L.toFixed(2) + ' · C ' + picked.C.toFixed(2)}/>
+    </div>}
+    {history.length > 1 && <div style={{marginTop:8}}>
+      <div style={{fontSize:10,color:'var(--text3)',marginBottom:4}}>Recent</div>
+      <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+        {history.map(p => <button key={p.hex} title={p.hex + ' · ' + p.name}
+          onClick={() => navigator.clipboard.writeText(p.hex).catch(()=>{})}
+          style={{width:22,height:22,borderRadius:4,background:p.hex,border:'1px solid var(--border2)',cursor:'pointer',padding:0}}></button>)}
+      </div>
+    </div>}
+  </div>;
+}
+
+// Shown in About. Its own component so the Settings page gains no state for it, and
+// read from package.json through Electron rather than written out a second time here -
+// a hardcoded copy would be wrong the first time the version changed and nobody would
+// notice, because nothing checks it.
+function AppVersion() {
+  const [v, setV] = React.useState('');
+  React.useEffect(() => {
+    if (!window.lorekeeper.getAppVersion) return;
+    window.lorekeeper.getAppVersion().then(setV).catch(() => {});
+  }, []);
+  if (!v) return null;
+  return <div>Version {v}</div>;
+}
+
+function PaletteTool() {
+  const img = useImageSource();
+  const canvasRef = React.useRef(null);
+  const [mode, setMode] = React.useState('image');
+  const [seed, setSeed] = React.useState('#5a3c78');
+  const [scheme, setScheme] = React.useState('tonal');
+  const [count, setCount] = React.useState(5);
+  const [fromImage, setFromImage] = React.useState([]);
+
+  const S = {box:{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:12},
+    label:{fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:6,display:'block'}};
+
+  React.useEffect(() => {
+    if (!img.src) { setFromImage([]); return; }
+    const el = new Image();
+    el.onload = () => {
+      // Downscaled before reading pixels. A full-size portrait is millions of
+      // pixels and tells you nothing a 120px version does not.
+      const cv = canvasRef.current || document.createElement('canvas');
+      const scale = Math.min(1, 120 / Math.max(el.width, el.height));
+      cv.width = Math.max(1, Math.round(el.width * scale));
+      cv.height = Math.max(1, Math.round(el.height * scale));
+      const ctx = cv.getContext('2d', {willReadFrequently:true});
+      ctx.drawImage(el, 0, 0, cv.width, cv.height);
+      try {
+        const d = ctx.getImageData(0, 0, cv.width, cv.height).data;
+        setFromImage(extractPalette(d, count).map(c => ({
+          hex: oklchToHex(c.L, c.C, c.h), name: hueName(c.h, c.C, c.L), L: c.L, C: c.C, n: c.n
+        })));
+      } catch (e) { setFromImage([]); }
+    };
+    el.src = img.src;
+  }, [img.src, count]);
+
+  const built = mode === 'seed' ? buildPalette(seed, scheme) : [];
+  const shown = mode === 'image' ? fromImage : built;
+  const copyAll = () => {
+    if (!shown.length) return;
+    navigator.clipboard.writeText(shown.map(c => c.hex).join(', ')).catch(() => {});
+  };
+
+  let input;
+  if (mode === 'image') {
+    input = !img.src
+      ? <ColourDropZone img={img}>
+          <div style={{fontSize:12,color:'var(--text3)',marginBottom:8}}>Drop an image to pull its colours</div>
+          <div style={{display:'flex',gap:6,justifyContent:'center'}}>
+            <button className="btn" style={{fontSize:11}} onClick={img.choose}>Choose file</button>
+            <button className="btn" style={{fontSize:11}} onClick={img.paste}>Paste</button>
+          </div>
+        </ColourDropZone>
+      : <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:10}}>
+          <img src={img.src} alt="" style={{width:56,height:56,objectFit:'cover',borderRadius:'var(--r)',border:'1px solid var(--border)'}}/>
+          <button className="btn" style={{fontSize:10,padding:'2px 8px'}} onClick={() => img.setSrc(null)}>New image</button>
+        </div>;
+  } else {
+    const schemeInfo = PALETTE_SCHEMES.find(x => x.id === scheme);
+    input = <div style={{marginBottom:10}}>
+      <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:8}}>
+        <input type="color" value={/^#[0-9a-f]{6}$/i.test(seed) ? seed : '#5a3c78'}
+          onChange={e => setSeed(e.target.value)}
+          style={{width:36,height:30,padding:0,border:'1px solid var(--border)',borderRadius:4,background:'var(--bg2)',cursor:'pointer'}}/>
+        <input type="text" value={seed} onChange={e => setSeed(e.target.value)} placeholder="#5a3c78"
+          style={{flex:1,background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',fontFamily:'monospace'}}/>
+      </div>
+      <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+        {PALETTE_SCHEMES.map(s => <button key={s.id} className={'btn' + (scheme===s.id?' primary':'')}
+          style={{fontSize:10,padding:'3px 8px'}} onClick={() => setScheme(s.id)}>{s.label}</button>)}
+      </div>
+      {schemeInfo && <div style={{fontSize:10,color:'var(--text3)',marginTop:6,lineHeight:1.5}}>{schemeInfo.hint}</div>}
+    </div>;
+  }
+
+  return <div style={S.box}>
+    <label style={S.label}>Palette</label>
+    <div style={{display:'flex',gap:4,marginBottom:10}}>
+      <button className={'btn' + (mode==='image'?' primary':'')} style={{fontSize:11,flex:1,justifyContent:'center'}}
+        onClick={() => setMode('image')}>From an image</button>
+      <button className={'btn' + (mode==='seed'?' primary':'')} style={{fontSize:11,flex:1,justifyContent:'center'}}
+        onClick={() => setMode('seed')}>From one colour</button>
+    </div>
+    {input}
+    <canvas ref={canvasRef} style={{display:'none'}}/>
+    {mode==='image' && img.src && <div style={{display:'flex',gap:4,alignItems:'center',marginBottom:8}}>
+      <span style={{fontSize:10,color:'var(--text3)'}}>How many</span>
+      {[3,5,8].map(n => <button key={n} className={'btn' + (count===n?' primary':'')}
+        style={{fontSize:10,padding:'2px 8px'}} onClick={() => setCount(n)}>{n}</button>)}
+    </div>}
+    {shown.length > 0 && <React.Fragment>
+      <div style={{display:'flex',height:34,borderRadius:'var(--r)',overflow:'hidden',border:'1px solid var(--border)',marginBottom:8}}>
+        {shown.map(c => <div key={c.hex} title={c.hex} style={{flex:1,background:c.hex}}></div>)}
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:4}}>
+        {shown.map(c => <Swatch key={c.hex} hex={c.hex} name={c.name}
+          note={'L ' + c.L.toFixed(2) + (c.C!==undefined ? ' · C ' + c.C.toFixed(2) : '')}/>)}
+      </div>
+      <button className="btn" style={{fontSize:11,marginTop:8,width:'100%',justifyContent:'center'}} onClick={copyAll}>
+        <i className="ti ti-copy"></i>Copy all
+      </button>
+    </React.Fragment>}
+    {mode==='seed' && !shown.length && <div style={{fontSize:11,color:'var(--amber)'}}>
+      That is not a colour. Use six hex digits, for example #5a3c78.
+    </div>}
+    {img.status && <div style={{fontSize:11,color:'var(--amber)',marginTop:6}}>{img.status}</div>}
+    <div style={{fontSize:10,color:'var(--text3)',marginTop:8,lineHeight:1.5}}>
+      Built in OKLCH, where equal lightness really does look equally bright. In HSL, yellow and blue are both {'"'}50% lightness{'"'} while one reads more than twice as bright as the other — which is why rotating hue alone tends to produce palettes that feel unbalanced.
+    </div>
+  </div>;
 }
 
 function PasteAndSaveTool() {
@@ -4480,6 +5360,8 @@ function ToolsPanel({data, currentChar}) {
     {id:'img-prompt',icon:'ti-sparkles',label:'Img Prompt'},
     {id:'uuid',icon:'ti-id',label:'Img UUID'},
     {id:'roll',icon:'ti-dice-5',label:'Roll'},
+    {id:'imgcolor',icon:'ti-color-picker',label:'Pick from image'},
+    {id:'palette',icon:'ti-color-swatch',label:'Palette'},
   ];
 
   const S={box:{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:12},label:{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10,display:'block'},input:{width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:13,outline:'none'}};
@@ -4584,6 +5466,8 @@ function ToolsPanel({data, currentChar}) {
       {tool==='img-prompt'&&<ImagePromptTool currentChar={currentChar} data={data}/>}
       {tool==='uuid'&&<UuidExtractTool/>}
       {tool==='roll'&&<RollTool/>}
+      {tool==='imgcolor'&&<ImageColourTool/>}
+      {tool==='palette'&&<PaletteTool/>}
 
       {tool==='chinese-zodiac'&&<ChineseZodiacTool/>}
       {tool==='hockey'&&<HockeyTool/>}
@@ -4777,7 +5661,7 @@ function GalleryItem({src, label, sublabel, path, onViewFull, verySus, galleryOn
           <div style={{fontSize:10,color:'var(--text)',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{label}</div>
           {sublabel&&<div style={{fontSize:9,color:'var(--text3)'}}>{sublabel}</div>}
           {dims&&<div style={{fontSize:9,color:'var(--accent)'}}>{dims.w} × {dims.h}px</div>}
-          {path&&<div style={{fontSize:8,color:'var(--text3)',fontFamily:'monospace',wordBreak:'break-all',lineHeight:1.4,cursor:'pointer'}} title="Click to copy" onClick={e=>{e.stopPropagation();navigator.clipboard.writeText('I:\\Lorekeeper\\'+path.replace(/\//g,'\\'));}}>{'I:\\Lorekeeper\\'+path.replace(/\//g,'\\')}</div>}
+          {path&&<div style={{fontSize:8,color:'var(--text3)',fontFamily:'monospace',wordBreak:'break-all',lineHeight:1.4,cursor:'pointer'}} title="Click to copy" onClick={e=>{e.stopPropagation();navigator.clipboard.writeText(fullImagePath(path));}}>{fullImagePath(path)}</div>}
           {ext&&<div style={{fontSize:9,color:'var(--text3)'}}>{ext}</div>}
           {onViewFull&&<button onClick={e=>{e.stopPropagation();onViewFull();}} style={{marginTop:4,background:'rgba(167,139,250,0.2)',border:'1px solid var(--accent)',color:'var(--accent)',borderRadius:3,padding:'2px 8px',fontSize:9,cursor:'pointer'}}>View full</button>}
         </div>
@@ -5088,25 +5972,26 @@ function TimelinePanel({world, data, update, worldChars, worldLores, setSelected
     a.order = bo; b.order = ao;
   });
 
-  const addLane = () => {
-    const name = window.prompt('Name this strand (e.g. a couple, a faction):');
-    if(!name || !name.trim()) return;
-    update(d => {
-      if(!d.timeline_lanes) d.timeline_lanes = {};
-      d.timeline_lanes[world.id] = [...((d.timeline_lanes||{})[world.id] || ['Main']), name.trim()];
-    });
-  };
+  // Inline editing, NOT window.prompt — Chromium removed prompt() and Electron never
+  // reinstated it, so the call is silently ignored in the renderer and the button does
+  // nothing at all. alert() and confirm() still work; prompt() does not. Never use it here.
+  const [laneEdit, setLaneEdit] = React.useState(null); // {i: index | 'new', text}
 
-  const renameLane = (i) => {
-    const name = window.prompt('Rename strand:', lanes[i]);
-    if(!name || !name.trim()) return;
+  const commitLane = () => {
+    const name = (laneEdit && laneEdit.text || '').trim();
+    if(!name) { setLaneEdit(null); return; }
+    const idx = laneEdit.i;
     update(d => {
       if(!d.timeline_lanes) d.timeline_lanes = {};
       const arr = [...((d.timeline_lanes||{})[world.id] || ['Main'])];
-      arr[i] = name.trim();
+      if(idx === 'new') arr.push(name); else arr[idx] = name;
       d.timeline_lanes[world.id] = arr;
     });
+    setLaneEdit(null);
   };
+
+  const addLane = () => setLaneEdit({i:'new', text:''});
+  const renameLane = (i) => setLaneEdit({i, text: lanes[i]});
 
   const toggleChar = (cid) => setDraft(dr => ({...dr, charIds: dr.charIds.includes(cid) ? dr.charIds.filter(x=>x!==cid) : [...dr.charIds, cid]}));
   const toggleLore = (lid, ci) => setDraft(dr => {
@@ -5151,7 +6036,8 @@ function TimelinePanel({world, data, update, worldChars, worldLores, setSelected
         return <div key={e.id} className="tl-row">
           <div className="tl-when" style={{color}}>{e.when || '—'}</div>
           <div className="tl-spine"><span className="tl-dot" style={{background:color,borderColor:color}}></span></div>
-          <div className="tl-card" style={{borderLeft:'2px solid '+color, marginLeft: (e.lane===null?0:laneIdx*18)}}>
+          <div className="tl-lanes" style={{gridTemplateColumns:'repeat('+Math.max(1,lanes.length)+', minmax(0, 1fr))'}}>
+          <div className={'tl-card'+(e.lane===null?' tl-span':'')} style={{borderLeft:'2px solid '+color, gridColumn: e.lane===null?('1 / -1'):String(laneIdx+1)}}>
             <div className="tl-card-top">
               <span className="tl-label">{e.label}</span>
               <span className="tl-lane" style={{color}}>{e.lane===null?'all strands':(lanes[laneIdx]||'Main')}</span>
@@ -5165,6 +6051,7 @@ function TimelinePanel({world, data, update, worldChars, worldLores, setSelected
               {chars.map(c=><button key={c.id} className="tl-chip" onClick={()=>setSelectedChar(c.id)}>{c.display_name||c.name}</button>)}
               {refs.map((r,i)=><span key={i} className="tl-chip tl-chip-lore">{r.name}{r.ch&&r.ch.title?' · '+r.ch.title:''}</span>)}
             </div>}
+          </div>
           </div>
         </div>;
       })}
@@ -5224,6 +6111,21 @@ function TimelinePanel({world, data, update, worldChars, worldLores, setSelected
         {events.length>0&&<button className="btn" style={{fontSize:12}} onClick={copyMarkdown}><i className="ti ti-copy"></i>Copy as markdown</button>}
         <span style={{fontSize:11,color:'var(--text3)',marginLeft:'auto'}}>{visible.length} event{visible.length===1?'':'s'}</span>
       </div>
+      {laneEdit&&<div style={{display:'flex',gap:6,alignItems:'center',marginBottom:12}}>
+        <input autoFocus value={laneEdit.text} onChange={e=>setLaneEdit({...laneEdit, text:e.target.value})}
+          onKeyDown={e=>{if(e.key==='Enter')commitLane();if(e.key==='Escape')setLaneEdit(null);}}
+          placeholder="Strand name — e.g. a couple, a faction"
+          style={{flex:1,background:'var(--bg3)',border:'1px solid var(--accent2)',color:'var(--text)',padding:'5px 9px',borderRadius:'var(--r)',fontSize:12,outline:'none'}}/>
+        <button className="btn primary" style={{fontSize:11,padding:'3px 10px'}} onClick={commitLane}>Save</button>
+        <button className="btn" style={{fontSize:11,padding:'3px 10px'}} onClick={()=>setLaneEdit(null)}>Cancel</button>
+      </div>}
+      {lanes.length>1&&<div className="tl-row" style={{marginBottom:2}}>
+        <div className="tl-when"></div>
+        <div style={{width:18,flexShrink:0}}></div>
+        <div className="tl-lanes" style={{gridTemplateColumns:'repeat('+lanes.length+', minmax(0, 1fr))'}}>
+          {lanes.map((ln,i)=><div key={i} className="tl-colhead" style={{color:TIMELINE_LANE_COLORS[i%TIMELINE_LANE_COLORS.length]}}>{ln}</div>)}
+        </div>
+      </div>}
       {lanes.length>1&&<div style={laneRow}>
         {lanes.map((ln,i)=><button key={i} className="tl-lane-chip" style={{borderColor:TIMELINE_LANE_COLORS[i%TIMELINE_LANE_COLORS.length],color:TIMELINE_LANE_COLORS[i%TIMELINE_LANE_COLORS.length]}} onClick={()=>renameLane(i)} title="Rename strand">{ln}</button>)}
       </div>}
@@ -6825,11 +7727,20 @@ function CollectionCharPicker({coll,data,update,setSelectedChar}) {
   );
 }
 
+</script>
+<script type="text/babel">
+// ── Babel block 2 of 2 — see block 1 for why this is split ──
 function CollectionPicker({charData,data,updChar,update}) {
   const [search,setSearch]=useState('');
   const q=search.toLowerCase();
   const allColls=data.collections.filter(c=>!search||c.name.toLowerCase().includes(q));
-  const grouped=data.worlds.reduce((acc,w)=>{
+  // The character's own world goes first — it is the one being looked for almost every
+  // time. The rest follow the sidebar's order rather than raw array order, so the list
+  // matches how worlds are arranged everywhere else. Previously this walked data.worlds
+  // unsorted, which put the newest world last no matter whose character it was.
+  const ownId = charData.world_id;
+  const worldOrder = sortedWorlds(data).slice().sort((a,b)=>(a.id===ownId?-1:0)-(b.id===ownId?-1:0));
+  const grouped=worldOrder.reduce((acc,w)=>{
     const wColls=allColls.filter(c=>c.world_id===w.id);
     if(wColls.length>0) acc.push({world:w,colls:wColls});
     return acc;
@@ -7683,7 +8594,10 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                 {(charData.portraits||[]).length < 10 && (
                   <div style={{display:'flex',flexDirection:'column',gap:6}}>
                     <button className="btn" style={{aspectRatio:'3/4',width:'100%',flexDirection:'column',gap:6,justifyContent:'center',border:'1.5px dashed var(--border2)'}} onClick={async()=>{
-                      const dp=await window.lorekeeper.getDataPath();
+                      // getDataDir, not getDataPath — the latter returns the data FILE, and
+                      // appending folders to it produced a path that could never exist, so
+                      // the dialog silently fell back to the last folder Windows had open.
+                      const dp=await window.lorekeeper.getDataDir();
                       const cDir=charData.companion_folder?dp+'\\Companions\\'+charData.companion_folder:dp+'\\Companions';
                       const imgs=await window.lorekeeper.importImages({defaultPath:cDir});
                       if(!imgs||!imgs.length) return;
@@ -8205,7 +9119,7 @@ function CollSettingsTab({col,setCol,data,world,update,openChar,setModal,onBack}
       <div className="field-block">
         <label>Auto-save filename <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11}}>— saves to Collections{String.fromCharCode(92)}</span></label>
         <input value={col.collection_filename||''} onChange={e=>setCol(c=>{c.collection_filename=e.target.value||null;})} placeholder="e.g. Guideverse.json"/>
-        {col.collection_filename?<div className="field-hint">{["I:","Lorekeeper","Collections",col.collection_filename].join(BS)}</div>:null}
+        {col.collection_filename?<div className="field-hint">{["Collections",col.collection_filename].join(BS)}</div>:null}
       </div>
       <CollectionCharPicker coll={col} data={data} update={update} setSelectedChar={openChar}/>
       <div style={{paddingTop:8,borderTop:'1px solid var(--border)'}}>
@@ -8787,7 +9701,7 @@ function NotesBackupPanel({data}) {
 }
 
 
-function GitSyncPanel() {
+function GitSyncPanel({data}) {
   const [info, setInfo] = React.useState(null);
   const [busy, setBusy] = React.useState(false);
   const [res, setRes] = React.useState(null);
@@ -8816,6 +9730,20 @@ function GitSyncPanel() {
   };
 
   const openBackup = () => { window.lorekeeper.openBackupFolder(); };
+  const openCloud = () => { window.lorekeeper.openBackupFolder('cloud'); };
+
+  // The API route replaces this panel entirely rather than sitting beside it.
+  // Two backup panels on one page, each with its own Sync button and its own
+  // idea of when the last successful push was, is how someone ends up trusting
+  // the one that is not running.
+  //
+  // Declared AFTER every hook above, never inside a conditional - an early
+  // return placed above them would change the hook order between renders.
+  const settings = (data && data.settings) || {};
+  const prov = settings.backup_provider || 'none';
+  if (prov === 'github-api' || prov === 'folder' || prov === 'rclone' || prov === 'none') {
+    return <GitHubSyncPanel settings={settings}/>;
+  }
 
   const wrapStyle = { marginTop: 24, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--rl)', padding: 16 };
   const hdrStyle = { fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 };
@@ -8828,11 +9756,16 @@ function GitSyncPanel() {
 
   let resNode = null;
   if (res && res.success) {
-    resNode = <div style={okStyle}>Sync complete. Pushed to the backup repo.</div>;
+    resNode = <div style={okStyle}>Sync complete.{info&&info.cloudDir?' Pushed to git and copied to the second destination.':' Pushed to the backup repo.'}</div>;
   }
   if (res && !res.success) {
     const msg = res.error || ('Sync script exited with code ' + res.code);
-    resNode = <div style={errStyle}>Sync failed: {msg}</div>;
+    // Code 4 means git succeeded and only the cloud leg failed, and code 3 means
+    // nothing was touched at all. Both are materially different from "sync failed".
+    const amber = res.code === 4 || res.code === 3;
+    resNode = <div style={amber?{...errStyle,color:'var(--amber)'}:errStyle}>
+      {res.code===4?'Pushed to git, but the cloud copy did not happen: ':res.code===3?'Sync aborted safely: ':'Sync failed: '}{msg}
+    </div>;
   }
 
   let outNode = null;
@@ -8840,11 +9773,50 @@ function GitSyncPanel() {
     outNode = <div style={preStyle}>{res.output}</div>;
   }
 
-  let metaNode = null;
+  // Staleness is the point of this. A sync that quietly stopped — a changed drive letter,
+  // a lapsed credential — is invisible until it is needed, so the age of the last
+  // SUCCESSFUL push is shown, and turns amber past a week.
+  // One readout per destination. Git and the cloud copy fail independently —
+  // Drive not being mounted does not stop a push, and a lapsed credential does
+  // not stop the folder copy — so a single combined "last sync" would hide
+  // whichever half had quietly died.
+  const stamp = (label, st, configured) => {
+    if (!configured) return null;
+    if (!st) return <div key={label} style={metaStyle}>{label}: never recorded yet.</div>;
+    const when = new Date(st.at);
+    const days = Math.floor((Date.now() - when.getTime()) / 86400000);
+    const stale = days >= 7;
+    const txt = days === 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago';
+    return <div key={label} style={stale?{...metaStyle,color:'var(--amber)'}:metaStyle}>
+      {label}: {when.toLocaleString()} ({txt}){stale?' — check that this still works':''}
+    </div>;
+  };
+
+  let syncNode = null;
   if (info) {
-    const scriptMsg = info.scriptFound ? 'Sync script found.' : 'Sync script NOT found — check the backup folder path.';
+    syncNode = <React.Fragment>
+      {stamp('Last successful push', info.lastSync, !!info.backupDir)}
+      {stamp('Last copy to second destination', info.lastCloudSync, !!info.cloudDir)}
+    </React.Fragment>;
+  }
+
+  let metaNode = null;
+  if (info && !info.configured) {
+    metaNode = <div style={{...metaStyle,color:'var(--amber)'}}>
+      Backup is not configured. Set the folders in Settings → Backup. Nothing is being backed up, and the pretty-printed data copy is not being written either.
+    </div>;
+  } else if (info) {
+    const scriptMsg = info.scriptFound ? 'Sync script found.' : 'Sync script NOT found in the backup folder.';
+    const pathsMsg = info.pathsCmdFound ? '' : ' sync-paths.cmd missing — the scheduled run will not know where anything is until you press Sync now.';
     const prettyMsg = info.prettyMtime ? ('Pretty data file last written ' + info.prettyMtime.replace('T', ' ').slice(0, 16) + '.') : 'Pretty data file not written yet — it is created on shutdown or on Sync Now.';
-    metaNode = <div style={metaStyle}>{info.backupDir} · {scriptMsg} {prettyMsg}</div>;
+    const cloudMsg = info.provider!=='folder' ? 'Git only — nothing is copied anywhere else.'
+      : !info.cloudDir ? 'Second destination selected but no folder set.'
+      : info.cloudDriveReady === false ? 'Cloud drive not currently available — if this is Google Drive, it may not have started yet.'
+      : 'Second destination: ' + info.cloudDir;
+    metaNode = <React.Fragment>
+      <div style={metaStyle}>{info.backupDir} · {scriptMsg}{pathsMsg} {prettyMsg}</div>
+      <div style={info.cloudDriveReady===false?{...metaStyle,color:'var(--amber)',marginTop:4}:{...metaStyle,marginTop:4}}>{cloudMsg}</div>
+    </React.Fragment>;
   }
 
   const btnLabel = busy ? 'Syncing…' : 'Sync now';
@@ -8853,7 +9825,10 @@ function GitSyncPanel() {
     <div style={wrapStyle}>
       <div style={hdrStyle}>Git Backup Sync</div>
       <p style={pStyle}>
-        Mirrors every text file — notes, templates, companions, lorebooks, collections, personas, and a pretty-printed copy of the main data file — into a separate private git repo, then commits and pushes. Images are excluded, so the backup stays small enough to push often. This also runs automatically when Lorekeeper closes.
+        Mirrors every text file — notes, templates, companions, lorebooks, collections, personas, and a pretty-printed copy of the main data file — into a separate private git repo, then commits and pushes. Images are excluded, so the backup stays small enough to push often. ComfyUI and LM Studio configs ride along. This also runs automatically when Lorekeeper closes, and on a schedule whether or not the app is open.
+      </p>
+      <p style={pStyle}>
+        An optional second destination — a folder another program keeps in sync — can be switched on in Settings → Backup, so the data leaves this disk by two independent routes. Off by default: git alone is what most setups want.
       </p>
       <div style={rowStyle}>
         <button className="btn" style={{fontSize:12}} onClick={doSync} disabled={busy}>
@@ -8862,9 +9837,13 @@ function GitSyncPanel() {
         <button className="btn" style={{fontSize:12}} onClick={openBackup}>
           <i className="ti ti-folder-open"></i>Open backup folder
         </button>
+        {info&&info.cloudDir&&<button className="btn" style={{fontSize:12}} onClick={openCloud}>
+          <i className="ti ti-folder"></i>Open second destination
+        </button>}
       </div>
       {resNode}
       {outNode}
+      {syncNode}
       {metaNode}
     </div>
   );
@@ -8985,7 +9964,7 @@ function BatchImportHelp() {
     <button onClick={()=>setOpen(o=>!o)} style={{background:'none',border:'1px solid var(--border)',cursor:'pointer',color:'var(--text3)',fontSize:12,padding:'4px 10px',borderRadius:'var(--r)',lineHeight:1}}>? How it works</button>
     {open&&<div style={{position:'absolute',top:'100%',left:0,marginTop:4,zIndex:50,width:340,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:14,boxShadow:'0 4px 20px rgba(0,0,0,0.4)',fontSize:12,color:'var(--text3)',lineHeight:1.7}}>
       <strong style={{color:'var(--text)',display:'block',marginBottom:8}}>Batch Import steps:</strong>
-      <div style={{marginBottom:4}}>1. Copy files into subfolders of <code style={{background:'var(--bg3)',padding:'1px 4px',borderRadius:3,fontSize:11}}>I:\Lorekeeper\</code></div>
+      <div style={{marginBottom:4}}>1. Copy files into subfolders of <code style={{background:'var(--bg3)',padding:'1px 4px',borderRadius:3,fontSize:11}}>{DATA_ROOT||'the Lorekeeper folder'}</code></div>
       <div style={{marginBottom:4}}>2. Click Scan Folders — items appear with badges:</div>
       <div style={{paddingLeft:12,marginBottom:4,fontSize:11}}>
         <span style={{color:'#6ee7b7'}}>new</span> — not in Lorekeeper yet<br/>
@@ -9229,7 +10208,7 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
           if(item.imageRelPath&&!existing.image_relpath)existing.image_relpath=item.imageRelPath;
           collCount++;
         } else {
-          d.collections.push({id:obj.id||uuid(),world_id:worldId,name:obj.name||'',definition:obj.description||'',tags:obj.tags||[],fandom_tags:obj.fandom_tags||[],access_level:obj.access_level||'private',image:obj.image||null,image_data:null,image_relpath:item.imageRelPath||null,companions:obj.companions||[],has_been_public:obj.has_been_public||false,very_nsfw:obj.very_nsfw||false,lorebook_display:obj.lorebook_display||'',posted_at:obj.posted_at||now(),updated_at:now(),hide_on_owner_profile:false,collection_filename:item.filename||null});
+          d.collections.push({id:obj.id||uuid(),world_id:worldId,name:obj.name||'',definition:obj.description||'',tags:obj.tags||[],fandom_tags:obj.fandom_tags||[],access_level:obj.access_level||'private',image:obj.image||null,image_data:null,image_relpath:item.imageRelPath||null,companions:obj.companions||[],has_been_public:obj.has_been_public||false,very_nsfw:obj.very_nsfw||false,lorebook_display:obj.lorebook_display||'none',posted_at:obj.posted_at||now(),updated_at:now(),hide_on_owner_profile:false,collection_filename:item.filename||null});
           collCount++;
         }
       });
@@ -9384,7 +10363,7 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
           <div>
             <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.6,marginBottom:8}}>Merge content from a backup into existing data — nothing is deleted. Reviews changes before applying.</div>
             <button className="btn" style={{justifyContent:'center',width:'100%'}} onClick={bkMerge} disabled={bkStatus==='working'}>
-              <i className="ti ti-file-import"></i>Import &amp; merge from backup…
+              <i className="ti ti-file-import"></i>Import & merge from backup…
             </button>
           </div>
           <div style={{borderTop:'1px solid var(--border)',paddingTop:12}}>
@@ -9416,7 +10395,7 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
                 <i className="ti ti-scan"></i>{scanning?'Scanning…':'Scan Folders'}
               </button>
               <button className="btn" onClick={()=>window.lorekeeper.openFolder('')}>
-                <i className="ti ti-folder-open"></i>Open I:\Lorekeeper
+                <i className="ti ti-folder-open"></i>Open data folder
               </button>
             </div>
             <BatchImportHelp/>
@@ -9431,7 +10410,7 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
 
       <ImageMigrationPanel data={data} update={update}/>
       <NotesBackupPanel data={data}/>
-      <GitSyncPanel/>
+      <GitSyncPanel data={data}/>
       {mergePlan&&<MergePreviewModal plan={mergePlan.plan} onConfirm={confirmMerge} onCancel={()=>setMergePlan(null)}/>}
     </div>
   );
@@ -9446,7 +10425,7 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
         {done.collCount} collections imported<br/>
         {done.skipCount} skipped (local is newer)
       </p>
-      <p style={{fontSize:13,color:'var(--text3)',marginTop:16}}>Images are linked by file path — they'll load from I:\Lorekeeper\Companions\ automatically.</p>
+      <p style={{fontSize:13,color:'var(--text3)',marginTop:16}}>Images are linked by file path — they'll load from the Companions folder automatically.</p>
       <button className="btn primary" style={{margin:'20px auto 0',display:'flex'}} onClick={()=>{setScanned(false);setDone(null);setCompanions([]);setLorebooks([]);setCollections([]);}}>
         <i className="ti ti-refresh"></i>Scan again
       </button>
@@ -9821,9 +10800,453 @@ function ThemeGenerator({settings, update}) {
   );
 }
 
+
+// ── GitHub backup over the API (Stage 3b) ────────────────────────────────
+// Replaces the four manual steps the script route needed - git installed, a
+// repo cloned by hand, a credential saved in Windows Credential Manager, and
+// lorekeeper-sync.bat dropped into the right folder - with one pasted token.
+//
+// The token never reaches this file. It goes straight to the main process,
+// which encrypts it and stores it in the app's own folder, deliberately NOT in
+// the data folder: that folder is what gets backed up, so a token written there
+// would be pushed to GitHub and stay recoverable from history permanently.
+const GH_INPUT = {background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',width:'100%',fontFamily:'monospace'};
+const GH_NOTE  = {fontSize:11,color:'var(--text3)',marginTop:6,lineHeight:1.5};
+
+function GitHubSetup({settings, setBackupPath}) {
+  const [status, setStatus] = React.useState(null);
+  const [token, setToken]   = React.useState('');
+  const [busy, setBusy]     = React.useState(false);
+  const [msg, setMsg]       = React.useState(null);
+  const [repos, setRepos]   = React.useState(null);
+  const [check, setCheck]   = React.useState(null);
+
+  const refresh = () => { window.lorekeeper.githubStatus().then(setStatus).catch(() => {}); };
+
+  const loadRepos = () => {
+    setRepos('loading');
+    window.lorekeeper.githubListRepos().then(r => {
+      setRepos(r.ok ? r.repos : []);
+      if (!r.ok) setMsg({ok:false, text:r.error});
+    }).catch(() => setRepos([]));
+  };
+
+  React.useEffect(() => {
+    window.lorekeeper.githubStatus().then(st => {
+      setStatus(st);
+      if (st && st.hasToken) loadRepos();
+    }).catch(() => {});
+  }, []);
+
+  const saveToken = () => {
+    setBusy(true); setMsg(null);
+    window.lorekeeper.githubSetToken(token).then(r => {
+      setBusy(false);
+      if (r.ok) { setToken(''); setMsg({ok:true, text:'Connected as ' + r.login + '.'}); refresh(); loadRepos(); }
+      else setMsg({ok:false, text:r.error});
+    }).catch(e => { setBusy(false); setMsg({ok:false, text:String(e)}); });
+  };
+
+  const disconnect = () => {
+    window.lorekeeper.githubClearToken().then(() => {
+      setRepos(null); setCheck(null); setMsg(null); refresh();
+    }).catch(() => {});
+  };
+
+  const chooseRepo = (full) => {
+    setBackupPath('backup_github_repo', full);
+    setCheck(null);
+    if (!full) return;
+    window.lorekeeper.githubCheckRepo(full).then(setCheck).catch(e => setCheck({ok:false, error:String(e)}));
+  };
+
+  const repoValue = settings.backup_github_repo || '';
+
+  // safeStorage is what encrypts the token. If Windows is not offering it, say
+  // so up front rather than letting someone paste a token that cannot be saved.
+  if (status && status.encryptionAvailable === false) {
+    return <div style={{...GH_NOTE, color:'var(--amber)'}}>
+      Windows is not currently offering encrypted storage, so a GitHub token cannot be saved safely. Nothing will be stored in plain text. Try restarting the app; if it persists, use one of the other backup options.
+    </div>;
+  }
+
+  let tokenNode;
+  if (status && status.hasToken) {
+    tokenNode = <div>
+      <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+        <span style={{fontSize:12,color:'var(--green, #4ade80)'}}>
+          <i className="ti ti-circle-check" style={{marginRight:6}}></i>
+          Connected{status.login ? ' as ' + status.login : ''}
+        </span>
+        <button className="btn" style={{fontSize:11}} onClick={disconnect}>Disconnect</button>
+      </div>
+      <div style={GH_NOTE}>The token is stored encrypted, outside the folder that gets backed up.</div>
+    </div>;
+  } else {
+    tokenNode = <div>
+      <div style={{display:'flex',gap:8}}>
+        <input type="password" value={token} onChange={e=>setToken(e.target.value)}
+          placeholder="github_pat_..." style={GH_INPUT} autoComplete="off" spellCheck="false"/>
+        <button className="btn primary" style={{fontSize:12,whiteSpace:'nowrap'}} onClick={saveToken} disabled={busy||!token.trim()}>
+          {busy ? 'Checking…' : 'Connect'}
+        </button>
+      </div>
+      <div style={GH_NOTE}>
+        On GitHub: Settings → Developer settings → Personal access tokens → Fine-grained tokens. Give it access to your backup repository only, and set Contents to Read and write. Nothing else is needed. The token is checked against GitHub before it is saved, so a bad one fails here rather than inside a scheduled run at 11pm.
+      </div>
+    </div>;
+  }
+
+  let repoNode = null;
+  if (status && status.hasToken) {
+    const known = Array.isArray(repos) ? repos : [];
+    const inList = known.some(r => r.fullName === repoValue);
+    repoNode = <div style={{marginTop:14}}>
+      <div style={{fontSize:12,color:'var(--text2)',marginBottom:6}}>Backup repository</div>
+      {repos === 'loading' && <div style={{fontSize:11,color:'var(--text3)'}}>Asking GitHub which repositories this token can reach…</div>}
+      {Array.isArray(repos) && known.length > 0 && <select value={inList?repoValue:''} onChange={e=>chooseRepo(e.target.value)}
+        style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',width:'100%'}}>
+        <option value="">— pick a repository —</option>
+        {known.map(r => <option key={r.fullName} value={r.fullName}>{r.fullName}{r.private?' (private)':' (public)'}</option>)}
+      </select>}
+      {Array.isArray(repos) && known.length === 0 && <div style={{fontSize:11,color:'var(--amber)',marginBottom:6}}>
+        This token cannot see any repositories. A fine-grained token only reaches the ones you explicitly granted it. You can still type the name below.
+      </div>}
+      <input type="text" value={repoValue} onChange={e=>chooseRepo(e.target.value)}
+        placeholder="owner/repository" style={{...GH_INPUT, marginTop:8}}/>
+      <div style={GH_NOTE}>
+        Paste the repository URL or type owner/name. The repository has to exist already — Lorekeeper never creates one, so it never needs the wide account access that would require.
+      </div>
+      {check && check.ok && <div style={{...GH_NOTE, color: check.canPush ? 'var(--green, #4ade80)' : 'var(--amber)'}}>
+        {check.fullName} found{check.private?', private':', public'}, default branch {check.defaultBranch}.{check.warning ? ' ' + check.warning : ' The token can write to it.'}
+      </div>}
+      {check && !check.ok && <div style={{...GH_NOTE, color:'var(--red, #f87171)'}}>{check.error}</div>}
+    </div>;
+  }
+
+  return <div>
+    {tokenNode}
+    {repoNode}
+    {msg && <div style={{...GH_NOTE, color: msg.ok ? 'var(--green, #4ade80)' : 'var(--red, #f87171)'}}>{msg.text}</div>}
+  </div>;
+}
+
+// Google Drive / OneDrive / Dropbox, through the bundled rclone.
+//
+// Lorekeeper never sees a cloud credential: rclone owns the sign-in and keeps the
+// token in its own config file, which is why this route exists at all rather than
+// a native integration (see the spec's Backup section).
+function RcloneSetup({settings, setBackupPath}) {
+  const [status, setStatus] = React.useState(null);
+  const [busy, setBusy]     = React.useState(false);
+  const [prog, setProg]     = React.useState('');
+  const [msg, setMsg]       = React.useState(null);
+
+  const refresh = () => { window.lorekeeper.rcloneStatus().then(setStatus).catch(() => {}); };
+  React.useEffect(() => { refresh(); }, []);
+  React.useEffect(() => {
+    if (!window.lorekeeper.onRcloneConnectProgress) return undefined;
+    return window.lorekeeper.onRcloneConnectProgress(m => setProg(m));
+  }, []);
+
+  const backend = settings.backup_rclone_backend || '';
+  const folder  = settings.backup_rclone_folder || 'Lorekeeper';
+
+  const connect = () => {
+    if (!backend) { setMsg({ok:false, text:'Pick a cloud service first.'}); return; }
+    setBusy(true); setMsg(null); setProg('Starting…');
+    window.lorekeeper.rcloneConnect({backend, folder}).then(r => {
+      setBusy(false); setProg('');
+      setMsg(r.ok ? {ok:true, text:'Connected, and a test file was written and read back successfully.'}
+                  : {ok:false, text:r.error});
+      refresh();
+    }).catch(e => { setBusy(false); setProg(''); setMsg({ok:false, text:String(e)}); });
+  };
+
+  const disconnect = () => {
+    window.lorekeeper.rcloneDisconnect().then(() => { setMsg(null); refresh(); }).catch(() => {});
+  };
+
+  if (status && !status.binaryFound) {
+    return <div style={{...GH_NOTE, color:'var(--amber)'}}>
+      <div>The uploader rclone could not be started. It ships with Lorekeeper, so this usually means the install is incomplete — reinstalling should fix it. Until then, use GitHub or a folder instead.</div>
+      {(status.searchedIn || []).length > 0 && <div style={{marginTop:6}}>
+        Looked in:
+        {(status.searchedIn || []).map(p => <div key={p} style={{fontFamily:'monospace',fontSize:10,opacity:0.85}}>{p}</div>)}
+      </div>}
+    </div>;
+  }
+
+  let connectedNode;
+  if (status && status.connected) {
+    connectedNode = <div>
+      <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+        <span style={{fontSize:12,color:'var(--green, #4ade80)'}}>
+          <i className="ti ti-circle-check" style={{marginRight:6}}></i>
+          Connected{status.backend ? ' to ' + ((status.backends||[]).find(b=>b.id===status.backend)||{}).label : ''}
+        </span>
+        <button className="btn" style={{fontSize:11}} onClick={disconnect}>Disconnect</button>
+      </div>
+      {status.destination && <div style={GH_NOTE}>Backups go to <code>{status.destination}</code></div>}
+      <div style={GH_NOTE}>The sign-in is held by rclone in its own file, separate from your data. Lorekeeper never sees it.</div>
+    </div>;
+  } else {
+    connectedNode = <div>
+      <select value={backend} onChange={e=>setBackupPath('backup_rclone_backend', e.target.value)}
+        style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',width:'100%'}}>
+        <option value="">— pick a cloud service —</option>
+        {(status && status.backends || []).map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
+      </select>
+      <input type="text" value={folder} onChange={e=>setBackupPath('backup_rclone_folder', e.target.value)}
+        placeholder="Lorekeeper" style={{...GH_INPUT, marginTop:8}}/>
+      <div style={GH_NOTE}>
+        The folder to create on that account. Only this folder is ever written to or tidied up — anything else on the account is left alone.
+      </div>
+      <button className="btn primary" style={{fontSize:12,marginTop:8}} onClick={connect} disabled={busy||!backend}>
+        {busy ? 'Waiting for sign-in…' : 'Connect'}
+      </button>
+      <div style={GH_NOTE}>
+        Your browser opens so you can sign in to the service directly. Once it finishes, Lorekeeper writes a small test file and reads it back, so a connection that cannot actually store anything fails here rather than at the first real backup.
+      </div>
+    </div>;
+  }
+
+  return <div>
+    {connectedNode}
+    {busy && prog && <div style={{...GH_NOTE, fontFamily:'monospace'}}>{prog}</div>}
+    {msg && <div style={{...GH_NOTE, color: msg.ok ? 'var(--green, #4ade80)' : 'var(--red, #f87171)'}}>{msg.text}</div>}
+  </div>;
+}
+
+// The Sync now panel for the API route. Shown in place of the script panel when
+// the provider is set to GitHub direct, so the two never overlap.
+function GitHubSyncPanel({settings}) {
+  const [status, setStatus]   = React.useState(null);
+  const [busy, setBusy]       = React.useState(false);
+  const [prog, setProg]       = React.useState('');
+  const [res, setRes]         = React.useState(null);
+  const [preview, setPreview] = React.useState(null);
+
+  const refresh = () => { window.lorekeeper.githubStatus().then(setStatus).catch(() => {}); };
+
+  React.useEffect(() => {
+    refresh();
+    window.lorekeeper.githubPreview().then(setPreview).catch(() => {});
+  }, []);
+
+  // A first sync uploads everything there is, which takes a while. Without this
+  // the window looks frozen, and a backup that looks broken gets cancelled.
+  React.useEffect(() => {
+    if (!window.lorekeeper.onGithubSyncProgress) return undefined;
+    return window.lorekeeper.onGithubSyncProgress(m => setProg(m));
+  }, []);
+
+  const provider = settings.backup_provider || 'none';
+  const isFolder = provider === 'folder';
+  const isCloud  = provider === 'rclone';
+
+  const doSync = () => {
+    setBusy(true); setRes(null); setProg('Starting…');
+    window.lorekeeper.githubSync({
+      provider: provider,
+      repo: settings.backup_github_repo || '',
+      folder: isCloud ? (settings.backup_rclone_folder || 'Lorekeeper') : (settings.backup_cloud_dir || ''),
+      backend: settings.backup_rclone_backend || ''
+    }).then(r => {
+      setBusy(false); setProg(''); setRes(r); refresh();
+    }).catch(e => { setBusy(false); setProg(''); setRes({success:false, error:String(e)}); });
+  };
+
+  const wrapStyle = { marginTop: 24, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--rl)', padding: 16 };
+  const hdrStyle  = { fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 };
+  const pStyle    = { fontSize: 12, color: 'var(--text3)', marginBottom: 8, lineHeight: 1.6 };
+  const metaStyle = { fontSize: 11, color: 'var(--text3)', marginTop: 10, lineHeight: 1.6 };
+
+  const ready = isFolder ? !!settings.backup_cloud_dir
+    : isCloud ? !!settings.backup_rclone_backend
+    : !!(status && status.hasToken && (settings.backup_github_repo || status.repo));
+
+  // Nothing chosen: say so plainly and stop. A fresh install must not show a
+  // button that would do something, or a status line about a destination that
+  // was never configured.
+  if (provider === 'none') {
+    return (
+      <div style={{ marginTop: 24, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--rl)', padding: 16 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Backup</div>
+        <p style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6, margin: 0 }}>
+          No backup is set up, so nothing is being copied anywhere. Choose a destination in Settings → Backup. GitHub needs a token and a repository and nothing else; a synced folder needs only a path.
+        </p>
+      </div>
+    );
+  }
+
+  let resNode = null;
+  if (res && res.success && res.noop) {
+    resNode = <div style={{...metaStyle, color:'var(--green, #4ade80)'}}>Already up to date — nothing had changed, so nothing was uploaded.</div>;
+  } else if (res && res.success) {
+    const c = res.counts || {};
+    const mb = res.uploadedBytes ? (res.uploadedBytes / 1048576) : 0;
+    const verb = isFolder ? 'copied' : 'uploaded';
+    // The cloud route reports what STAGING changed, which is the same number of
+    // files rclone then sent. Saying "uploaded" is therefore accurate.
+    resNode = <div style={{...metaStyle, color:'var(--green, #4ade80)'}}>
+      Backed up. {c.uploaded} file{c.uploaded===1?'':'s'} {verb}{mb>=0.1?' ('+mb.toFixed(1)+' MB)':''}{c.deleted?', '+c.deleted+' removed':''}, {c.total} tracked in total.
+    </div>;
+  } else if (res && !res.success) {
+    resNode = <div style={{...metaStyle, color:'var(--red, #f87171)'}}>Backup failed: {res.error}</div>;
+  }
+
+  let aheadNode = null;
+  if (res && res.success && res.remoteAhead) {
+    aheadNode = <div style={{...metaStyle, color:'var(--amber)'}}>
+      The repository had commits this machine did not make, so files were uploaded but nothing was deleted. If that was an edit made somewhere else, reconcile it before the next sync.
+    </div>;
+  }
+
+  let skipNode = null;
+  const skipped = (res && res.skipped) || (preview && preview.skipped) || [];
+  if (skipped.length) {
+    skipNode = <div style={{...metaStyle, color:'var(--amber)'}}>
+      Too large to upload, and left out: {skipped.map(f => f.path).join(', ')}
+    </div>;
+  }
+
+  // A fine-grained token expires on a date chosen when it was made, and when it
+  // does the backup simply stops. Warning beforehand is the whole difference
+  // between a lapse of a day and a lapse nobody notices for a month.
+  let expiryNode = null;
+  if (!isFolder && status && status.tokenExpiry) {
+    // GitHub sends this as "2027-10-08 03:00:00 UTC", which is not ISO. V8 parses it,
+    // but if that ever changes the old code showed NOTHING - a dead warning that only
+    // reveals itself the day backups stop. Fall back to printing the raw string.
+    const exp = new Date(status.tokenExpiry);
+    if (isNaN(exp.getTime())) {
+      expiryNode = <div style={metaStyle}>GitHub token expires: {String(status.tokenExpiry)}</div>;
+    } else {
+      const days = Math.ceil((exp.getTime() - Date.now()) / 86400000);
+      if (days <= 0) {
+        expiryNode = <div style={{...metaStyle, color:'var(--red, #f87171)'}}>
+          The GitHub token expired on {exp.toLocaleDateString()}. Backups will fail until you make a new one and paste it in Settings → Backup.
+        </div>;
+      } else if (days <= 21) {
+        expiryNode = <div style={{...metaStyle, color:'var(--amber)'}}>
+          The GitHub token expires in {days} day{days===1?'':'s'}, on {exp.toLocaleDateString()}. Backups stop when it does.
+        </div>;
+      }
+    }
+  }
+
+  let stampNode = null;
+  if (status && status.lastSync) {
+    const when = new Date(status.lastSync);
+    const days = Math.floor((Date.now() - when.getTime()) / 86400000);
+    const stale = days >= 7;
+    const txt = days === 0 ? 'today' : days === 1 ? 'yesterday' : days + ' days ago';
+    stampNode = <div style={stale?{...metaStyle,color:'var(--amber)'}:metaStyle}>
+      Last backup: {when.toLocaleString()} ({txt}){stale?' — check that this still works':''}
+    </div>;
+  } else if (status && status.hasToken) {
+    stampNode = <div style={metaStyle}>No backup has run yet.</div>;
+  }
+
+  return (
+    <div style={wrapStyle}>
+      <div style={hdrStyle}>{isFolder ? 'Folder Backup' : isCloud ? 'Cloud Backup' : 'GitHub Backup'}</div>
+      <p style={pStyle}>
+        {isFolder
+          ? 'Copies every text file — notes, templates, companions, lorebooks, collections, personas, and a pretty-printed copy of the main data file — into the folder set in Settings. Images are left out. Plain files: restoring means copying them back.'
+          : isCloud
+          ? 'Uploads every text file — notes, templates, companions, lorebooks, collections, personas, and a pretty-printed copy of the main data file — to the cloud account connected in Settings. Images are left out. Plain files: restoring means downloading them back.'
+          : 'Uploads every text file — notes, templates, companions, lorebooks, collections, personas, and a pretty-printed copy of the main data file — straight to a private GitHub repository. Images are left out, so the backup stays small. No git installation, no cloned folder, nothing to run in a terminal.'}
+      </p>
+      <p style={pStyle}>
+        Unchanged files are skipped: the first backup {isFolder?'copies':'uploads'} everything, and after that only what you actually edited goes{isFolder?' across':' up'}. Files in the destination that Lorekeeper did not put there are left alone.
+      </p>
+      {!ready && <div style={{...metaStyle, color:'var(--amber)'}}>
+        {isFolder ? 'No folder set yet. Choose one in Settings → Backup.'
+          : isCloud ? 'No cloud account connected yet. Connect one in Settings → Backup.'
+          : 'Not set up yet. Add a token and choose a repository in Settings → Backup.'}
+      </div>}
+      <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginTop:4}}>
+        <button className="btn" style={{fontSize:12}} onClick={doSync} disabled={busy||!ready}>
+          <i className="ti ti-cloud-upload"></i>{busy ? 'Backing up…' : 'Back up now'}
+        </button>
+        {!isFolder && status && status.repo && <span style={{fontSize:11,color:'var(--text3)'}}>{status.repo}{status.branch?' · '+status.branch:''}</span>}
+        {isFolder && settings.backup_cloud_dir && <span style={{fontSize:11,color:'var(--text3)',fontFamily:'monospace'}}>{settings.backup_cloud_dir}</span>}
+      </div>
+      {busy && prog && <div style={{...metaStyle, fontFamily:'monospace'}}>{prog}</div>}
+      {resNode}
+      {aheadNode}
+      {skipNode}
+      {expiryNode}
+      {stampNode}
+      {preview && preview.ok && <div style={metaStyle}>
+        {preview.count} files would be considered, {(preview.bytes/1048576).toFixed(1)} MB in total.
+      </div>}
+    </div>
+  );
+}
+
+const BK_INPUT = {background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',width:'100%',fontFamily:'monospace'};
+
 function SettingsPage({data, update, dataPath}) {
   const settings = data.settings || {};
   const set = (key, val) => update(d => { if(!d.settings) d.settings={}; d.settings[key]=val; });
+
+  // One-time seed of the backup fields from whatever main.js actually resolved.
+  //
+  // THIS IS NOT COSMETIC. Before it, the fields rendered empty on an existing
+  // install, because the paths were still coming from main.js's legacy migration
+  // rather than from settings. Typing the repo path would then persist
+  // backup_repo_dir and nothing else — which makes syncPathsFromDataFile() start
+  // answering, which retires the migration, which leaves ComfyUI and LM Studio
+  // blank. Those two would have stopped being backed up the moment this page was
+  // touched, silently, with the panel still reporting healthy pushes.
+  //
+  // Seeding writes all four at once, so what the fields show is what will be used.
+  const seeded = React.useRef(false);
+  React.useEffect(() => {
+    if (seeded.current) return;
+    if (settings.backup_repo_dir) { seeded.current = true; return; }
+    seeded.current = true;
+    window.lorekeeper.getSyncInfo().then(i => {
+      if (!i || !i.backupDir) return;
+      update(d => {
+        if (!d.settings) d.settings = {};
+        // backup_provider is NOT seeded any more. It used to be set to the
+        // batch-script route, which is retired; seeding it would hand a fresh
+        // install a destination it never chose. Unconfigured means unconfigured.
+        //
+        // backup_repo_dir is seeded ONLY for an install already on that route.
+        // getSyncInfo().backupDir comes from resolveSyncPaths(), whose one-time
+        // migration adopts I:\LorekeeperBackup whenever that folder happens to
+        // sit on the machine - so an unguarded seed handed a FRESH install the
+        // retired route's folder, with the provider correctly reading none. The
+        // argument for not seeding the provider applies word for word to the
+        // folder. Caught on 11 October 2026 in a packaged build.
+        const onScriptRoute = (d.settings.backup_provider === 'github' || d.settings.backup_provider === 'legacy-folder');
+        if (onScriptRoute && !d.settings.backup_repo_dir)  d.settings.backup_repo_dir  = i.backupDir || '';
+        // backup_cloud_dir is NOT seeded. A destination that sends data off this
+        // machine is never filled in on someone's behalf — it is typed deliberately
+        // or it stays empty.
+      });
+    }).catch(() => {});
+  }, []);
+
+  // Backup paths have to reach main.js as well as the data file: main.js caches
+  // them for this process AND regenerates sync-paths.cmd, which is the only way
+  // the SCHEDULED run — which never loads this app — learns where anything is.
+  const setBackupPath = (key, val) => {
+    set(key, val);
+    const next = {...settings, [key]: val};
+    if (window.lorekeeper.setSyncPaths) {
+      window.lorekeeper.setSyncPaths({
+        provider: next.backup_provider || 'none',
+        dst: next.backup_repo_dir || '',
+        cloud: next.backup_cloud_dir || ''
+      }).catch(() => {});
+    }
+  };
 
   const [apiKeyVisible, setApiKeyVisible] = React.useState(false);
   const [lmTest, setLmTest] = React.useState(null);
@@ -10070,7 +11493,7 @@ function SettingsPage({data, update, dataPath}) {
       <Section title="Data" icon="ti-database">
         <Field label="Data file location" hint="Where your Lorekeeper data is stored.">
           <div style={{display:'flex',gap:8,alignItems:'center'}}>
-            <code style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:11,color:'var(--text3)',fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{dataPath||'I:\\Lorekeeper\\lorekeeper-data.json'}</code>
+            <code style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:11,color:'var(--text3)',fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{dataPath||'Resolving...'}</code>
             <button className="btn" style={{flexShrink:0}} onClick={()=>window.lorekeeper.openFolder('')}><i className="ti ti-folder-open"></i>Open</button>
           </div>
         </Field>
@@ -10086,16 +11509,71 @@ function SettingsPage({data, update, dataPath}) {
         </Field>
       </Section>
 
+      <Section title="Backup" icon="ti-cloud-upload">
+        <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.6,marginBottom:14}}>
+          Lorekeeper's own data is backed up from wherever it lives — that path is shown under Data and is not configured here. This section is only about where a copy of it goes. With no backup configured nothing is copied anywhere, and the pretty-printed data file written on close is skipped too.
+        </div>
+        <Field label="Where backups go" hint="Git on its own is the default and is all most setups need. The extra destination is opt-in: it is never filled in for you, and nothing leaves this machine by that route unless you choose it here.">
+          <select value={settings.backup_provider||'none'} onChange={e=>setBackupPath('backup_provider',e.target.value)}
+            style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',width:'100%'}}>
+            <option value="none">None — nothing is backed up</option>
+            <option value="github-api">GitHub</option>
+            <option value="rclone">Google Drive, OneDrive or Dropbox</option>
+            <option value="folder">A synced folder</option>
+            {(settings.backup_provider||'none')==='github'&&<option value="github">Sync script (retired)</option>}
+          </select>
+          {(settings.backup_provider||'none')==='none'&&<div style={{fontSize:11,color:'var(--text3)',marginTop:6,lineHeight:1.5}}>
+            Nothing is being backed up. No files are copied, nothing is uploaded, and the pretty-printed data file written on close is skipped as well.
+          </div>}
+          {(settings.backup_provider||'none')==='github-api'&&<div style={{fontSize:11,color:'var(--text3)',marginTop:6,lineHeight:1.5}}>
+            Lorekeeper uploads to GitHub itself. No git installation, no folder to prepare, nothing to run in a terminal — just a token and a repository.
+          </div>}
+          {(settings.backup_provider||'none')==='folder'&&<div style={{fontSize:11,color:'var(--text3)',marginTop:6,lineHeight:1.5}}>
+            The text files are copied into a folder of your choosing. Useful when another program already keeps that folder in sync, or when it sits on a second drive or a network share.
+          </div>}
+          {(settings.backup_provider||'none')==='github'&&<div style={{fontSize:11,color:'var(--amber)',marginTop:6,lineHeight:1.5}}>
+            This is the retired route. It needs git installed, a repository cloned by hand, a saved credential and a script file placed in the backup folder — none of which a new install has. Switch to GitHub above: it backs up to the same repository with none of that setup. This option disappears once you change it.
+          </div>}
+        </Field>
+        {(settings.backup_provider||'none')==='rclone'&&<div style={{fontSize:11,color:'var(--text3)',marginTop:6,lineHeight:1.5}}>
+          Lorekeeper uploads through rclone, which ships with it. You sign in to the service in your own browser; the sign-in stays with rclone and Lorekeeper never sees it.
+        </div>}
+        {(settings.backup_provider||'none')==='rclone'&&<Field label="Cloud account" hint="Only the folder named below is ever written to or tidied up. Anything else on the account is left alone.">
+          <RcloneSetup settings={settings} setBackupPath={setBackupPath}/>
+        </Field>}
+        {(settings.backup_provider||'none')==='github-api'&&<Field label="GitHub account" hint="A fine-grained token scoped to your backup repository, with Contents set to Read and write. That is the whole permission it needs — it cannot reach anything else in your account.">
+          <GitHubSetup settings={settings} setBackupPath={setBackupPath}/>
+        </Field>}
+        {(settings.backup_provider||'none')==='github'&&<Field label="Backup repo folder" hint="Used only by the retired sync-script route. The git repo the text data is mirrored into.">
+          <input type="text" value={settings.backup_repo_dir||''} onChange={e=>setBackupPath('backup_repo_dir',e.target.value)}
+            placeholder="Path to the backup repo clone" style={BK_INPUT}/>
+        </Field>}
+        {(settings.backup_provider||'none')==='folder'&&<Field label="Folder to copy into" hint="A folder another program already keeps in sync — a Drive, OneDrive or Dropbox client folder — or simply another drive or a network share. Plain files, restorable by copying them back.">
+          <input type="text" value={settings.backup_cloud_dir||''} onChange={e=>setBackupPath('backup_cloud_dir',e.target.value)}
+            placeholder="D:\Backups\Lorekeeper" style={BK_INPUT}/>
+          <div style={{fontSize:11,color:'var(--text3)',marginTop:6,lineHeight:1.5}}>
+            This route depends on whatever program watches that folder, which is why it is not the default. If the folder lives on a virtual drive — Google Drive's G:, for instance — it does not exist until that program has started, and a backup at logon can beat it; that is detected and reported rather than writing a real local folder nothing ever uploads.
+          </div>
+        </Field>}
+        <div style={{fontSize:11,color:'var(--text3)',lineHeight:1.6,marginTop:4}}>
+          Back up now, the status readout and the staleness warning are on the Import / Export page.
+        </div>
+        <div style={{fontSize:11,color:'var(--text3)',lineHeight:1.6,marginTop:8}}>
+          The backup script can cover folders belonging to other programs as well. Those are deliberately not configured here — Lorekeeper has no business knowing about software it does not use, and they should not appear in a copy of the app given to anyone else. They live in <code style={{background:'var(--bg3)',padding:'1px 4px',borderRadius:3}}>sync-extras.cmd</code> in the backup folder, which Lorekeeper never reads or writes.
+        </div>
+      </Section>
+
       <Section title="About" icon="ti-info-circle">
         <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.8}}>
           <div><strong style={{color:'var(--text)'}}>Lorekeeper</strong> — AI companion management for Saucepan</div>
           <div>Built by Ine · Electron + React 18.2.0</div>
+          <AppVersion/>
           <div style={{marginTop:8}}>
             <strong style={{color:'var(--text)'}}>Pinned dependencies</strong><br/>
             React 18.2.0 · Babel 7.23.10 · Tabler Icons 2.44.0 · adm-zip
           </div>
           <div style={{marginTop:8}}>
-            <a href="https://console.anthropic.com" target="_blank" style={{color:'var(--accent)'}}>Get Anthropic API key ↗</a>
+            <span style={{color:'var(--text3)'}}>API keys for all five providers, and what each costs, are covered in Help → AI assistant.</span>
           </div>
         </div>
       </Section>
@@ -10387,12 +11865,13 @@ function Modal({modal,setModal,data,update,setData,assignLore,assignChar,assignC
 
   if(modal.type==='new-lore') return <div className="modal-bg"><div className="modal"><h2>New Lorebook</h2><div className="form-group"><label>Name</label><input autoFocus value={form.name||''} onChange={e=>f('name',e.target.value)} placeholder="Lorebook name"/></div><div className="form-group"><label>Short Description</label><textarea value={form.desc||''} onChange={e=>f('desc',e.target.value)} placeholder="What does this lorebook cover?"/></div><div className="form-group"><label>World</label><select value={form.wid!==undefined?form.wid:(modal.worldId||'')} onChange={e=>f('wid',e.target.value)}><option value="">No World (standalone)</option>{sortedWorlds(data).map(w=><option key={w.id} value={w.id}>{w.emoji?w.emoji+' ':''}{w.name}</option>)}</select></div><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={!form.name?.trim()} onClick={()=>{const wid=form.wid!==undefined?form.wid:(modal.worldId||'');const fname=(form.name.trim().replace(/[^a-zA-Z0-9_-]/g,'_'))+'.json';update(d=>d.lorebooks.push({id:uuid(),world_id:wid||null,name:form.name.trim(),short_description:form.desc||'',content:[],tags:[],fandom_tags:[],nsfw:false,very_nsfw:false,image_id:null,collaboration_type:'private',definition_protection:'copy_protection',has_been_public:false,posted_at:now(),updated_at:now(),hide_on_owner_profile:false,selected_chapter_index:0,access_level:'private',lorebook_filename:fname}));window.lorekeeper.saveLorebookJson(fname,{name:form.name.trim(),short_description:form.desc||'',content:[],tags:[],fandom_tags:[],nsfw:false,very_nsfw:false,image_id:null,collaboration_type:'private',definition_protection:'copy_protection',has_been_public:false,posted_at:now(),updated_at:now(),hide_on_owner_profile:false,access_level:'private'});setModal(null);}}>Create</button></div></div></div>;
 
-  if(modal.type==='new-coll') return <div className="modal-bg"><div className="modal"><h2>New Collection</h2><div className="form-group"><label>Name</label><input autoFocus value={form.name||''} onChange={e=>f('name',e.target.value)} placeholder="Collection name"/></div><div className="form-group"><label>Public Definition</label><textarea value={form.def||''} onChange={e=>f('def',e.target.value)} placeholder="Public-facing description"/></div><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={!form.name?.trim()} onClick={()=>{const fname=(form.name.trim().replace(/[^a-zA-Z0-9_-]/g,'_'))+'.json';update(d=>d.collections.push({id:uuid(),world_id:modal.worldId||null,name:form.name.trim(),definition:form.def||'',tags:[],fandom_tags:[],access_level:'private',image:null,image_data:null,companions:[],has_been_public:false,very_nsfw:false,lorebook_display:false,posted_at:now(),updated_at:now(),hide_on_owner_profile:false,collection_filename:fname}));window.lorekeeper.saveCollectionJson(fname,{name:form.name.trim(),definition:form.def||'',tags:[],fandom_tags:[],access_level:'private',image:null,companions:[],has_been_public:false,very_nsfw:false,lorebook_display:false,posted_at:now(),updated_at:now(),hide_on_owner_profile:false});setModal(null);}}>Create</button></div></div></div>;
+  if(modal.type==='new-coll') return <div className="modal-bg"><div className="modal"><h2>New Collection</h2><div className="form-group"><label>Name</label><input autoFocus value={form.name||''} onChange={e=>f('name',e.target.value)} placeholder="Collection name"/></div><div className="form-group"><label>Public Definition</label><textarea value={form.def||''} onChange={e=>f('def',e.target.value)} placeholder="Public-facing description"/></div><div className="modal-footer"><button className="btn" onClick={()=>setModal(null)}>Cancel</button><button className="btn primary" disabled={!form.name?.trim()} onClick={()=>{const fname=(form.name.trim().replace(/[^a-zA-Z0-9_-]/g,'_'))+'.json';update(d=>d.collections.push({id:uuid(),world_id:modal.worldId||null,name:form.name.trim(),definition:form.def||'',tags:[],fandom_tags:[],access_level:'private',image:null,image_data:null,companions:[],has_been_public:false,very_nsfw:false,lorebook_display:'none',posted_at:now(),updated_at:now(),hide_on_owner_profile:false,collection_filename:fname}));window.lorekeeper.saveCollectionJson(fname,{name:form.name.trim(),definition:form.def||'',tags:[],fandom_tags:[],access_level:'private',image:null,companions:[],has_been_public:false,very_nsfw:false,lorebook_display:'none',posted_at:now(),updated_at:now(),hide_on_owner_profile:false});setModal(null);}}>Create</button></div></div></div>;
 
   return null;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
 </script>
 </body>
 </html>

@@ -1,7 +1,13 @@
+# Personal data. The app's own folders live inside this repo's working tree, so
+# these lines are what keep a PUBLIC repo from publishing every character, note
+# and persona. Do not remove one to "tidy up" — check Backup in the spec first.
 lorekeeper-data.preshrink-*.json
 lorekeeper-data.json
 lorekeeper-data.lastgood.json
 lorekeeper-data.SUSPICIOUS.json
+lorekeeper-data.pretty.json
+audit-app.md
+audit-spec.md
 Companions/
 Lorebooks/
 Collections/
@@ -9,5 +15,14 @@ Worlds/
 Personas/
 Templates/
 Notes/
+
+# Build output. dist*/ rather than dist/ because app.asar gets locked after a
+# build and the workaround is to build into dist2, dist3 and so on — each one a
+# full unpacked Electron app, none of which belong in git.
 node_modules/
-dist/
+dist*/
+
+# The bundled rclone binary, 81.5 MB, downloaded from rclone.org and placed by
+# hand. It is a redistributable third-party executable, not source: it belongs
+# in the installer via extraResources, never in the repo.
+vendor/

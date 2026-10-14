@@ -1,9 +1,26 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, session, clipboard, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, session, clipboard, Menu, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const AdmZip = require('adm-zip');
 const os = require('os');
 const { spawn } = require('child_process');
+// Stage 3b: backup straight to GitHub over the REST API, so a clean install needs
+// no git binary, no cloned repo and no script placed by hand. All of its wiring
+// lives in github-ipc.js; main.js carries only this require and the call below.
+const { createGitHubBackup } = require('./github-ipc');
+
+// PIN THE APP NAME. Electron derives app.getPath('userData') from the app name,
+// and the name it picks depends on HOW the app was launched: `electron .` reads
+// package.json and gets "lorekeeper", while `electron src/main.js` has no
+// package.json beside the entry file and falls back to "Electron". Two launch
+// scripts in this repo do exactly those two things, so the same install had two
+// different userData folders depending on which one was used - and the GitHub
+// token lives in that folder. Saved from one launcher, it was invisible to the
+// other, and to the scheduled run.
+//
+// Must be set before anything reads a path, which is why it sits above the
+// createGitHubBackup() call rather than inside app.whenReady().
+app.setName('Lorekeeper');
 
 // In production: data lives next to the exe (user chose location at install)
 // In dev: hardcoded to I:\Lorekeeper
@@ -17,15 +34,171 @@ const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
 // The backup repo is a SEPARATE folder from DATA_DIR, because DATA_DIR is
 // already the source repo's working tree and two repos cannot share one.
 // A sync script there mirrors text-only data in and pushes it.
-const BACKUP_DIR = 'I:\\LorekeeperBackup';
-const SYNC_SCRIPT = path.join(BACKUP_DIR, 'lorekeeper-sync.bat');
+//
+// PATHS ARE CONFIGURABLE SINCE SESSION 36. They were hardcoded to I:\ , which
+// meant a rebuild or a new machine silently stopped the backup, and a packaged
+// build handed to anyone else showed a panel citing a drive letter they do not
+// have. Settings now owns them; this module caches what the renderer sends and
+// generates sync-paths.cmd so the SCHEDULED run (which never loads the app)
+// reads the same values.
 const PRETTY_FILE = path.join(DATA_DIR, 'lorekeeper-data.pretty.json');
+
+// Ine's original hardcoded values. Used ONLY by the one-time migration below,
+// so an existing install keeps working before Settings has ever been opened.
+// A fresh install fails the probe and stays unconfigured, which is correct —
+// an unconfigured backup must do nothing rather than something wrong.
+const LEGACY = {
+  provider: 'github',
+  dst:   'I:\\LorekeeperBackup',
+  cloud: ''
+};
+
+// Module-level cache. The renderer pushes this on load and on every Settings
+// change; resolveSyncPaths() falls back to the data file, then to the migration.
+let syncPaths = null;
+
+// Reads the backup paths straight out of the data file's settings. The fallback
+// for a sync requested before the renderer has pushed anything — on shutdown,
+// for instance, if the user never opened Settings this run.
+function syncPathsFromDataFile() {
+  try {
+    if (!fs.existsSync(DATA_FILE)) return null;
+    const d = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+    const st = (d && d.settings) || {};
+    if (!st.backup_repo_dir) return null;
+    return {
+      provider: st.backup_provider || 'github',
+      dst:   st.backup_repo_dir || '',
+      cloud: st.backup_cloud_dir || ''
+    };
+  } catch (e) { return null; }
+}
+
+function resolveSyncPaths() {
+  if (syncPaths && syncPaths.dst) return syncPaths;
+  const fromFile = syncPathsFromDataFile();
+  if (fromFile) { syncPaths = fromFile; return syncPaths; }
+  // One-time migration: adopt the legacy constants only if that install is
+  // actually present on this machine.
+  if (fs.existsSync(path.join(LEGACY.dst, 'lorekeeper-sync.bat'))) {
+    syncPaths = { ...LEGACY };
+    return syncPaths;
+  }
+  return null;
+}
+
+function backupDir() { const p = resolveSyncPaths(); return p ? p.dst : null; }
+function syncScript() { const d = backupDir(); return d ? path.join(d, 'lorekeeper-sync.bat') : null; }
+
+// Writes sync-paths.cmd next to the script, so the scheduled task — which never
+// loads Lorekeeper and therefore never sees Settings — uses the same paths.
+//
+// THIS FILE MUST BE PLAIN ASCII, WITH NO chcp LINE.
+//
+// A `chcp 65001` was tried here on 8 October 2026 so that an accented path
+// would survive, and it broke the sync completely. Changing the codepage while
+// a batch file is running makes cmd re-read the remainder under a different
+// encoding and lose its byte position; it then executes fragments of its own
+// comment lines as commands. The observed failure was a wall of "'the' is not
+// recognized as an internal or external command" followed by the script giving
+// up because DST had never been set - the parser never reached the set lines.
+//
+// So: ASCII comments, no codepage change. A non-ASCII character in a PATH is
+// still unsolved for the batch route and is reported rather than written, since
+// a silently wrong path is worse than a refusal. Stage 3b retires this script in
+// favour of a Node implementation, which has no codepage problem at all, so a
+// proper batch-Unicode fix would be wasted work.
+function writeSyncPathsCmd(p) {
+  try {
+    if (!p || !p.dst || !fs.existsSync(p.dst)) return false;
+    const esc = (v) => String(v || '').replace(/"/g, '');
+    // A non-ASCII path cannot be represented reliably in a batch file read under
+    // the OEM codepage, and writing it anyway produces a path that looks right in
+    // the file and resolves to something else at runtime. Refuse instead.
+    const nonAscii = [p.dst, cloudPath(p), DATA_DIR].filter(v => v && /[^\x00-\x7F]/.test(v));
+    if (nonAscii.length) {
+      console.error('writeSyncPathsCmd: refusing, path contains non-ASCII characters:', nonAscii);
+      return false;
+    }
+    const lines = [
+      'REM Generated by Lorekeeper from Settings > Backup. Do not edit by hand -',
+      'REM it is overwritten on startup and whenever those settings change.',
+      'REM',
+      'REM Only paths Lorekeeper owns appear here. Anything else the backup covers',
+      'REM lives in sync-extras.cmd, which Lorekeeper never reads or writes, so it',
+      'REM survives these regenerations and never ships in a build given elsewhere.',
+      'set "SRC=' + esc(DATA_DIR) + '"',
+      'set "DST=' + esc(p.dst) + '"',
+      'set "CLOUD=' + esc(cloudPath(p)) + '"',
+      ''
+    ].join('\r\n');
+    fs.writeFileSync(path.join(p.dst, 'sync-paths.cmd'), lines, 'utf-8');
+    return true;
+  } catch (e) { console.error('writeSyncPathsCmd:', e); return false; }
+}
+
+// The ONE place that decides whether a cloud copy happens at all.
+//
+// backup_provider is the seam, shaped like ai_provider. 'github' — the default —
+// means git and nothing else, and the folder copy is unreachable regardless of
+// what backup_cloud_dir happens to contain. A stale path left in that field can
+// therefore never start syncing on its own; opting in is an explicit act.
+//
+// 'rclone' is the planned third option (see the spec's Stage 3b). It is not
+// accepted here yet, so selecting it cannot silently behave like 'folder'.
+function cloudPath(p) {
+  if (!p) return '';
+  if ((p.provider || 'github') !== 'folder') return '';
+  return p.cloud || '';
+}
+
+// Environment overrides for a spawned sync. These win over sync-paths.cmd, so
+// Sync now always uses what Settings says this instant, even if the generated
+// file is stale.
+function syncEnv(p) {
+  return { ...process.env,
+    LK_SRC: DATA_DIR,
+    LK_DST: p.dst || '',
+    LK_CLOUD: cloudPath(p) };
+}
+
+// The script's exit codes, in words. Without this the panel can only say
+// "failed", and a backup that fails uninformatively is barely better than one
+// that fails silently.
+const SYNC_CODES = {
+  0: null,
+  1: 'A configured folder does not exist. Check the paths in Settings > Backup.',
+  2: 'Backup is not configured yet. Set the folders in Settings > Backup.',
+  3: 'Aborted: the backup repo is behind its remote. Nothing was copied or deleted. Pull in the backup folder, then sync again.',
+  4: 'The second destination was unreachable — if it is on a virtual drive, that program may not have started yet. The git push still succeeded.',
+  5: 'Git push failed. The commit is saved locally and will go out on the next run.'
+};
 
 // Ensure all standard data folders exist on startup
 ['', 'Companions', 'Lorebooks', 'Collections', 'Worlds', 'Personas', 'Templates', 'Notes'].forEach(sub => {
   const p = sub ? path.join(DATA_DIR, sub) : DATA_DIR;
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
 });
+
+// Regenerate sync-paths.cmd at startup, not only when Settings changes.
+// Without this, an install that updates to session 36 and never opens Settings
+// would have no generated file at all, so the SCHEDULED run — which is the
+// primary backup path, since it runs whether or not the app does — would resolve
+// no paths and exit 2. The migration inside resolveSyncPaths() supplies the
+// legacy values, so an existing setup keeps working untouched.
+// ONLY for an install still on the retired script route. Previously this ran
+// unconditionally, so a fresh install whose machine happened to have the old backup
+// folder wrote a generated file into it at startup - touching a folder it had nothing
+// to do with, with backup set to None. The script does not even read this file any
+// more (it takes its paths from sync-extras.cmd), so for every current route it was
+// writing something nothing reads.
+try {
+  const prov0 = activeProvider();
+  if (prov0 === 'github' || prov0 === 'legacy-folder') {
+    const p0 = resolveSyncPaths();
+    if (p0) writeSyncPathsCmd(p0);
+  }
+} catch (e) { console.error('startup writeSyncPathsCmd:', e); }
 
 // Writes a pretty-printed, key-sorted copy of the data file for git to diff.
 // saveData writes compact single-line JSON, which git treats as one giant line:
@@ -56,13 +229,104 @@ async function writePrettyData() {
   }
 }
 
+// Register the GitHub backup handlers. Placed here rather than at the top because
+// the sync needs writePrettyData: the live data file is a single enormous line, so
+// what actually gets committed is the pretty-printed copy.
+const githubBackup = createGitHubBackup({ ipcMain, safeStorage, app, dataDir: DATA_DIR, writePrettyData,
+  // Where electron-builder puts extraResources in a packaged build. In dev it points
+  // inside node_modules/electron, where no bundled rclone exists, so the resolver
+  // falls through to any rclone on PATH - which is what makes this testable before
+  // a packaged build exists.
+  resourcesPath: process.resourcesPath,
+  // AND the project's own vendor folder. In DEV, process.resourcesPath points inside
+  // node_modules/electron/dist/resources - Electron's own folder, nothing to do with
+  // this project - so a binary placed at vendor/rclone/rclone.exe was never looked at
+  // and the app fell through to PATH, which may not have rclone on it at all.
+  // Packaged, extraResources puts it under resourcesPath and this second path simply
+  // does not exist. Checking both means one place to put the file either way.
+  vendorDir: path.join(__dirname, '..', 'vendor', 'rclone') });
+
+// Which destination is configured, read straight from the data file. 'none' is
+// the default and means exactly that: nothing is copied, nothing is written, no
+// panel cites a folder that is not there. A fresh install has to stay silent.
+//
+// The legacy script values ('github' meaning the batch route, and the old
+// 'folder' which also went through it) are deliberately NOT treated as
+// configured here. They are reported to the renderer, which shows a notice
+// asking the user to pick again, rather than quietly running a script that a
+// packaged build may not even have.
+// WHICH DESTINATION IS CHOSEN COMES FROM THE DATA FILE AND NOWHERE ELSE.
+//
+// This used to read the syncPaths cache first, and that was wrong in a way that only
+// showed up on a fresh install. syncPaths is about the retired script's PATHS, and it
+// gets populated at startup by the legacy migration whenever I:\LorekeeperBackup
+// happens to exist on the machine - carrying provider 'github' with it. So a brand new
+// install, with nothing configured and the UI correctly showing None, reported the
+// retired script route here, wrote a 33 MB pretty file on close and launched the batch
+// script. Found by running the packaged build (session 41).
+//
+// A cache of where some paths are must never answer the question of what the user chose.
+function activeProvider() {
+  try {
+    if (!fs.existsSync(DATA_FILE)) return 'none';
+    const d = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+    return ((d && d.settings && d.settings.backup_provider) || 'none');
+  } catch (e) { return 'none'; }
+}
+
+function backupTarget() {
+  try {
+    if (!fs.existsSync(DATA_FILE)) return {};
+    const d = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+    const st = (d && d.settings) || {};
+    return { repo: st.backup_github_repo || '', folder: st.backup_cloud_dir || '' };
+  } catch (e) { return {}; }
+}
+
+// Unattended run for the scheduled task: Lorekeeper.exe --backup
+//
+// Goes through the SAME runBackup as the button. It needs Electron rather than
+// plain node because the token is encrypted with safeStorage, which only exists
+// inside an Electron process - which is also what keeps the token out of reach
+// of anything else on the machine.
+async function runHeadlessBackup() {
+  const provider = activeProvider();
+  const t = backupTarget();
+  if (provider !== 'github-api' && provider !== 'folder' && provider !== 'rclone') {
+    console.log('Backup: nothing configured, doing nothing.');
+    app.exit(2);
+    return;
+  }
+  try {
+    const res = await githubBackup.runBackup({
+      provider: provider, repo: t.repo, folder: t.folder,
+      onProgress: (m) => console.log(m)
+    });
+    if (res.success) {
+      const c = res.counts || {};
+      console.log(res.noop ? 'Backup: already up to date.'
+        : 'Backup: ' + c.uploaded + ' uploaded, ' + c.deleted + ' removed, ' + c.total + ' tracked.');
+      app.exit(0);
+    } else {
+      console.error('Backup FAILED: ' + res.error);
+      app.exit(5);
+    }
+  } catch (e) {
+    console.error('Backup FAILED: ' + e.message);
+    app.exit(5);
+  }
+}
+
 // Fire-and-forget launch of the sync script. Detached and unref'd so a slow
 // git push can never hold the app open or delay quitting.
 function launchSyncDetached() {
   try {
-    if (!fs.existsSync(SYNC_SCRIPT)) return false;
-    const child = spawn('cmd.exe', ['/c', SYNC_SCRIPT], {
-      cwd: BACKUP_DIR, detached: true, stdio: 'ignore', windowsHide: true
+    const p = resolveSyncPaths();
+    if (!p) return false;
+    const script = syncScript();
+    if (!script || !fs.existsSync(script)) return false;
+    const child = spawn('cmd.exe', ['/c', script], {
+      cwd: p.dst, detached: true, stdio: 'ignore', windowsHide: true, env: syncEnv(p)
     });
     child.unref();
     return true;
@@ -142,8 +406,28 @@ function createWindow() {
       // Data is now final on disk, so this is the correct moment to refresh the
       // pretty copy and hand off to the sync script. The spawn is detached, so
       // quitting is not blocked on git.
-      try { await writePrettyData(); } catch (err) {}
-      launchSyncDetached();
+      // Gated on sync being configured (session 36). Unconfigured, this wrote a
+      // ~21 MB pretty copy into the data folder on every single close, forever,
+      // for nothing — which is what a packaged build handed to someone else
+      // would have done.
+      // On close we refresh the pretty-printed copy and stop there. Uploading
+      // is NOT done here: a 33 MB push takes 15-20 seconds and the close path
+      // is time-boxed to 8, so it would be killed halfway every time while
+      // appearing to have run. The scheduled --backup run and the button own
+      // the upload; this just makes sure they have current data to send.
+      //
+      // Gated on something actually being configured. Unconfigured, this wrote
+      // a 33 MB file into the data folder on every single close, forever, for
+      // nothing - which is what a packaged build handed to someone else did.
+      const prov = activeProvider();
+      if (prov === 'github-api' || prov === 'folder' || prov === 'rclone') {
+        try { await writePrettyData(); } catch (err) {}
+      } else if (resolveSyncPaths() && (prov === 'github' || prov === 'legacy-folder')) {
+        // The retired batch route, still honoured for an install that has not
+        // been switched over yet.
+        try { await writePrettyData(); } catch (err) {}
+        launchSyncDetached();
+      }
       allowClose = true;
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
     };
@@ -155,6 +439,10 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // --backup is the scheduled task's entry point: no window, no renderer, run
+  // the backup and exit with a code the task log can show.
+  if (process.argv.includes('--backup')) { runHeadlessBackup(); return; }
+
   // Allow CDN resources
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
@@ -254,7 +542,15 @@ ipcMain.handle('save-data', async (event, data) => {
   catch (e) { console.error('save-data:', e); return false; }
 });
 
+// Read from package.json by Electron itself, so there is exactly one version
+// number in the project and the About panel cannot drift from the installer.
+ipcMain.handle('get-app-version', () => app.getVersion());
 ipcMain.handle('get-data-path', () => DATA_FILE);
+// The data FOLDER. get-data-path returns the data FILE, which Settings displays — the
+// portrait picker was appending 'Companions/<folder>' onto that, producing a path
+// through lorekeeper-data.json that could never exist, so no defaultPath was passed and
+// the dialog fell back to whatever folder Windows had open last.
+ipcMain.handle('get-data-dir', () => DATA_DIR);
 
 // Intentional-shrink save. The ratio guard above cannot tell a catastrophic empty-state
 // write from a legitimate bulk shrink (clearing 190 MB of base64 down to file paths), so
@@ -350,7 +646,7 @@ ipcMain.handle('export-file', async (event, { defaultName, content, folder }) =>
 ipcMain.handle('import-file', async () => {
   const { filePaths } = await dialog.showOpenDialog(mainWindow, {
     filters: [{ name: 'JSON', extensions: ['json'] }],
-    properties: ['openFile']
+    properties: ['openFile', 'dontAddToRecent']
   });
   if (!filePaths || !filePaths[0]) return null;
   return fs.readFileSync(filePaths[0], 'utf-8');
@@ -370,10 +666,12 @@ function readImageAsPath(filePath) {
 }
 
 // ── Import image (single, returns base64) ───────────────
+// dontAddToRecent keeps Lorekeeper from feeding the shell's "last visited folder"
+// memory, which is what the picker falls back to when no usable defaultPath is given.
 ipcMain.handle('import-image', async (event, opts) => {
   const dialogOpts = {
     filters: [{ name: 'Images', extensions: IMAGE_EXTS }],
-    properties: ['openFile']
+    properties: ['openFile', 'dontAddToRecent']
   };
   // Open in the character's own companion folder when there is one — otherwise the picker
   // starts wherever Windows last left it, which is rarely where the portraits live.
@@ -390,7 +688,7 @@ ipcMain.handle('import-image', async (event, opts) => {
 ipcMain.handle('import-images', async (event, opts) => {
   const dialogOpts = {
     filters: [{ name: 'Images', extensions: IMAGE_EXTS }],
-    properties: ['openFile', 'multiSelections']
+    properties: ['openFile', 'multiSelections', 'dontAddToRecent']
   };
   if (opts && opts.defaultPath) {
     const abs2 = path.isAbsolute(opts.defaultPath) ? opts.defaultPath : path.join(DATA_DIR, opts.defaultPath);
@@ -718,33 +1016,103 @@ ipcMain.handle('restore-lastgood', async () => {
 // Runs the sync script and waits for it, so the UI can report the real result.
 // The shutdown path uses launchSyncDetached() instead — there, waiting is wrong.
 ipcMain.handle('sync-to-git', async () => {
+  const p = resolveSyncPaths();
+  if (!p || !p.dst) return { success: false, error: SYNC_CODES[2], code: 2 };
+  const script = syncScript();
+  if (!script || !fs.existsSync(script)) return { success: false, error: 'Sync script not found at ' + script };
   const pretty = await writePrettyData();
   if (!pretty.success) return { success: false, error: 'Pretty-print failed: ' + pretty.error };
-  if (!fs.existsSync(SYNC_SCRIPT)) return { success: false, error: 'Sync script not found at ' + SYNC_SCRIPT };
+  // Refresh the generated file so the scheduled run agrees with Settings.
+  writeSyncPathsCmd(p);
   return await new Promise((resolve) => {
     let out = '';
-    const child = spawn('cmd.exe', ['/c', SYNC_SCRIPT], { cwd: BACKUP_DIR, windowsHide: true });
+    const child = spawn('cmd.exe', ['/c', script], { cwd: p.dst, windowsHide: true, env: syncEnv(p) });
     child.stdout.on('data', d => { out += d.toString(); });
     child.stderr.on('data', d => { out += d.toString(); });
     const timer = setTimeout(() => { try { child.kill(); } catch (e) {} resolve({ success: false, error: 'Sync timed out after 3 minutes', output: out }); }, 180000);
     child.on('error', (e) => { clearTimeout(timer); resolve({ success: false, error: e.message }); });
     child.on('close', (code) => {
       clearTimeout(timer);
-      resolve({ success: code === 0, code, output: out.trim(), prettySize: pretty.size });
+      resolve({
+        success: code === 0,
+        code,
+        error: SYNC_CODES[code] || (code === 0 ? null : 'Sync exited with code ' + code),
+        output: out.trim(),
+        prettySize: pretty.size
+      });
     });
   });
 });
 
-ipcMain.handle('get-sync-info', async () => ({
-  backupDir: BACKUP_DIR,
-  scriptFound: fs.existsSync(SYNC_SCRIPT),
-  prettyExists: fs.existsSync(PRETTY_FILE),
-  prettyMtime: fs.existsSync(PRETTY_FILE) ? fs.statSync(PRETTY_FILE).mtime.toISOString() : null
-}));
+// The renderer pushes the configured paths here on load and whenever Settings
+// changes, which both caches them for this process and regenerates the file the
+// scheduled task reads.
+ipcMain.handle('set-sync-paths', async (e, p) => {
+  // Defaults to 'none', not 'github'. An absent provider means nothing has been
+  // chosen, and reading it as the retired script route is how an unconfigured
+  // install ends up acting configured.
+  syncPaths = {
+    provider: (p && p.provider) || 'none',
+    dst:   (p && p.dst)   || '',
+    cloud: (p && p.cloud) || ''
+  };
+  // sync-paths.cmd belongs to the retired script route and to nothing else.
+  // Writing it on every Settings change put a generated file into a folder the
+  // install does not use - which is what a fresh packaged build was caught doing
+  // on 11 October 2026, with the provider correctly set to none. The startup
+  // regeneration was gated the same day; this call site was missed because it is
+  // 850 lines away from it.
+  const scriptRoute = (syncPaths.provider === 'github' || syncPaths.provider === 'legacy-folder');
+  const wrote = scriptRoute ? writeSyncPathsCmd(syncPaths) : false;
+  return { ok: true, wrote, dataDir: DATA_DIR };
+});
 
-ipcMain.handle('open-backup-folder', async () => {
-  if (!fs.existsSync(BACKUP_DIR)) return false;
-  shell.openPath(BACKUP_DIR);
+ipcMain.handle('get-sync-info', async () => {
+  const p = resolveSyncPaths();
+  const dst = p ? p.dst : null;
+  const script = syncScript();
+  const stamp = (name) => {
+    try {
+      if (!dst) return null;
+      const f = path.join(dst, name);
+      if (!fs.existsSync(f)) return null;
+      return { text: fs.readFileSync(f, 'utf-8').trim(), at: fs.statSync(f).mtime.toISOString() };
+    } catch (e) { return null; }
+  };
+  return {
+    configured: !!(p && p.dst),
+    dataDir: DATA_DIR,
+    backupDir: dst,
+    provider: p ? (p.provider || 'github') : 'github',
+    // Deliberately reports the EFFECTIVE destination, not the stored field. If the
+    // provider is github, the panel must not show a cloud folder as if it were in use.
+    cloudDir: cloudPath(p) || null,
+    backupDirExists: !!(dst && fs.existsSync(dst)),
+    // Checks the cloud DRIVE, not the leaf folder: Google Drive's virtual mount
+    // does not exist at all until Drive FS has started, and the leaf may legitimately
+    // not exist before the first successful run.
+    cloudDriveReady: (() => {
+      try {
+        const c = cloudPath(p);
+        if (!c) return null;
+        return fs.existsSync(path.parse(c).root);
+      } catch (e) { return null; }
+    })(),
+    scriptFound: !!(script && fs.existsSync(script)),
+    pathsCmdFound: !!(dst && fs.existsSync(path.join(dst, 'sync-paths.cmd'))),
+    prettyExists: fs.existsSync(PRETTY_FILE),
+    prettyMtime: fs.existsSync(PRETTY_FILE) ? fs.statSync(PRETTY_FILE).mtime.toISOString() : null,
+    lastSync: stamp('last-sync.txt'),
+    lastCloudSync: stamp('last-cloud-sync.txt')
+  };
+});
+
+ipcMain.handle('open-backup-folder', async (e, which) => {
+  const p = resolveSyncPaths();
+  if (!p) return false;
+  const target = which === 'cloud' ? cloudPath(p) : p.dst;
+  if (!target || !fs.existsSync(target)) return false;
+  shell.openPath(target);
   return true;
 });
 
@@ -829,7 +1197,7 @@ ipcMain.handle('restore-backup', async () => {
   try {
     const { filePaths } = await dialog.showOpenDialog(mainWindow, {
       filters: [{ name: 'ZIP Archive', extensions: ['zip'] }],
-      properties: ['openFile']
+      properties: ['openFile', 'dontAddToRecent']
     });
     if (!filePaths || !filePaths[0]) return { success: false, cancelled: true };
 

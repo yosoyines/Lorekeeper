@@ -1,6 +1,7 @@
 {
   "name": "lorekeeper",
-  "version": "1.1.0",
+  "version": "1.2.0",
+  "author": "yosoyines",
   "description": "Character and lore manager for Saucepan",
   "main": "src/main.js",
   "scripts": {
@@ -36,6 +37,15 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Lorekeeper"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "vendor/rclone",
+        "to": "rclone",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
   }
 }
