@@ -840,7 +840,7 @@ Lives in the right panel's **Map** tab (panel expands to 640px while active).
 Right panel **Assistant** tab (renamed from "Claude" session 31) — full AI chat with world-aware context.
 
 ### Providers
-All calls go through one shared helper, `callAI(data, systemPrompt, messages, maxTokens)`, which branches on `settings.ai_provider` and returns `{text}` or `{error}` — it never throws. Used by both the Assistant chat and the Image Prompt Generator.
+All calls go through one shared helper, `callAI(data, systemPrompt, messages, maxTokens, opts)`, which branches on `settings.ai_provider` and returns `{text}` or `{error}` — it never throws. Used by both the Assistant chat and the Image Prompt Generator. `opts` is optional and carries sampler values; the Image Prompt Generator omits it and is unaffected.
 
 | Provider | Endpoint | Auth | Model setting |
 |---|---|---|---|
@@ -864,6 +864,31 @@ LM Studio exposes an OpenAI-compatible server, so the branch reuses the same req
 
 Note the CSP header is applied in the main process at window creation, so it needs a full app restart, not a reload.
 
+### Task presets (session 42)
+
+A preset is a complete system prompt plus sampler values aimed at one kind of output. Chosen from a **Preset** dropdown at the top of the Assistant panel; edited in Settings → AI Provider → Task presets. Three ship built in: Character Sheet, Example Dialogue, Intro Scenario.
+
+**A preset replaces the assistant preamble and `ASSISTANT_HOUSE_RULES` outright.** This is deliberate and is the one thing a future session is most likely to "fix". A task prompt that opens *"output only the prose, no preamble"* and a preamble telling the model to be a concise helpful assistant are two different briefs, and the model splits the difference. Everything below that point in `buildSystemPrompt` — world, lorebook, house format, current character — is still appended, which is the entire reason for running the task from inside Lorekeeper rather than pasting the card into LM Studio by hand. `ai_custom_instructions` is still appended too.
+
+**Samplers have to be sent or they do not exist.** LM Studio's own presets are client-side: nothing on its Inference tab — temperature, Min P, repeat penalty, the preset system prompt — reaches `/v1/chat/completions`. Only Load-tab settings (context length, GPU offload, cache quantization, chat template) apply to server requests. So `preset.params` travels in the request body.
+
+Each provider builds its own subset rather than sharing one object, because sending `min_p` to Anthropic is a 400, not a silent ignore:
+
+| Provider | Accepts |
+|---|---|
+| `anthropic`, `openai` | `temperature`, `top_p` |
+| `google` | `temperature`, `topP` (inside `generationConfig`) |
+| `lmstudio` | `temperature`, `top_p`, `min_p`, `repeat_penalty` |
+| `openrouter` | `temperature`, `top_p`, `min_p`, `repetition_penalty` |
+
+**A blank sampler field is not sent.** That is how Top P stays off without having to send `top_p: 1`. Zero *is* sent — the normaliser tests for empty string and `NaN`, not falsiness.
+
+Storage: `settings.ai_presets` (array of `{id, name, instructions, params}`) and `settings.ai_active_preset` (id, or `''` for the default Assistant behaviour). **Deleting every preset falls back to the built-in three rather than leaving an empty dropdown** — a floor, not a bug. Editing any preset first materialises the built-ins into `settings.ai_presets` so they become the user's own copies.
+
+`DEFAULT_AI_PRESETS` and `PRESET_PARAM_FIELDS` live in the **plain-JS block**, not a Babel block — data arrays always do, and the prompt text alone is ~12 KB.
+
+Not built, deliberately: auto-filling output into a character field (needs field targeting, a confirm step and an undo path), and per-preset model selection (switching models means an eject and reload, which is slower than picking from the dropdown).
+
 ### Assistant context scope (session 31)
 
 The Assistant prompt sends world description, every lorebook with full chapter text, collections, sibling characters and the current character. Measured on Guideverse: **27,327 tokens**. Fine for cloud, impossible locally.
@@ -882,14 +907,20 @@ The panel shows a live `≈N tok` estimate (`chars/4`) that turns amber past 700
 
 **The world's template is injected as a HOUSE FORMAT block.** If a template exists for the current world, its `full_description`, `card` and `formatting_instructions` fields go into the prompt with an instruction to match the structure exactly and replace only placeholder text. Templates already supported these fields and per-world scoping — the only thing missing was the Assistant knowing they existed. Generated text now comes back already shaped to the catalogue's house style.
 
-### Reference hardware (Ine's machine)
-RTX 3060 Ti 8 GB, 32 GB RAM, i7-14700KF. **VRAM is the binding constraint, not RAM.**
+### Reference hardware (Ine's machine, updated session 42)
+RTX 5070 Ti 16 GB, i7-14700KF. **VRAM is the binding constraint, not RAM.** Blackwell needs the CUDA 12.8 runtime — in LM Studio that is the engine listed as "CUDA 12 llama.cpp", and the GGUF runtime *selector* can sit on an older installed version than the newest one present, which looks like a slow model rather than a misconfiguration.
 
-- `qwen-3-14b-instruct` Q4_K_M (9 GB) — the daily driver. Does not fit 8 GB fully; partial CPU offload.
-- `mistral-small-3.2-24b` (15.2 GB) — better prose, roughly half on CPU, noticeably slower.
-- `deepseek-r1-distill-qwen-14b` and `exaone-deep-7.8b` are **reasoning** models — they emit `<think>` blocks and are the wrong tool for prose. qwen3-instruct returns `reasoning_content: ""`, so no stripping is needed for it.
+Current models, all community fine-tunes for fiction:
 
-Working LM Studio config: **context 16384, GPU offload 24 layers, K and V cache both Q8_0, Flash Attention on.** KV cache is ~160 KB/token at fp16, so 16k costs ~2.6 GB — Q8_0 halves it to ~1.3 GB, which is the difference between loading and not. Context length and offload are load-time settings; the model must be reloaded. The "Customized" badge only means the config differs from defaults, not that it is unapplied.
+- `thedrummer_cydonia-24b-v4.1` **IQ4_XS** (12.8 GB) — holds structure, macros and template fidelity. The one to use for anything with a shape. ~18 tok/s; IQ4_XS dequantizes slower than a K-quant, so that is expected, not a fault. IQ4_XS over Q4_K_M because 14.3 GB of weights plus a 16k cache plus Windows' own overhead does not fit 16 GB.
+- `unslopnemo-12b-v4.1` Q5_K_M (8.7 GB) — livelier prose, loses constraints. First drafts only.
+- `mn-12b-mag-mell-r1` Q5_K_M (8.7 GB) — worldbuilding. **ChatML template, not Mistral**, despite the Nemo base; LM Studio guesses wrong and the result reads as weak writing rather than an obvious error.
+
+**Stock instruct models are the wrong tool and were all removed.** They are trained to be assistants: asked for a scenario they return a tutorial about writing one. A base model with no instruct tuning (`gemma-2-9b`, no `-it` suffix) cannot follow an instruction at all.
+
+Working config: **Cydonia at context 16384 / 40 layers; the 12Bs at 24576 / all layers; K and V cache Q8_0 and Flash Attention on for all three.** KV cache is ~160 KB/token at fp16, so 16k costs ~2.6 GB — Q8_0 halves it, which is the difference between loading and not. The cache-quantization dropdowns sit behind checkboxes that leave them inert until ticked, so the setting looks absent rather than off. Context length and offload are load-time; the model must be reloaded. The "Customized" badge only means the config differs from defaults, not that it is unapplied.
+
+**Default context length is a global setting and ships at 8192**, which a 2,600-token card plus a system prompt plus a long reply overruns. When context overflows, the system prompt is the first thing dropped — so the instructions genuinely stop reaching the model, and it reads as the model ignoring them.
 
 ### System prompt includes
 - Current world: name, description, tags, notes
