@@ -534,7 +534,7 @@ The last content type with no independent copy on disk. `Timelines\{world}.json`
 
 It claimed two blocks of roughly 250 KB and 241 KB. Measured with `compile-check.js` against the shipped file: **247 / 273 / 294 KB**. Still far from the ceiling, but the numbers had drifted because they were written once and never re-measured. The spec now says that any figure not produced by that script is a guess.
 
-## Session 44
+## Session 47
 
 **Nov 7**
 
@@ -576,4 +576,4 @@ Three findings from doing it at scale. **The test is not length, it is whether t
 
 **The help manual's Settings section had drifted from the page.** One "Font size" where there are two set separately, three backup routes where there are four, and no mention of Context window, Extra assistant instructions, Task presets or About. Rewritten to mirror the page section by section. **Validated by evaluating `HELP_SECTIONS` rather than trusting the compile** — a malformed object in that array compiles and renders wrong.
 
-**Session numbering: this is 44, not 42.** The log already held 42 (Oct 13-14) and 43 (Oct 16-18). I wrote "session 42" into the spec twice and into a code comment before checking the log, and the label is now in a pushed commit message that cannot be corrected. **Read the last heading in this file before writing a number into the source.**
+**Session numbering: this is 47, and I got it wrong twice.** First I wrote 42, which the log already held (Oct 13-14), along with 43. Renumbered to 44 — also wrong: the spec references sessions 45, 46 and 46b, and the roadmap is dated session 46b, 30 October. **The sessions log stops at 43 and has no entries for 44, 45, 46 or 46b**, so the file cannot be trusted as the source of the next number. The spec and the roadmap can. Both earlier labels are in pushed commit messages that cannot be corrected.

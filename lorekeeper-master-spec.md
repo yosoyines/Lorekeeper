@@ -1017,7 +1017,7 @@ LM Studio exposes an OpenAI-compatible server, so the branch reuses the same req
 
 Note the CSP header is applied in the main process at window creation, so it needs a full app restart, not a reload.
 
-### Task presets (session 44)
+### Task presets (session 47)
 
 A preset is a complete system prompt plus sampler values aimed at one kind of output. Chosen from a **Preset** dropdown at the top of the Assistant panel; edited in Settings → AI Provider → Task presets. Three ship built in: Character Sheet, Example Dialogue, Intro Scenario.
 
@@ -1042,7 +1042,7 @@ Storage: `settings.ai_presets` (array of `{id, name, instructions, params}`) and
 
 Not built, deliberately: auto-filling output into a character field (needs field targeting, a confirm step and an undo path), and per-preset model selection (switching models means an eject and reload, which is slower than picking from the dropdown).
 
-### Which AI settings are global and which are LM Studio's (session 44)
+### Which AI settings are global and which are LM Studio's (session 47)
 
 The two had been inconsistent: both **Extra assistant instructions** and **Context window** rendered only inside the `ai_provider==='lmstudio'` fragment, but `buildSystemPrompt` applied the instructions on every provider. So a rule written for a local model rode along invisibly on an Anthropic call with no field in that panel to see or edit it.
 
@@ -1073,7 +1073,7 @@ The panel shows a live `≈N tok` estimate (`chars/4`) that turns amber past 700
 
 **The world's template is injected as a HOUSE FORMAT block.** If a template exists for the current world, its `full_description`, `card` and `formatting_instructions` fields go into the prompt with an instruction to match the structure exactly and replace only placeholder text. Templates already supported these fields and per-world scoping — the only thing missing was the Assistant knowing they existed. Generated text now comes back already shaped to the catalogue's house style.
 
-### Reference hardware (Ine's machine, updated session 44)
+### Reference hardware (Ine's machine, updated session 47)
 RTX 5070 Ti 16 GB, i7-14700KF. **VRAM is the binding constraint, not RAM.** Blackwell needs the CUDA 12.8 runtime — in LM Studio that is the engine listed as "CUDA 12 llama.cpp", and the GGUF runtime *selector* can sit on an older installed version than the newest one present, which looks like a slow model rather than a misconfiguration.
 
 Current models, all community fine-tunes for fiction:
