@@ -4825,7 +4825,7 @@ function App() {
     <div className="app">
       {lightboxSrc&&<LightboxModal src={lightboxSrc} onClose={()=>setLightboxSrc(null)}/>}
         {lastgoodWarning&&<div style={{position:'fixed',top:0,left:0,right:0,background:'var(--amber)',color:'#000',padding:'8px 16px',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',justifyContent:'space-between',zIndex:9999}}>
-        <span><i className="ti ti-alert-triangle" style={{marginRight:6}}></i>Data file was corrupted on startup — auto-recovered from last good backup. Verify your data and create a fresh backup zip.</span>
+        <span><i className="ti ti-alert-triangle" style={{marginRight:6}}></i>Data file was corrupted on startup and recovered from the last good backup. Check your data, then make a fresh backup zip.</span>
         <button style={{background:'transparent',border:'1px solid rgba(0,0,0,0.3)',borderRadius:4,padding:'3px 10px',cursor:'pointer',fontWeight:600,fontSize:12,marginLeft:16,flexShrink:0}} onClick={()=>setLastgoodWarning(false)}>Dismiss</button>
       </div>}
       
@@ -5811,7 +5811,7 @@ function ImageColourTool() {
           onClick={() => {img.setSrc(null);}}>New image</button>
       </div>
       <div style={{fontSize:10,color:'var(--text3)',marginTop:6,lineHeight:1.5}}>
-        A single pixel in a compressed image is often noise rather than the colour you are looking at, so averaging a small square is usually truer to what you see.
+        Averages a small square rather than one pixel, which is often compression noise.
       </div>
     </React.Fragment>;
   }
@@ -5954,7 +5954,7 @@ function PaletteTool() {
     </div>}
     {img.status && <div style={{fontSize:11,color:'var(--amber)',marginTop:6}}>{img.status}</div>}
     <div style={{fontSize:10,color:'var(--text3)',marginTop:8,lineHeight:1.5}}>
-      Built in OKLCH, where equal lightness really does look equally bright. In HSL, yellow and blue are both {'"'}50% lightness{'"'} while one reads more than twice as bright as the other — which is why rotating hue alone tends to produce palettes that feel unbalanced.
+      Built in OKLCH, where equal lightness really does look equally bright.
     </div>
   </div>;
 }
@@ -7081,7 +7081,7 @@ function TimelinePanel({world, data, update, worldChars, worldLores, setSelected
   let body = null;
   if(visible.length === 0){
     body = <div style={emptyStyle}>
-      No events yet. A timeline is most useful when two or more threads run alongside each other — add a strand per couple or faction, then place events on them to see where the histories cross. Events can link to characters and lorebook chapters, and the whole thing copies out as markdown for a chapter.
+      No events yet. Add a strand per couple or faction, then place events on them to see where the histories cross.
     </div>;
   } else {
     body = <div>
@@ -7124,7 +7124,7 @@ function TimelinePanel({world, data, update, worldChars, worldLores, setSelected
         <input style={inStyle} placeholder="Sort key (optional)" value={draft.sort} onChange={ev=>setDraft({...draft,sort:ev.target.value})}/>
       </div>
       <div style={{fontSize:10,color:'var(--text3)',marginBottom:8,lineHeight:1.6}}>
-        "When" is what you see — any format. "Sort key" is what orders it: a date like 1864-07-08, or a plain number. Leave the sort key empty to place the event by hand with the arrows.
+        "When" is displayed, in any format. "Sort key" orders it: a date like 1864-07-08, or a number. Leave it empty to order by hand with the arrows.
       </div>
       <textarea style={{...inStyle,minHeight:70,resize:'vertical',fontFamily:'inherit',marginBottom:8}} placeholder="What happens" value={draft.description} onChange={ev=>setDraft({...draft,description:ev.target.value})}/>
       <div style={{marginBottom:8}}>
@@ -8033,7 +8033,7 @@ function SiteChecklistPanel({data, openChar, openLore, openColl}) {
           2. Click <strong style={{color:'var(--text)'}}>Export</strong> to download the JSON<br/>
           3. Upload the JSON to the site<br/>
           4. Item disappears from this list<br/>
-          <span style={{color:'var(--text3)',fontSize:10,marginTop:4,display:'block'}}>Items appear here when you edit something after its last export, or if it has never been exported at all.</span>
+          <span style={{color:'var(--text3)',fontSize:10,marginTop:4,display:'block'}}>Items appear here once edited after their last export, or never exported at all.</span>
         </div>:null}
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:6}}>
@@ -9731,7 +9731,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                       <input value={p.description||''} onChange={e=>updChar(c=>c.portraits[i].description=e.target.value)} placeholder="Description (required by site)" style={{width:'100%',background:'var(--bg2)',border:p.description?'1px solid var(--border)':'1px solid var(--amber)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',marginTop:4}}/>
                       <input value={p.caption||''} onChange={e=>updChar(c=>c.portraits[i].caption=e.target.value)} placeholder="Caption (shown to users in the gallery)" maxLength={200} style={{width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',marginTop:4}}/>
                       <div className="pflag-row">
-                        <button type="button" className={p.very_sus?'pflag pflag-spicy-on':'pflag'} title="Blurs the image on the site until the viewer opts in. Set this to match the site — Lorekeeper cannot detect it, and exporting with it off will un-blur an image that was spicy." onClick={()=>updChar(c=>c.portraits[i].very_sus=!c.portraits[i].very_sus)}>Extra Spicy</button>
+                        <button type="button" className={p.very_sus?'pflag pflag-spicy-on':'pflag'} title="Blurs the image on the site until the viewer opts in. Set it to match the site — exporting with it off will un-blur a spicy image." onClick={()=>updChar(c=>c.portraits[i].very_sus=!c.portraits[i].very_sus)}>Extra Spicy</button>
                         <button type="button" className={p.gallery_only?'pflag pflag-gal-on':'pflag'} title="Image appears in the gallery only — the LLM will not select it for in-chat display." onClick={()=>updChar(c=>c.portraits[i].gallery_only=!c.portraits[i].gallery_only)}>Gallery only</button>
                       </div>
                       <div style={{display:'flex',gap:4,marginTop:6}}>
@@ -9848,7 +9848,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                   <input value={charData.source_url||''} onChange={e=>updChar(c=>c.source_url=e.target.value)} placeholder="https://…" style={ST_SOURCE_INPUT}/>
                   {charData.source_url?<button className="btn" style={{flexShrink:0}} onClick={()=>navigator.clipboard.writeText(charData.source_url)} title="Copy link"><i className="ti ti-copy"></i></button>:null}
                 </div>
-                <div className="field-hint">Local only — stripped from every Saucepan export. Doubles as the source link on a SillyTavern card.</div>
+                <div className="field-hint">Local only, stripped from every Saucepan export. Doubles as the SillyTavern source link.</div>
               </div>
               <div className="field-row">
                 <div className="field-block"><label>Access Level</label><select value={charData.access_level||'private'} onChange={e=>updChar(c=>c.access_level=e.target.value)}><option value="private">Private</option><option value="unlisted">Unlisted</option><option value="public">Public</option></select></div>
@@ -10016,7 +10016,7 @@ function LorebookEntryTab({charData, data, update, updChar}) {
             2. Edit the chapter title and body below<br/>
             3. Click <strong style={{color:'var(--text)'}}>Save to Lorebook</strong> — creates or updates a chapter in the linked lorebook<br/>
             4. Click <strong style={{color:'var(--text)'}}>Re-apply template</strong> to reset the content from the template (fills in the character name)<br/>
-            <span style={{fontSize:11,marginTop:4,display:'block',color:'var(--text3)'}}>The chapter is matched by character ID, so renaming the character won't create a duplicate.</span>
+            <span style={{fontSize:11,marginTop:4,display:'block',color:'var(--text3)'}}>Matched by character ID, so renaming won't create a duplicate.</span>
           </div>}
         </div>;
       })()}
@@ -10114,7 +10114,7 @@ function LoreItemRestoreCard({lorebook, update}) {
   return (
     <div className="export-card">
       <div className="export-card-title">Backup / Restore</div>
-      <p className="export-card-desc">Save a platform-format backup or restore from a pasted or dropped JSON. Restore keeps world, auto-save filename, and all app-only data.</p>
+      <p className="export-card-desc">Save a platform-format backup, or restore from a pasted or dropped JSON. Restore keeps world, filename and app-only data.</p>
       <div style={{display:'flex',gap:8,marginBottom:12}}>
         <button className="btn" onClick={handleLoreBackup}><i className="ti ti-database-export"></i>Backup Lore Book</button>
         <button className="btn" onClick={()=>loreFileRef.current&&loreFileRef.current.click()}><i className="ti ti-database-import"></i>Restore Lore Book</button>
@@ -10149,7 +10149,7 @@ function LoreExportPanel({lorebook,exportLore,exportLoreMd,loreMdPreview,setLore
       <LoreItemRestoreCard lorebook={lorebook} update={update}/>
       {importJSON?<div className="export-card">
         <div className="export-card-title">Update from JSON</div>
-        <p className="export-card-desc">Re-import this lorebook's JSON to overwrite its fields (keeps world and auto-save filename — app-specific data isn't touched).</p>
+        <p className="export-card-desc">Overwrites this lorebook's fields from its JSON. World, filename and app-only data are kept.</p>
         <button className="btn" onClick={importJSON}><i className="ti ti-refresh"></i>Update from JSON</button>
       </div>:null}
       <div className="export-card">
@@ -10293,7 +10293,7 @@ function CollSettingsTab({col,setCol,data,world,update,openChar,setModal,onBack}
           <label style={{display:'flex',alignItems:'center',gap:8,fontSize:13,color:'var(--text2)',cursor:'pointer',fontWeight:'normal',textTransform:'none',letterSpacing:0,marginTop:10}}>
             <input type="checkbox" checked={!!col.is_community} onChange={e=>setCol(c=>{c.is_community=e.target.checked;})} style={{width:'auto',accentColor:'var(--accent)'}}/>Community collection
           </label>
-          <div style={{fontSize:10,color:'var(--text3)',marginTop:4,lineHeight:1.5}}>Saucepan doesn't export this flag — set it here to match the site, so companions in this collection can reuse its banner image.</div>
+          <div style={{fontSize:10,color:'var(--text3)',marginTop:4,lineHeight:1.5}}>Saucepan doesn't export this flag. Set it to match the site so companions here can reuse the banner image.</div>
           <label style={{fontSize:10,marginTop:10,display:'block'}}>Image UUID <span style={{color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0}}>(from site)</span></label>
           <input value={col.image?.id||''} onChange={e=>setCol(c=>{if(!c.image)c.image={};c.image.id=e.target.value;})} placeholder="paste UUID…" style={BANNER_INPUT_STYLE}/>
         </div>
@@ -10383,7 +10383,7 @@ function CollItemRestoreCard({coll, update}) {
   return (
     <div className="export-card">
       <div className="export-card-title">Backup / Restore</div>
-      <p className="export-card-desc">Save a platform-format backup or restore from a pasted or dropped JSON. Restore keeps world, auto-save filename, and all app-only data.</p>
+      <p className="export-card-desc">Save a platform-format backup, or restore from a pasted or dropped JSON. Restore keeps world, filename and app-only data.</p>
       <div style={{display:'flex',gap:8,marginBottom:12}}>
         <button className="btn" onClick={handleCollBackup}><i className="ti ti-database-export"></i>Backup Collection</button>
         <button className="btn" onClick={()=>collFileRef.current&&collFileRef.current.click()}><i className="ti ti-database-import"></i>Restore Collection</button>
@@ -10429,7 +10429,7 @@ function CollExportPanel({coll,data,exportColl,importJSON,update}) {
       <CollItemRestoreCard coll={coll} update={update}/>
       {importJSON?<div className="export-card">
         <div className="export-card-title">Update from JSON</div>
-        <p className="export-card-desc">Re-import this collection's JSON to overwrite its fields (keeps world and auto-save filename — app-specific data isn't touched).</p>
+        <p className="export-card-desc">Overwrites this collection's fields from its JSON. World, filename and app-only data are kept.</p>
         <button className="btn" onClick={importJSON}><i className="ti ti-refresh"></i>Update from JSON</button>
       </div>:null}
       <div className="export-card">
@@ -10480,7 +10480,7 @@ function CharExportTab({charData, data, exportChar, importJSON, updChar}) {
     <div className="export-panel">
       {importJSON?<div className="export-card">
         <div className="export-card-title">Update from JSON</div>
-        <p className="export-card-desc">Re-import this character's JSON to overwrite its fields (keeps world, status, schedule, and portrait — app-specific data isn't touched).</p>
+        <p className="export-card-desc">Overwrites this character's fields from its JSON. World, status, schedule and portrait are kept.</p>
         <button className="btn" onClick={importJSON}><i className="ti ti-refresh"></i>Update from JSON</button>
       </div>:null}
       <div className="export-card">
@@ -10543,7 +10543,7 @@ function SillyTavernExportCard({charData, data}) {
   return (
     <div className="export-card">
       <div className="export-card-title">Export to SillyTavern</div>
-      <p className="export-card-desc">A character card PNG — the portrait with the card data written into it. Saucepan macros are resolved to real words, because SillyTavern would print them literally. Pronoun choice decides which.</p>
+      <p className="export-card-desc">The portrait with the card data written into it. Saucepan macros are resolved to real words; the pronoun choice decides which.</p>
       <div className="export-card-meta">
         {counts.map(([label,ok])=>(
           <span key={label} className={"export-field-"+(ok?"ok":"missing")}>{label}</span>
@@ -10836,7 +10836,7 @@ function RelationshipsPage({data, update, initialWorld}) {
 function PersonasPage({data,setSelectedPersona}) {
   const personas = data.personas||[];
   return personas.length===0 ? (
-    <div className="empty"><i className="ti ti-masks-theater"></i><h3>No personas yet</h3><p>Personas are your player characters — independent from worlds, used across roleplay.</p></div>
+    <div className="empty"><i className="ti ti-masks-theater"></i><h3>No personas yet</h3><p>Your player characters. Independent of worlds, used across roleplay.</p></div>
   ) : (
     <div className="chars-grid">
       {personas.map(p=>(
@@ -10991,7 +10991,7 @@ function PersonaPortraitsTab({pData,updP,setLightboxSrc}) {
   return (
     <div className="field-block">
       <label>Portraits ({ports.length}/10)</label>
-      <div className="field-hint">Reference images for this persona. Local only — personas cannot be uploaded to or downloaded from Saucepan, so these never leave this machine.</div>
+      <div className="field-hint">Reference images for this persona. Local only — personas never leave this machine.</div>
       <div style={PP_GRID_STYLE}>
         {ports.map((p,i)=>(
           <PersonaPortraitSlot key={i} p={p} i={i} updP={updP} setLightboxSrc={setLightboxSrc}
