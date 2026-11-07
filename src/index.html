@@ -1320,7 +1320,7 @@ const HELP_SECTIONS = [
    },
    {
     "t": "p",
-    "x": "**Choose a destination in Settings → Backup.** Three options:"
+    "x": "**Choose a destination in Settings → Backup.** Four options:"
    },
    {
     "t": "p",
@@ -1332,7 +1332,17 @@ const HELP_SECTIONS = [
    },
    {
     "t": "p",
+    "x": "**Google Drive, OneDrive or Dropbox** uploads through rclone, which ships with Lorekeeper. You sign in to the service in your own browser and the sign-in stays with rclone — Lorekeeper never sees it. Only the folder you name is ever written to or tidied up."
+   },
+   {
+    "t": "p",
     "x": "**A synced folder** copies the same files into a folder you choose — one another program already keeps in sync, a second drive, or a network share. Restoring means copying them back; no special knowledge needed."
+   },
+   {
+    "t": "warn",
+    "h": "⚠ A synced folder on a virtual drive may not exist yet",
+    "x": "If the folder lives on a drive letter a sync client creates — Google Drive's G:, for instance — it does not exist until that client has started. A backup that runs before it does will fail. A folder on a real disk has no such problem.",
+    "s": []
    },
    {
     "t": "p",
@@ -1532,6 +1542,22 @@ const HELP_SECTIONS = [
    {
     "t": "p",
     "x": "**Chat resets** when you switch to a different character or world. Copy anything useful before switching."
+   },
+   {
+    "t": "p",
+    "x": "**Task presets** — the Preset dropdown above the context selector. A preset is a whole system prompt plus sampler values aimed at one kind of output. Three are built in: Character Sheet, Example Dialogue and Intro Scenario."
+   },
+   {
+    "t": "p",
+    "x": "Choosing one **replaces the Assistant's own instructions** for that request. The world, lorebook, house format and character context are still sent underneath, which is the point: the card is already in context instead of being pasted in by hand. Leave it on **Assistant (default)** for ordinary chat."
+   },
+   {
+    "t": "p",
+    "x": "Edit them in **Settings → AI Provider → Task presets**: the prompt itself, plus temperature, Top P, Min P, repeat penalty and a token cap. A blank sampler is not sent at all. Min P and repeat penalty reach LM Studio and OpenRouter only; other providers ignore them. **Add preset** makes your own, **Restore built-ins** puts the three originals back."
+   },
+   {
+    "t": "tip",
+    "x": "Sampler values set inside LM Studio's own Inference tab never reach Lorekeeper — that panel only affects LM Studio's chat window. A preset's values do, because they are sent with the request."
    },
    {
     "t": "tip",
@@ -6810,7 +6836,7 @@ function PlotArchetypeInput({worldId, update}) {
       onKeyDown={e=>{if(e.key==='Enter')add();}}
       placeholder="Add a custom plot archetype…"
       style={{flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none'}}/>
-    <button className="btn" onClick={add}><i className="ti ti-plus"></i></button>
+    <button className="btn" onClick={add} title="Add this archetype to the world"><i className="ti ti-plus"></i></button>
   </div>;
 }
 
@@ -6922,7 +6948,7 @@ function RollTool() {
         <button className="btn" style={{flex:1,justifyContent:'center'}} onClick={doRoll} disabled={options.length<2}>
           <i className="ti ti-dice-5"></i>{result===null?'Roll':'Roll again'}
         </button>
-        <button className="btn" style={{fontSize:12}} onClick={clearAll}><i className="ti ti-x"></i></button>
+        <button className="btn" style={{fontSize:12}} onClick={clearAll} title="Clear every option"><i className="ti ti-x"></i></button>
       </div>
       {resultNode}
       {histNode}
@@ -8724,7 +8750,7 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
             </div>
             {(world.image||world.image_relpath)&&<BannerFocusControl value={world.banner_focus} onChange={v=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.banner_focus=v;})}/>}
             <div className="export-row">
-              <button className="btn" onClick={handleBannerUpload}><i className="ti ti-upload"></i>{(world.image||world.image_relpath)?'Change Image':'Upload Image'}</button>
+              <button className="btn" onClick={handleBannerUpload} title="Banner shown on the world's page in Lorekeeper. Not exported to Saucepan."><i className="ti ti-upload"></i>{(world.image||world.image_relpath)?'Change Image':'Upload Image'}</button>
               {(world.image||world.image_relpath)?<button className="btn danger" onClick={()=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w){w.image=null;w.image_relpath=null;}})}><i className="ti ti-x"></i>Remove</button>:null}
             </div>
           </div>
@@ -8745,7 +8771,7 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
             <div style={{display:'flex',flexWrap:'wrap',gap:4,marginBottom:6}}>
               {(world.plot_archetypes||[]).map((a,i)=>(
                 <span key={i} className="plot-tag">
-                  {a}<button onClick={()=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.plot_archetypes=(w.plot_archetypes||[]).filter((_,j)=>j!==i);})}>×</button>
+                  {a}<button title="Remove from this world" onClick={()=>update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.plot_archetypes=(w.plot_archetypes||[]).filter((_,j)=>j!==i);})}>×</button>
                 </span>
               ))}
             </div>
@@ -8756,7 +8782,7 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
             <textarea value={world.notes||''} onChange={e=>{const val=e.target.value;update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.notes=val;});saveWorldNotesBackup(val);}} style={{minHeight:120}} placeholder="Ideas, plot threads, reminders…"/>
           </div>
           <div className="delete-zone">
-            <button className="btn danger" onClick={()=>setModal({type:'confirm-delete-world',world})}><i className="ti ti-trash"></i>Delete World</button>
+            <button className="btn danger" onClick={()=>setModal({type:'confirm-delete-world',world})} title="Characters, lorebooks and collections in this world are not deleted — they are left without a world."><i className="ti ti-trash"></i>Delete World</button>
           </div>
         </div>
       )}
@@ -9112,7 +9138,7 @@ function LoreChaptersTab({lore, updLore, activeIdx, setActiveIdx, goTo}) {
       <div className="lore-chapters">
         <div style={{padding:'8px 10px',display:'flex',justifyContent:'space-between',alignItems:'center',borderBottom:'1px solid var(--border)',marginBottom:4}}>
           <span style={{fontSize:11,color:'var(--text3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.06em'}}>Chapters</span>
-          <button className="btn" style={{padding:'3px 8px',fontSize:11}} onClick={addChapter}><i className="ti ti-plus"></i></button>
+          <button className="btn" style={{padding:'3px 8px',fontSize:11}} onClick={addChapter} title="Add a chapter"><i className="ti ti-plus"></i></button>
         </div>
         {addedNote&&<div style={{padding:'0 10px 6px',display:'flex',gap:6,alignItems:'center',fontSize:10,color:'var(--text3)'}}>
           <span>Added at the end.</span>
