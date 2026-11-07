@@ -11487,7 +11487,7 @@ function GitSyncPanel({data}) {
   let metaNode = null;
   if (info && !info.configured) {
     metaNode = <div style={{...metaStyle,color:'var(--amber)'}}>
-      Backup is not configured. Set the folders in Settings → Backup. Nothing is being backed up, and the pretty-printed data copy is not being written either.
+      Nothing is being backed up. Choose a destination in Settings → Backup.
     </div>;
   } else if (info) {
     const scriptMsg = info.scriptFound ? 'Sync script found.' : 'Sync script NOT found in the backup folder.';
@@ -11509,10 +11509,10 @@ function GitSyncPanel({data}) {
     <div style={wrapStyle}>
       <div style={hdrStyle}>Git Backup Sync</div>
       <p style={pStyle}>
-        Mirrors every text file — notes, templates, companions, lorebooks, collections, personas, and a pretty-printed copy of the main data file — into a separate private git repo, then commits and pushes. Images are excluded, so the backup stays small enough to push often. ComfyUI and LM Studio configs ride along. This also runs automatically when Lorekeeper closes, and on a schedule whether or not the app is open.
+        Pushes every text file to a private git repo. Images are excluded. Runs on close and on a schedule, whether or not the app is open.
       </p>
       <p style={pStyle}>
-        An optional second destination — a folder another program keeps in sync — can be switched on in Settings → Backup, so the data leaves this disk by two independent routes. Off by default: git alone is what most setups want.
+        A second destination — a synced folder — can be added in Settings → Backup.
       </p>
       <div style={rowStyle}>
         <button className="btn" style={{fontSize:12}} onClick={doSync} disabled={busy}>
@@ -11653,7 +11653,7 @@ function BatchImportHelp() {
       <div style={{paddingLeft:12,marginBottom:4,fontSize:11}}>
         <span style={{color:'#6ee7b7'}}>new</span> — not in Lorekeeper yet<br/>
         <span style={{color:'var(--accent)'}}>update ↓</span> — site version is newer<br/>
-        <span style={{color:'var(--amber)'}}>local newer ↑</span> — your edits are newer (skipped by default; use "Import anyway" on an item, or "Force import all" to override)<br/>
+        <span style={{color:'var(--amber)'}}>local newer ↑</span> — your edits are newer. Skipped by default; use Import anyway, or Force import all.<br/>
         <span style={{color:'var(--text3)'}}>up to date</span> — no changes
       </div>
       <div style={{marginBottom:4}}>3. Assign worlds to items that need one</div>
@@ -12045,7 +12045,7 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
             <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>Restore</span>
           </div>
           <div>
-            <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.6,marginBottom:8}}>Merge content from a backup into existing data — nothing is deleted. Reviews changes before applying.</div>
+            <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.6,marginBottom:8}}>Merges a backup into existing data. Nothing is deleted, and changes are reviewed first.</div>
             <button className="btn" style={{justifyContent:'center',width:'100%'}} onClick={bkMerge} disabled={bkStatus==='working'}>
               <i className="ti ti-file-import"></i>Import & merge from backup…
             </button>
@@ -12480,7 +12480,7 @@ function ThemeGenerator({settings, update}) {
         <button className="btn primary" style={{fontSize:12}} disabled={isApplied} onClick={apply}><i className="ti ti-check"></i>{isApplied?'Applied':'Apply theme'}</button>
         {savedTheme.accent_hex&&<button className="btn" style={{fontSize:12}} onClick={reset}><i className="ti ti-refresh"></i>Reset to default</button>}
       </div>
-      <div style={{fontSize:10,color:'var(--text3)',marginTop:8}}>Generated from the same color logic as the Color tool — pick any accent and Lorekeeper derives a full background/text/border ramp around it for both dark and light mode.</div>
+      <div style={{fontSize:10,color:'var(--text3)',marginTop:8}}>Pick any accent and Lorekeeper derives a full background, text and border ramp for dark and light mode.</div>
     </div>
   );
 }
@@ -12551,7 +12551,7 @@ function GitHubSetup({settings, setBackupPath}) {
   // so up front rather than letting someone paste a token that cannot be saved.
   if (status && status.encryptionAvailable === false) {
     return <div style={{...GH_NOTE, color:'var(--amber)'}}>
-      Windows is not currently offering encrypted storage, so a GitHub token cannot be saved safely. Nothing will be stored in plain text. Try restarting the app; if it persists, use one of the other backup options.
+      Windows is not offering encrypted storage, so the token cannot be saved. Nothing is written in plain text. Restart Lorekeeper; if it persists, use a synced folder instead.
     </div>;
   }
 
@@ -12577,7 +12577,7 @@ function GitHubSetup({settings, setBackupPath}) {
         </button>
       </div>
       <div style={GH_NOTE}>
-        On GitHub: Settings → Developer settings → Personal access tokens → Fine-grained tokens. Give it access to your backup repository only, and set Contents to Read and write. Nothing else is needed. The token is checked against GitHub before it is saved, so a bad one fails here rather than inside a scheduled run at 11pm.
+        GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens. Grant your backup repository only, with Contents set to Read and write. Checked against GitHub before saving, so a bad one fails here rather than inside a scheduled run at 11pm.
       </div>
     </div>;
   }
@@ -12595,12 +12595,12 @@ function GitHubSetup({settings, setBackupPath}) {
         {known.map(r => <option key={r.fullName} value={r.fullName}>{r.fullName}{r.private?' (private)':' (public)'}</option>)}
       </select>}
       {Array.isArray(repos) && known.length === 0 && <div style={{fontSize:11,color:'var(--amber)',marginBottom:6}}>
-        This token cannot see any repositories. A fine-grained token only reaches the ones you explicitly granted it. You can still type the name below.
+        This token cannot see any repositories. Grant it one on GitHub, or type the name below.
       </div>}
       <input type="text" value={repoValue} onChange={e=>chooseRepo(e.target.value)}
         placeholder="owner/repository" style={{...GH_INPUT, marginTop:8}}/>
       <div style={GH_NOTE}>
-        Paste the repository URL or type owner/name. The repository has to exist already — Lorekeeper never creates one, so it never needs the wide account access that would require.
+        Paste the repository URL or type owner/name. It has to exist already.
       </div>
       {check && check.ok && <div style={{...GH_NOTE, color: check.canPush ? 'var(--green, #4ade80)' : 'var(--amber)'}}>
         {check.fullName} found{check.private?', private':', public'}, default branch {check.defaultBranch}.{check.warning ? ' ' + check.warning : ' The token can write to it.'}
@@ -12654,7 +12654,7 @@ function RcloneSetup({settings, setBackupPath}) {
 
   if (status && !status.binaryFound) {
     return <div style={{...GH_NOTE, color:'var(--amber)'}}>
-      <div>The uploader rclone could not be started. It ships with Lorekeeper, so this usually means the install is incomplete — reinstalling should fix it. Until then, use GitHub or a folder instead.</div>
+      <div>rclone could not start. It ships with Lorekeeper, so the install is probably incomplete — reinstalling should fix it. Use GitHub or a folder meanwhile.</div>
       {(status.searchedIn || []).length > 0 && <div style={{marginTop:6}}>
         Looked in:
         {(status.searchedIn || []).map(p => <div key={p} style={{fontFamily:'monospace',fontSize:10,opacity:0.85}}>{p}</div>)}
@@ -12685,13 +12685,13 @@ function RcloneSetup({settings, setBackupPath}) {
       <input type="text" value={folder} onChange={e=>setBackupPath('backup_rclone_folder', e.target.value)}
         placeholder="Lorekeeper" style={{...GH_INPUT, marginTop:8}}/>
       <div style={GH_NOTE}>
-        The folder to create on that account. Only this folder is ever written to or tidied up — anything else on the account is left alone.
+        The folder to create on that account. Only this folder is written to.
       </div>
       <button className="btn primary" style={{fontSize:12,marginTop:8}} onClick={connect} disabled={busy||!backend}>
         {busy ? 'Waiting for sign-in…' : 'Connect'}
       </button>
       <div style={GH_NOTE}>
-        Your browser opens so you can sign in to the service directly. Once it finishes, Lorekeeper writes a small test file and reads it back, so a connection that cannot actually store anything fails here rather than at the first real backup.
+        Your browser opens to sign in. Lorekeeper then writes and reads a test file, so a connection that cannot store anything fails here rather than at the first backup.
       </div>
     </div>;
   }
@@ -12759,7 +12759,7 @@ function GitHubSyncPanel({settings}) {
       <div style={{ marginTop: 24, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--rl)', padding: 16 }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Backup</div>
         <p style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6, margin: 0 }}>
-          No backup is set up, so nothing is being copied anywhere. Choose a destination in Settings → Backup. GitHub needs a token and a repository and nothing else; a synced folder needs only a path.
+          Nothing is being backed up. Choose a destination in Settings → Backup: GitHub needs a token and a repository, a synced folder needs a path.
         </p>
       </div>
     );
@@ -12784,7 +12784,7 @@ function GitHubSyncPanel({settings}) {
   let aheadNode = null;
   if (res && res.success && res.remoteAhead) {
     aheadNode = <div style={{...metaStyle, color:'var(--amber)'}}>
-      The repository had commits this machine did not make, so files were uploaded but nothing was deleted. If that was an edit made somewhere else, reconcile it before the next sync.
+      The repository had commits this machine did not make. Files were uploaded, nothing was deleted. Reconcile the other machine's edits before the next backup.
     </div>;
   }
 
@@ -12845,7 +12845,7 @@ function GitHubSyncPanel({settings}) {
           : 'Uploads every text file — notes, templates, companions, lorebooks, collections, personas, and a pretty-printed copy of the main data file — straight to a private GitHub repository. Images are left out, so the backup stays small. No git installation, no cloned folder, nothing to run in a terminal.'}
       </p>
       <p style={pStyle}>
-        Unchanged files are skipped: the first backup {isFolder?'copies':'uploads'} everything, and after that only what you actually edited goes{isFolder?' across':' up'}. Files in the destination that Lorekeeper did not put there are left alone.
+        Unchanged files are skipped, so only edits {isFolder?'copy across':'upload'} after the first run. Anything Lorekeeper did not put there is left alone.
       </p>
       {!ready && <div style={{...metaStyle, color:'var(--amber)'}}>
         {isFolder ? 'No folder set yet. Choose one in Settings → Backup.'
