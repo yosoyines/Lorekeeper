@@ -1042,13 +1042,18 @@ Storage: `settings.ai_presets` (array of `{id, name, instructions, params}`) and
 
 Not built, deliberately: auto-filling output into a character field (needs field targeting, a confirm step and an undo path), and per-preset model selection (switching models means an eject and reload, which is slower than picking from the dropdown).
 
-### LM Studio-only settings (session 44)
+### Which AI settings are global and which are LM Studio's (session 44)
 
-**Extra assistant instructions** (`ai_custom_instructions`) and **Context window** (`ai_context_window`) render only inside the `ai_provider==='lmstudio'` fragment in Settings, and both are now gated on the provider in code as well.
+The two had been inconsistent: both **Extra assistant instructions** and **Context window** rendered only inside the `ai_provider==='lmstudio'` fragment, but `buildSystemPrompt` applied the instructions on every provider. So a rule written for a local model rode along invisibly on an Anthropic call with no field in that panel to see or edit it.
 
-They were not before. `buildSystemPrompt` appended the custom instructions on every provider, so a rule written for a local model rode along invisibly on an Anthropic call, with no field anywhere in that provider's panel to see or edit it. The context window was worse in the other direction: its 8192 default painted the Assistant's token readout amber against a 200k cloud window.
+Resolved by splitting them rather than gating both:
 
-Now the instructions apply under LM Studio only, and the readout drops its `/ 8k` suffix and its warning threshold (`ctxLimit = Infinity`) on any other provider, showing a bare estimate instead. **If either setting is ever made global, the gate in `buildSystemPrompt` and `ctxIsLocal` in `ClaudePanel` must move with the UI** — three places, not one.
+- **Extra assistant instructions** (`ai_custom_instructions`) is **global**. The field now sits outside the provider fragments, beside Task presets, and applies to every provider. It is appended last, so it overrides whatever preceded it — the house rules, or an active preset's instructions.
+- **Context window** (`ai_context_window`) stays **LM Studio only**, in both places. It describes how a local model was loaded and has no meaning for a cloud provider, where its 8192 default would paint the Assistant's token readout amber against a 200k window. On any other provider the readout drops its `/ 8k` suffix and its threshold (`ctxIsLocal` in `ClaudePanel` sets `ctxLimit = Infinity`), showing a bare estimate.
+
+**Task presets** are global too, for the same reason as the instructions: a task prompt is about the output, not the backend.
+
+**A setting's visibility and its effect must agree.** If the context window is ever made global, `ctxIsLocal` has to move with the UI.
 
 ### Assistant context scope (session 31)
 

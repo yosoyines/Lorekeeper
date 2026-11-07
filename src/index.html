@@ -7642,13 +7642,11 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
       parts.push(`You are a creative writing assistant helping with character and world development for the Saucepan AI companion platform. Be concise and practical. When suggesting text for fields, write it ready to use. Just write the content.`);
       parts.push(ASSISTANT_HOUSE_RULES);
     }
-    // User-editable additions, appended after the built-in rules so they can
-    // override. Gated on the provider because the field only renders under LM
-    // Studio in Settings — applied everywhere it would ride along invisibly on a
-    // cloud call, with no way to see or edit it from that provider's panel.
+    // Appended last so it can override whatever came before it — the house
+    // rules, or a task preset's instructions. Applies to every provider, and the
+    // field sits outside the provider fragments in Settings to match.
     const extraRules = (data.settings||{}).ai_custom_instructions;
-    const extraOk = ((data.settings||{}).ai_provider || 'anthropic') === 'lmstudio';
-    if(extraOk && extraRules && extraRules.trim()) parts.push('\n## ADDITIONAL INSTRUCTIONS\n' + extraRules.trim());
+    if(extraRules && extraRules.trim()) parts.push('\n## ADDITIONAL INSTRUCTIONS\n' + extraRules.trim());
 
     if(world) {
       parts.push(`\n## CURRENT WORLD: ${world.name}`);
@@ -7799,13 +7797,13 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
       <div style={{padding:'6px 12px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
         <span style={{fontSize:10,color:'var(--text3)',flexShrink:0}}>Preset</span>
         <select value={activePresetId} onChange={onPresetChange} style={CTX_SELECT_STYLE}
-          title="A preset replaces the assistant's own instructions with a task prompt and sends its sampler values. World and character context is still included. Edit them in Settings.">
+          title="Replaces the assistant's instructions. Edit presets in Settings.">
           <option value="">Assistant (default)</option>
           {presetList.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
       </div>
       {activePreset&&<div style={PRESET_NOTE_STYLE}>
-        House rules replaced by <strong>{activePreset.name}</strong>. Context below still applies.
+        <strong>{activePreset.name}</strong> replaces the house rules. Context still sent.
       </div>}
       {/* Context scope */}
       <div style={{padding:'6px 12px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
@@ -13165,11 +13163,6 @@ function SettingsPage({data, update, dataPath}) {
             <button className="btn" onClick={testLmStudio}><i className="ti ti-plug-connected"></i>Test connection</button>
             {lmTest&&<span style={lmTest.state==='ok'?LM_OK_STYLE:lmTest.state==='warn'?LM_WARN_STYLE:LM_ERR_STYLE}>{lmTest.msg}</span>}
           </div>
-          <Field label="Extra assistant instructions" hint="Appended after the built-in house rules on every request. Use for per-project rules; the built-ins already cover {{user}} narration, banned register, macros and field limits.">
-            <textarea value={settings.ai_custom_instructions||''} onChange={e=>set('ai_custom_instructions',e.target.value)}
-              placeholder="e.g. This world uses British spelling. Keep dialogue clipped."
-              style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',width:'100%',minHeight:70,resize:'vertical',fontFamily:'inherit'}}/>
-          </Field>
           <Field label="Context window" hint="Set this to the context length the model is actually loaded with, not what it theoretically supports. In LM Studio check with 'lms ps' — it silently reduces the window if it thinks the requested size will not fit.">
             <input type="number" min="1024" step="1024" value={settings.ai_context_window||8192}
               onChange={e=>set('ai_context_window',parseInt(e.target.value)||8192)}
@@ -13180,7 +13173,13 @@ function SettingsPage({data, update, dataPath}) {
           </div>
         </React.Fragment>}
 
-        <Field label="Task presets" hint="A preset is a complete system prompt plus sampler values for one kind of output. Pick one from the Preset dropdown in the Assistant. It replaces the built-in house rules; the world, lorebook and character context is still sent underneath. Sampler values only have effect because they are sent in the request — nothing set in LM Studio's own Inference tab reaches the server.">
+        <Field label="Extra assistant instructions" hint="Added to every request, after the house rules or the active preset.">
+          <textarea value={settings.ai_custom_instructions||''} onChange={e=>set('ai_custom_instructions',e.target.value)}
+            placeholder="e.g. This world uses British spelling. Keep dialogue clipped."
+            style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',width:'100%',minHeight:70,resize:'vertical',fontFamily:'inherit'}}/>
+        </Field>
+
+        <Field label="Task presets" hint="A system prompt and sampler values for one kind of output. Choose one in the Assistant.">
           <div style={PRESET_LIST_STYLE}>
             {presetList.map(p => (
               <div key={p.id} style={PRESET_ROW_STYLE}>
@@ -13205,9 +13204,7 @@ function SettingsPage({data, update, dataPath}) {
                       </label>
                     ))}
                   </div>
-                  <div style={PRESET_HINT_STYLE}>
-                    A blank sampler is not sent, which is how Top P stays off. Min P and repeat penalty reach LM Studio and OpenRouter only; the other providers drop them rather than erroring.
-                  </div>
+                  <div style={PRESET_HINT_STYLE}>Blank is not sent. Min P and repeat penalty: LM Studio and OpenRouter only.</div>
                 </div>}
               </div>
             ))}
