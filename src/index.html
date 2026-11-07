@@ -1491,31 +1491,55 @@ const HELP_SECTIONS = [
   "items": [
    {
     "t": "p",
-    "x": "**Font size** — Changes the base font size across the whole app immediately."
+    "x": "Five sections: **AI Provider**, **Appearance**, **Data**, **Backup** and **About**."
    },
    {
     "t": "p",
-    "x": "**AI provider & API key** — Used by the Assistant and Img Prompt. Choose Anthropic, OpenAI, Google, OpenRouter, or LM Studio, then paste the matching key. See the AI assistant section for where to get each one."
+    "x": "**Provider** — Anthropic, OpenAI, Google, OpenRouter or LM Studio, each with its own key field, so switching back does not lose the other keys. See the AI assistant section for where to get each one."
    },
    {
     "t": "p",
-    "x": "**LM Studio needs no key.** Start its server, load one or more models, and pick from the Model dropdown, which lists whatever is currently loaded. Loading several means switching between them without leaving Lorekeeper."
+    "x": "**LM Studio needs no key.** Start its server from LM Studio\u2019s Developer tab, load one or more models, and pick from the Model dropdown, which lists whatever is currently loaded. Loading several means switching between them without leaving Lorekeeper."
    },
    {
     "t": "p",
-    "x": "**Backup** — Where a continuous copy of your text data goes: nothing, GitHub, or a folder. See the Backup section."
+    "x": "**Context window** — LM Studio only. Set it to the length the model was actually loaded with, not the maximum it claims; LM Studio reduces the request silently if it will not fit, and `lms ps` shows the real number. The Assistant\u2019s token readout turns amber at 75% of it."
    },
    {
     "t": "p",
-    "x": "**Autosave debounce** — How long to wait after a keystroke before saving. Default 600ms."
+    "x": "**Extra assistant instructions** — applies to every provider. Added to each request after the house rules, or after an active task preset, so it overrides either. Use it for standing rules: a world\u2019s spelling convention, a register to avoid."
    },
    {
     "t": "p",
-    "x": "**Data** — Shows where your data is stored. Click to open the folder. This is discovered at startup, not configured."
+    "x": "**Task presets** — a whole system prompt plus sampler values for one kind of output. Covered in the AI assistant section."
    },
    {
     "t": "p",
-    "x": "**Theme and colorblind mode** — Pick an accent color to generate a full dark/light theme. Colorblind mode adjusts red/green or blue/yellow pairs: Red-Green mode (deuteranopia/protanopia) swaps red→orange and green→blue; Blue-Yellow mode (tritanopia) swaps amber→red-orange and teal→pink."
+    "x": "**Two font sizes, set separately.** **Menu Font Size** scales menus, labels, buttons and headings. **Editing Font Size** scales only the text inside fields you type into, with a live preview. Changing one does not affect the other."
+   },
+   {
+    "t": "p",
+    "x": "**Theme** — pick any accent colour and Lorekeeper derives a full background, text and border ramp from it, for both dark and light mode. **Colorblind Mode** replaces red/green or blue/yellow pairs with distinguishable alternatives."
+   },
+   {
+    "t": "p",
+    "x": "**Data file location** — where your data is stored, discovered at startup rather than configured. Click to open the folder."
+   },
+   {
+    "t": "p",
+    "x": "**Auto-save debounce** — how long to wait after a keystroke before writing to disk. Default 600ms."
+   },
+   {
+    "t": "p",
+    "x": "**Backup** — four routes: none, GitHub, Google Drive / OneDrive / Dropbox, or a synced folder. The fields below it change to match the one you pick. See the Backup section."
+   },
+   {
+    "t": "p",
+    "x": "**About** — version and build information."
+   },
+   {
+    "t": "tip",
+    "x": "API keys, presets and every other setting live in your data file, so they travel with a backup and restore with it."
    }
   ]
  },
