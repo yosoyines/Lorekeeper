@@ -6905,9 +6905,13 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
       parts.push(`You are a creative writing assistant helping with character and world development for the Saucepan AI companion platform. Be concise and practical. When suggesting text for fields, write it ready to use. Just write the content.`);
       parts.push(ASSISTANT_HOUSE_RULES);
     }
-    // User-editable additions, appended after the built-in rules so they can override.
+    // User-editable additions, appended after the built-in rules so they can
+    // override. Gated on the provider because the field only renders under LM
+    // Studio in Settings — applied everywhere it would ride along invisibly on a
+    // cloud call, with no way to see or edit it from that provider's panel.
     const extraRules = (data.settings||{}).ai_custom_instructions;
-    if(extraRules && extraRules.trim()) parts.push('\n## ADDITIONAL INSTRUCTIONS\n' + extraRules.trim());
+    const extraOk = ((data.settings||{}).ai_provider || 'anthropic') === 'lmstudio';
+    if(extraOk && extraRules && extraRules.trim()) parts.push('\n## ADDITIONAL INSTRUCTIONS\n' + extraRules.trim());
 
     if(world) {
       parts.push(`\n## CURRENT WORLD: ${world.name}`);
@@ -7008,8 +7012,12 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
   const ctxTokens = estimateTokens(buildSystemPrompt(ctxScope));
   // Threshold follows the configured window instead of a hardcoded 7000 (which
   // assumed 8k forever and stayed green at 7k even on a 32k model).
+  // ai_context_window is an LM Studio setting and only renders there, so the
+  // budget warning is local-only too. On a cloud provider the field is unreachable
+  // and its default of 8192 would paint the readout amber against a 200k window.
+  const ctxIsLocal = ((data.settings||{}).ai_provider || 'anthropic') === 'lmstudio';
   const ctxWindow = Number((data.settings||{}).ai_context_window) || 8192;
-  const ctxLimit = Math.round(ctxWindow * 0.75);
+  const ctxLimit = ctxIsLocal ? Math.round(ctxWindow * 0.75) : Infinity;
 
   const send = async () => {
     if(!input.trim() || loading) return;
@@ -7070,7 +7078,7 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
           <option value="world">World, no lorebook text</option>
           <option value="full">Everything</option>
         </select>
-        <span style={ctxTokens>ctxLimit?CTX_WARN_STYLE:CTX_OK_STYLE} title={'Estimated system-prompt size against your configured '+ctxWindow.toLocaleString()+'-token window. Turns amber past '+ctxLimit.toLocaleString()+', leaving room for the conversation and the reply.'}>≈{ctxTokens.toLocaleString()} / {(ctxWindow/1000)+'k'}</span>
+        <span style={ctxTokens>ctxLimit?CTX_WARN_STYLE:CTX_OK_STYLE} title={ctxIsLocal?('Estimated system-prompt size against your configured '+ctxWindow.toLocaleString()+'-token window. Turns amber past '+ctxLimit.toLocaleString()+', leaving room for the conversation and the reply.'):'Estimated system-prompt size. The window budget is an LM Studio setting, so no warning threshold applies to this provider.'}>≈{ctxTokens.toLocaleString()}{ctxIsLocal?' / '+(ctxWindow/1000)+'k':''}</span>
       </div>
       {ctxScope==='world'&&worldLoreList.length>0&&<div style={{padding:'0 12px 6px',borderBottom:'1px solid var(--border)',flexShrink:0,maxHeight:150,overflowY:'auto'}}>
         <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>

@@ -889,6 +889,14 @@ Storage: `settings.ai_presets` (array of `{id, name, instructions, params}`) and
 
 Not built, deliberately: auto-filling output into a character field (needs field targeting, a confirm step and an undo path), and per-preset model selection (switching models means an eject and reload, which is slower than picking from the dropdown).
 
+### LM Studio-only settings (session 42)
+
+**Extra assistant instructions** (`ai_custom_instructions`) and **Context window** (`ai_context_window`) render only inside the `ai_provider==='lmstudio'` fragment in Settings, and both are now gated on the provider in code as well.
+
+They were not before. `buildSystemPrompt` appended the custom instructions on every provider, so a rule written for a local model rode along invisibly on an Anthropic call, with no field anywhere in that provider's panel to see or edit it. The context window was worse in the other direction: its 8192 default painted the Assistant's token readout amber against a 200k cloud window.
+
+Now the instructions apply under LM Studio only, and the readout drops its `/ 8k` suffix and its warning threshold (`ctxLimit = Infinity`) on any other provider, showing a bare estimate instead. **If either setting is ever made global, the gate in `buildSystemPrompt` and `ctxIsLocal` in `ClaudePanel` must move with the UI** — three places, not one.
+
 ### Assistant context scope (session 31)
 
 The Assistant prompt sends world description, every lorebook with full chapter text, collections, sibling characters and the current character. Measured on Guideverse: **27,327 tokens**. Fine for cloud, impossible locally.
