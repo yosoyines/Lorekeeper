@@ -2363,295 +2363,6 @@ const LORE_ON_STYLE = {fontSize:9,padding:'2px 7px',borderRadius:3,background:'v
 
 const LORE_OFF_STYLE = {fontSize:9,padding:'2px 7px',borderRadius:3,background:'var(--bg3)',color:'var(--text3)',border:'1px solid var(--border)',cursor:'pointer'};
 
-// ---------------------------------------------------------------------------
-// TASK PRESETS (session 42)
-//
-// A preset is a complete system prompt plus sampler values, aimed at one kind of
-// output. Selecting one in the Assistant REPLACES the generic assistant preamble
-// and ASSISTANT_HOUSE_RULES. That is deliberate: a task prompt opening with
-// "output only the prose, no preamble" fights a preamble telling the model to be
-// a concise helpful assistant, and the model splits the difference. The world,
-// lorebook, house-format and character blocks are still appended underneath,
-// which is the entire reason for running the task from inside Lorekeeper rather
-// than pasting the card into LM Studio by hand.
-//
-// On samplers: LM Studio's own presets are client-side only. Nothing set on its
-// Inference tab — temperature, Min P, repeat penalty, the preset system prompt —
-// reaches /v1/chat/completions. Only the Load tab settings (context length, GPU
-// offload, cache quantization, chat template) apply to server requests. So any
-// sampler value has to travel in the request body, which is what params is for.
-//
-// Deleting every preset falls back to these built-ins rather than leaving an
-// empty dropdown. That is a floor, not a bug.
-// ---------------------------------------------------------------------------
-
-const PRESET_PARAM_FIELDS = [
-  {key:'temperature',     label:'Temperature',    step:'0.05', hint:'0.5 for extraction, 0.8-0.9 for prose.'},
-  {key:'top_p',           label:'Top P',          step:'0.05', hint:'Blank = not sent. Leave blank when using Min P.'},
-  {key:'min_p',           label:'Min P',          step:'0.01', hint:'LM Studio and OpenRouter only. 0.05 is a good default.'},
-  {key:'repeat_penalty',  label:'Repeat penalty', step:'0.01', hint:'LM Studio and OpenRouter only. Above 1.1 corrupts repeated macros.'},
-  {key:'max_tokens',      label:'Max tokens',     step:'100',  hint:'Reply length cap. 2000 suits a sheet, 3000 a long scenario.'}
-];
-
-const DEFAULT_AI_PRESETS = [
-  {
-    id: 'builtin-character-sheet',
-    name: 'Character Sheet',
-    params: {temperature:0.5, top_p:'', min_p:0.05, repeat_penalty:1.05, max_tokens:3000},
-    instructions: `You build character sheets for an adult AI companion platform from source material the user supplies - intro scenarios, notes, or drafts.
-
-WHAT TO WRITE
-
-Fill every section the source gives you grounds for. Most sections ask for things the source shows indirectly, and those are yours to write.
-
-Allowed: anything a careful reader would conclude from the source. A character who complains for a week about meetings he is forced to attend fears being trapped in them. A character who confronts two attackers protects people who cannot protect themselves. Write those.
-
-Not allowed: facts the source could not tell you. Names, ages, heights, nationalities, cities, family members, jobs, past events. If the source does not state it, it does not go in the sheet.
-
-The test is whether the source supports it, not whether the source says it outright. A section left blank because the source "did not say so in those words" is a failure. A section filled with a detail the source never implied is also a failure.
-
-Leave a section empty only when nothing in the source bears on it at all. Leave it truly empty - no text, not "Not specified".
-
-Write traits, not quotes. Never paste dialogue from the source into a field. Avoid lines that would be true of any character - every line should be about this one.
-
-FILL WHAT THE SOURCE GIVES
-
-If a detail appears anywhere in the source, it goes in the matching field. A partial detail is still a detail - a surname without a given name is a name.
-
-NO FIELD CONTRADICTS ANOTHER
-
-When the template asks for the same information in more than one place, the answer is identical in both. Check before finishing.
-
-ANYONE NAMED IN THE SOURCE GOES IN CONNECTIONS
-
-Every person the source names or clearly identifies gets a line in Connections with their relationship to {{char}} and what the source shows about it.
-
-PROSE SECTIONS
-
-Sections calling for prose are written as prose, not left as template stubs. If the template opens one with a phrase, continue that sentence. Sections describing how {{char}} thinks or speaks are written as description, not as in-character monologue.
-
-MACROS
-
-The Name field takes the character's name as the source gives it, in full or in part - the literal name, never a macro. Everywhere else, write {{char}}. Other people keep their own names. Never write {{char}} for anyone else.
-{{user}} for the player. {{they}} {{them}} {{their}} {{theirs}} {{themselves}} for {{user}} only, never for {{char}}. {{s?was:were}} for was/were attached to {{user}}.
-{{char}} takes he/him/his unless the source says otherwise.
-
-SETTING
-
-Use the source's setting and its terms. If the setting has its own categories for identity, status, or species, use the source's word, not a real-world equivalent. Identify which category {{char}} belongs to from how the source treats him.
-
-TEMPLATE
-
-Fill the template supplied. Same headings, same order, same formatting. Add nothing, reorder nothing. Output the character card only - not the template's surrounding notes or metadata.
-
-A template heading with a parenthetical description under it is telling you what belongs in that field. A heading with a bare dash and nothing else still needs filling - do not copy the empty dash back.
-
-HOW LINES ARE WRITTEN
-
-Every trait carries the behaviour that shows it. Prefer the source's specific detail over a general version. No adjective stacking. No trait without a consequence.
-
-LENGTH
-
-Hard cap 2,600 tokens, up to 2,900 with special mechanics.
-
-OUTPUT
-
-The filled character card only. Markdown. No preamble, no commentary, no repeated sections, nothing after the closing tag.`
-  },
-  {
-    id: 'builtin-example-dialogue',
-    name: 'Example Dialogue',
-    params: {temperature:0.8, top_p:'', min_p:0.05, repeat_penalty:1.05, max_tokens:2500},
-    instructions: `You write example dialogue sets for AI companion characters on an adult interactive fiction platform. The set teaches a roleplay model how the character sounds across his emotional range.
-
-THE FORMAT IS SHORT
-
-Seven numbered, labelled samples. Each one is 60 to 120 words. That is roughly four to six lines total.
-
-The shape of each sample:
-- one short line of narration setting the situation
-- one to three speeches from {{char}}
-- one short closing line of narration - an action, not a reflection
-
-That is the whole sample. It is not a scene. There is no plot, no arc, no resolution. It illustrates how {{char}} sounds and nothing else.
-
-If a sample runs past 120 words, you are writing a scene. Cut it back.
-
-Label each with the register in capitals. Derive the seven registers from the character sheet - the states this specific character actually enters. The seventh is labelled SIGNATURE and shows his single most distinctive move, the pattern a reader would recognise anywhere.
-
-Separate samples with a line containing only ---
-
-{{user}} IS ALMOST NEVER PRESENT
-
-{{user}} appears in at most two of the seven samples. The other five use colleagues, strangers, or no one.
-
-When {{user}} does appear:
-- no quoted dialogue, ever
-- no face, body, clothing, build, age, or gender
-- no stated thoughts, feelings or motives
-- report what {{user}} said through {{char}}, never as a quoted question
-
-Any physical description of {{user}} is a failure of the whole set.
-
-STAY INSIDE THE SHEET
-
-Every behaviour must be one the sheet supports. If the sheet says he gets quieter when something matters, he does not shout. If the sheet says he does not panic, he does not panic. If the sheet names what he finds contemptible, he does not do that thing.
-
-Do not invent events, relationships, confrontations, violence, or emotional breakdowns. Do not escalate. These are ordinary moments.
-
-Secondary characters behave as the sheet describes them. Do not add attraction, tension, or physical contact the sheet does not establish.
-
-ANGER, VULNERABILITY AND DESIRE STAY IN CHARACTER
-
-A sample showing a difficult emotion shows how THIS character does it, which is usually smaller and quieter than the generic version. An angry withholding man is angry by withholding further. A vulnerable guarded man is vulnerable by saying one true sentence and stopping.
-
-SITUATIONS
-
-Each sample uses a different ordinary situation - different place, different time, different task. No two samples share a setting.
-
-MACROS
-
-Write {{char}} for the character in narration. His real name may appear in dialogue when someone addresses him. Other people keep their own names.
-Write {{user}} for the player. {{they}} {{them}} {{their}} {{theirs}} {{themselves}} for {{user}} only, never for {{char}}. {{s?was:were}} for was/were attached to {{user}}.
-{{char}} takes he/him/his unless the sheet says otherwise.
-
-VOICE
-
-Follow the sheet's communication style exactly - pace, register, vocabulary, what he does instead of answering.
-
-Past tense unless the brief supplies a present-tense style sample.
-
-Follow the sheet's formatting instructions if it supplies any: quotes for speech, italics for thought, plain text for narration.
-
-If the brief includes a STYLE SAMPLE, match its tense, sentence length, and balance of narration to speech. The style sample outranks your defaults.
-
-Specificity does the work. The exact object, the exact number.
-
-Never explain a beat. Never name the emotion - the label already says it. Never summarise personality. Only behaviour.
-
-PROSE BANS
-
-No "something shifted", "a beat passed", "materialize", "unreadable expression", "a mix of X and Y", "practiced movement", "practiced movements", "heart skipped a beat", "a steady presence", "an unspoken understanding", "the air thickened", "his voice dripping with".
-
-OUTPUT
-
-The seven labelled samples only. No preamble, no commentary, no closing remark.`
-  },
-  {
-    id: 'builtin-intro-scenario',
-    name: 'Intro Scenario',
-    params: {temperature:0.9, top_p:'', min_p:0.05, repeat_penalty:1.05, max_tokens:3000},
-    instructions: `You write intro scenarios for AI companion characters on an adult interactive fiction platform.
-
-MACROS - literal strings that must appear in your output
-
-{{char}} is the character's name. Use it in the subject position wherever you would otherwise write the character's actual name. Begin most paragraphs with {{char}}, not with "he". Within a paragraph, "he/him/his" is correct for subsequent references.
-The character's real name may appear in dialogue when another character says it, or when {{char}} introduces himself. Never in narration.
-Other characters are named normally.
-{{char}} is male unless the brief says otherwise.
-
-For the player, write {{user}}. Never "the stranger", "the figure", "the caller", or any other noun.
-For the player's pronouns, write {{they}} {{them}} {{their}} {{theirs}} {{themselves}}. These belong to {{user}} ONLY. Never use them for {{char}}.
-For any past-tense was/were attached to {{user}}, write {{s?was:were}}.
-
-{{their}} means the player's. "{{char}} wiped {{their}} brow" says the character wiped the player's brow. Write "{{char}} wiped his brow".
-
-WHERE {{user}} SITS IN THE SCENE
-
-The brief decides. {{user}} may be present throughout, may arrive at the end, may be alongside {{char}} the whole time - or may not appear at all, with the scene ending at the moment before contact: the phone picked up, the door about to open, the name called.
-
-If {{user}} does appear:
-- rendered only through {{char}}'s senses
-- no quoted dialogue, no stated thoughts or motives
-- no face, body, clothing, age, build or gender
-- {{char}} may infer or misread; that is the only interior access
-
-If {{user}} does not appear, do not invent a stand-in and do not gesture at {{user}} vaguely. End the scene at the threshold.
-
-STYLE SAMPLE
-
-If the brief includes a passage marked STYLE SAMPLE, that passage is the target voice. Match its tense, paragraph length, dialogue rhythm, vocabulary level, and the balance between narration and speech. Do not reuse its content, characters or situations. The style sample overrides any default below that conflicts with it.
-
-VOICE
-
-Short paragraphs. One to four sentences. A single line can be its own paragraph and often should be.
-
-{{char}} has a distinct speech rhythm - follow the character sheet's communication style exactly, including its register, pacing, and emotional range.
-
-Any other characters the sheet or brief supplies are present and occupied with their own business. They reveal the world through how they speak and act in it, never through explanation.
-
-Specificity does the work: the exact object, the exact number, the exact procedure. Concrete over abstract, always. State things flat and let the reader draw the conclusion.
-
-Follow the character sheet's formatting instructions if it supplies any.
-
-Never explain a beat after landing it. No sentence stating what the previous sentence meant. End paragraphs on the object, the action, or the flat statement. Do not name an emotion the prose demonstrated. Never state {{char}}'s personality. Only behaviour.
-
-STRUCTURE
-
-One continuous stretch of time, from first line to last. No jumps, no flashback scenes, no later that evening.
-
-The scene is ordinary - {{char}} doing whatever {{char}} normally does, in the state {{char}} is normally in.
-
-Something small and concrete recurs across the scene: an object, a task, a sound, a phrase. It returns two or three times, and what it means changes.
-
-Each paragraph gives something new. Once a detail is spent, it is spent.
-
-THE LAST LINE
-
-The scene stops at the threshold and not one sentence past it. The phone is picked up, the door starts to open, the name is called, the command lands - stop there, mid-motion.
-
-Do not write {{char}} settling, resigning himself, bracing for what comes next, or reflecting on what just happened. Do not write a sentence beginning "At least" or "With a sigh" or "He leaned back". If the last thing you wrote describes {{char}} waiting, delete it and end on the line before.
-
-LENGTH
-
-Match what the brief asks for. If unspecified, 3,000 to 6,000 characters. Never exceed 7,500.
-
-OUTPUT
-
-Prose only. No headers, no preamble, no notes, no closing remark. Third person limited anchored to {{char}}, past tense unless the style sample is present tense. Never second person.
-
-PROSE BANS
-
-No place as a cathedral, temple, kingdom or sanctuary. No object standing sentinel. No silence that is heavy or charged. No air that thickens. No thing ancient or timeless. No simile that would appear as back cover copy.
-
-No "something shifted", "a beat passed", "materialize", "unreadable expression", "a mix of X and Y", "for the first time in years", "practiced movements", "heart skipped a beat", "steeling himself", "a steady presence", "an unspoken understanding".
-
-INVENT NOTHING
-
-No partner, romance, or named person the character sheet did not supply.`
-  }
-];
-
-// Built-ins are the floor when the user has deleted everything.
-function getPresetList(settings) {
-  settings = settings || {};
-  const list = settings.ai_presets;
-  return (list && list.length) ? list : DEFAULT_AI_PRESETS;
-}
-
-// null means "no preset" - the Assistant's own preamble and house rules apply.
-function getActivePreset(settings) {
-  settings = settings || {};
-  const id = settings.ai_active_preset || '';
-  if (!id) return null;
-  return getPresetList(settings).find(p => p.id === id) || null;
-}
-
-const PRESET_LIST_STYLE = {display:'flex',flexDirection:'column',gap:6};
-const PRESET_ROW_STYLE = {border:'1px solid var(--border)',borderRadius:'var(--r)',background:'var(--bg3)',overflow:'hidden'};
-const PRESET_HEAD_STYLE = {display:'flex',alignItems:'center',gap:8,padding:'7px 10px'};
-const PRESET_NAME_STYLE = {flex:1,fontSize:12,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'};
-const PRESET_BTN_STYLE = {fontSize:11,padding:'3px 9px',flexShrink:0};
-const PRESET_BODY_STYLE = {padding:'0 10px 10px',display:'flex',flexDirection:'column',gap:8};
-const PRESET_INPUT_STYLE = {background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 9px',borderRadius:'var(--r)',fontSize:12,outline:'none',width:'100%',boxSizing:'border-box'};
-const PRESET_TEXTAREA_STYLE = {background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 9px',borderRadius:'var(--r)',fontSize:11,outline:'none',width:'100%',minHeight:200,resize:'vertical',fontFamily:'monospace',lineHeight:1.5,boxSizing:'border-box'};
-const PRESET_PARAMS_STYLE = {display:'flex',flexWrap:'wrap',gap:8};
-const PRESET_PARAM_LABEL_STYLE = {display:'flex',flexDirection:'column',gap:3,minWidth:96,flex:'1 1 96px'};
-const PRESET_PARAM_NAME_STYLE = {fontSize:10,color:'var(--text3)'};
-const PRESET_NUM_STYLE = {background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 7px',borderRadius:'var(--r)',fontSize:11,outline:'none',width:'100%',boxSizing:'border-box'};
-const PRESET_HINT_STYLE = {fontSize:10,color:'var(--text3)',lineHeight:1.5};
-const PRESET_ACTIONS_STYLE = {display:'flex',gap:8,marginTop:8,flexWrap:'wrap'};
-const PRESET_NOTE_STYLE = {padding:'4px 12px',borderBottom:'1px solid var(--border)',fontSize:9,color:'var(--text3)',flexShrink:0,lineHeight:1.4};
 const CTX_SELECT_STYLE = {flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',fontSize:10,padding:'2px 4px',borderRadius:3,outline:'none',minWidth:0};
 
 const CTX_OK_STYLE = {fontSize:10,color:'#6ee7b7',flexShrink:0,fontVariantNumeric:'tabular-nums'};
@@ -3245,35 +2956,19 @@ function hasActiveKey(settings) {
 
 // Shared multi-provider AI call helper — used by ClaudePanel chat and ImagePromptTool.
 // Returns {text} on success or {error} on failure. Never throws.
-async function callAI(data, systemPrompt, messages, maxTokens, opts) {
+async function callAI(data, systemPrompt, messages, maxTokens) {
   const settings = data.settings || {};
   const provider = settings.ai_provider || 'anthropic';
-
-  // Sampler values travel in the request body or they do not apply at all.
-  // LM Studio's Inference tab is client-side only and never reaches the server
-  // endpoint, so a preset's temperature has effect only if it is sent here.
-  // Each provider builds its own subset rather than sharing one object: sending
-  // min_p to Anthropic is a 400, not a silent ignore. A blank field means "do
-  // not send", which is how Top P stays off without having to send top_p: 1.
-  const sp = opts || {};
-  const spNum = (v) => (v === undefined || v === null || v === '' || isNaN(Number(v)) ? undefined : Number(v));
-  const spTemp = spNum(sp.temperature);
-  const spTopP = spNum(sp.top_p);
-  const spMinP = spNum(sp.min_p);
-  const spRepeat = spNum(sp.repeat_penalty);
 
   try {
     if (provider === 'anthropic') {
       const apiKey = settings.anthropic_api_key || '';
       const model = settings.claude_model || 'claude-sonnet-4-6';
       if (!apiKey) return { error: 'No Anthropic API key set — add one in Settings.' };
-      const body = { model, max_tokens: maxTokens, system: systemPrompt, messages };
-      if (spTemp !== undefined) body.temperature = spTemp;
-      if (spTopP !== undefined) body.top_p = spTopP;
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'anthropic-version':'2023-06-01', 'x-api-key': apiKey },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ model, max_tokens: maxTokens, system: systemPrompt, messages })
       });
       const resp = await res.json();
       if (resp.error) return { error: resp.error.message || 'Anthropic API error' };
@@ -3285,13 +2980,10 @@ async function callAI(data, systemPrompt, messages, maxTokens, opts) {
       const apiKey = settings.openai_api_key || '';
       const model = settings.openai_model || 'gpt-4o';
       if (!apiKey) return { error: 'No OpenAI API key set — add one in Settings.' };
-      const body = { model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] };
-      if (spTemp !== undefined) body.temperature = spTemp;
-      if (spTopP !== undefined) body.top_p = spTopP;
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] })
       });
       const resp = await res.json();
       if (resp.error) return { error: resp.error.message || 'OpenAI API error' };
@@ -3304,13 +2996,10 @@ async function callAI(data, systemPrompt, messages, maxTokens, opts) {
       const model = settings.google_model || 'gemini-2.0-flash';
       if (!apiKey) return { error: 'No Google API key set — add one in Settings.' };
       const contents = messages.map(m => ({ role: m.role==='assistant'?'model':'user', parts:[{text:m.content}] }));
-      const gCfg = { maxOutputTokens: maxTokens };
-      if (spTemp !== undefined) gCfg.temperature = spTemp;
-      if (spTopP !== undefined) gCfg.topP = spTopP;
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ systemInstruction: { parts:[{text:systemPrompt}] }, contents, generationConfig: gCfg })
+        body: JSON.stringify({ systemInstruction: { parts:[{text:systemPrompt}] }, contents, generationConfig:{maxOutputTokens:maxTokens} })
       });
       const resp = await res.json();
       if (resp.error) return { error: resp.error.message || 'Google API error' };
@@ -3321,15 +3010,10 @@ async function callAI(data, systemPrompt, messages, maxTokens, opts) {
     if (provider === 'lmstudio') {
       const baseUrl = (settings.lmstudio_base_url || 'http://localhost:1234/v1').replace(/\/+$/, '');
       const model = settings.lmstudio_model || 'local-model';
-      const body = { model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] };
-      if (spTemp !== undefined) body.temperature = spTemp;
-      if (spTopP !== undefined) body.top_p = spTopP;
-      if (spMinP !== undefined) body.min_p = spMinP;
-      if (spRepeat !== undefined) body.repeat_penalty = spRepeat;
       const res = await fetch(baseUrl + '/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] })
       });
       const resp = await res.json();
       if (resp.error) return { error: (resp.error.message || resp.error) + '' };
@@ -3341,15 +3025,10 @@ async function callAI(data, systemPrompt, messages, maxTokens, opts) {
       const apiKey = settings.openrouter_api_key || '';
       const model = settings.openrouter_model || 'anthropic/claude-sonnet-4-6';
       if (!apiKey) return { error: 'No OpenRouter API key set — add one in Settings.' };
-      const body = { model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] };
-      if (spTemp !== undefined) body.temperature = spTemp;
-      if (spTopP !== undefined) body.top_p = spTopP;
-      if (spMinP !== undefined) body.min_p = spMinP;
-      if (spRepeat !== undefined) body.repetition_penalty = spRepeat;
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] })
       });
       const resp = await res.json();
       if (resp.error) return { error: resp.error.message || 'OpenRouter API error' };
@@ -6892,26 +6571,11 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
     const world = (scope !== 'character' && currentWorld) ? data.worlds.find(w => w.id === currentWorld.id) : null;
     const parts = [];
 
-    // A task preset replaces the assistant preamble and the house rules outright.
-    // See the TASK PRESETS note in the plain-JS block: a prompt that opens "output
-    // only the prose, no preamble" fights a preamble telling the model to be a
-    // concise assistant, and the model splits the difference. Everything below
-    // this point — world, lorebook, house format, character — is appended either
-    // way, which is the point of running the task from in here.
-    const taskPreset = getActivePreset(data.settings);
-    if(taskPreset) {
-      parts.push((taskPreset.instructions||'').trim());
-    } else {
-      parts.push(`You are a creative writing assistant helping with character and world development for the Saucepan AI companion platform. Be concise and practical. When suggesting text for fields, write it ready to use. Just write the content.`);
-      parts.push(ASSISTANT_HOUSE_RULES);
-    }
-    // User-editable additions, appended after the built-in rules so they can
-    // override. Gated on the provider because the field only renders under LM
-    // Studio in Settings — applied everywhere it would ride along invisibly on a
-    // cloud call, with no way to see or edit it from that provider's panel.
+    parts.push(`You are a creative writing assistant helping with character and world development for the Saucepan AI companion platform. Be concise and practical. When suggesting text for fields, write it ready to use. Just write the content.`);
+    parts.push(ASSISTANT_HOUSE_RULES);
+    // User-editable additions, appended after the built-in rules so they can override.
     const extraRules = (data.settings||{}).ai_custom_instructions;
-    const extraOk = ((data.settings||{}).ai_provider || 'anthropic') === 'lmstudio';
-    if(extraOk && extraRules && extraRules.trim()) parts.push('\n## ADDITIONAL INSTRUCTIONS\n' + extraRules.trim());
+    if(extraRules && extraRules.trim()) parts.push('\n## ADDITIONAL INSTRUCTIONS\n' + extraRules.trim());
 
     if(world) {
       parts.push(`\n## CURRENT WORLD: ${world.name}`);
@@ -6988,15 +6652,6 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
 
   const ctxScope = data.settings?.assistant_context_scope || 'full';
   const setScope = (v) => update(d=>{ if(!d.settings) d.settings={}; d.settings.assistant_context_scope = v; });
-  // Preset selection. Handlers live here rather than inline in JSX — nested
-  // arrows in attributes have silently stopped elements rendering in this file.
-  const presetList = getPresetList(data.settings);
-  const activePresetId = (data.settings||{}).ai_active_preset || '';
-  const activePreset = getActivePreset(data.settings);
-  const onPresetChange = (e) => {
-    const v = e.target.value;
-    update(d=>{ if(!d.settings) d.settings={}; d.settings.ai_active_preset = v; });
-  };
   const pickedChapters = data.settings?.assistant_chapters || [];
   const worldLoreList = currentWorld ? data.lorebooks.filter(l => l.world_id === currentWorld.id) : [];
   const toggleChapter = (key) => update(d=>{
@@ -7012,12 +6667,8 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
   const ctxTokens = estimateTokens(buildSystemPrompt(ctxScope));
   // Threshold follows the configured window instead of a hardcoded 7000 (which
   // assumed 8k forever and stayed green at 7k even on a 32k model).
-  // ai_context_window is an LM Studio setting and only renders there, so the
-  // budget warning is local-only too. On a cloud provider the field is unreachable
-  // and its default of 8192 would paint the readout amber against a 200k window.
-  const ctxIsLocal = ((data.settings||{}).ai_provider || 'anthropic') === 'lmstudio';
   const ctxWindow = Number((data.settings||{}).ai_context_window) || 8192;
-  const ctxLimit = ctxIsLocal ? Math.round(ctxWindow * 0.75) : Infinity;
+  const ctxLimit = Math.round(ctxWindow * 0.75);
 
   const send = async () => {
     if(!input.trim() || loading) return;
@@ -7029,11 +6680,7 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
     setLoading(true);
 
     const systemPrompt = buildSystemPrompt(ctxScope);
-    // A preset's samplers only exist if they are sent — see callAI.
-    const sendPreset = getActivePreset(data.settings);
-    const sendParams = sendPreset ? (sendPreset.params || {}) : {};
-    const sendMaxTokens = Number(sendParams.max_tokens) || 2000;
-    const result = await callAI(data, systemPrompt, newMessages.map(m => ({role:m.role, content:m.content})), sendMaxTokens, sendParams);
+    const result = await callAI(data, systemPrompt, newMessages.map(m => ({role:m.role, content:m.content})), 2000);
     if(result.error) { setError(result.error); setLoading(false); return; }
     setMessages(prev => [...prev, {role:'assistant', content:result.text}]);
     setLoading(false);
@@ -7058,18 +6705,6 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
         <i className="ti ti-key" style={{fontSize:12}}></i>
         No API key set — <span style={{textDecoration:'underline',cursor:'pointer'}} onClick={()=>setPage('settings')}>add in Settings</span>
       </div>}
-      {/* Task preset */}
-      <div style={{padding:'6px 12px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
-        <span style={{fontSize:10,color:'var(--text3)',flexShrink:0}}>Preset</span>
-        <select value={activePresetId} onChange={onPresetChange} style={CTX_SELECT_STYLE}
-          title="A preset replaces the assistant's own instructions with a task prompt and sends its sampler values. World and character context is still included. Edit them in Settings.">
-          <option value="">Assistant (default)</option>
-          {presetList.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-      </div>
-      {activePreset&&<div style={PRESET_NOTE_STYLE}>
-        House rules replaced by <strong>{activePreset.name}</strong>. Context below still applies.
-      </div>}
       {/* Context scope */}
       <div style={{padding:'6px 12px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
         <span style={{fontSize:10,color:'var(--text3)',flexShrink:0}}>Context</span>
@@ -7078,7 +6713,7 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
           <option value="world">World, no lorebook text</option>
           <option value="full">Everything</option>
         </select>
-        <span style={ctxTokens>ctxLimit?CTX_WARN_STYLE:CTX_OK_STYLE} title={ctxIsLocal?('Estimated system-prompt size against your configured '+ctxWindow.toLocaleString()+'-token window. Turns amber past '+ctxLimit.toLocaleString()+', leaving room for the conversation and the reply.'):'Estimated system-prompt size. The window budget is an LM Studio setting, so no warning threshold applies to this provider.'}>≈{ctxTokens.toLocaleString()}{ctxIsLocal?' / '+(ctxWindow/1000)+'k':''}</span>
+        <span style={ctxTokens>ctxLimit?CTX_WARN_STYLE:CTX_OK_STYLE} title={'Estimated system-prompt size against your configured '+ctxWindow.toLocaleString()+'-token window. Turns amber past '+ctxLimit.toLocaleString()+', leaving room for the conversation and the reply.'}>≈{ctxTokens.toLocaleString()} / {(ctxWindow/1000)+'k'}</span>
       </div>
       {ctxScope==='world'&&worldLoreList.length>0&&<div style={{padding:'0 12px 6px',borderBottom:'1px solid var(--border)',flexShrink:0,maxHeight:150,overflowY:'auto'}}>
         <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
@@ -11615,47 +11250,6 @@ function SettingsPage({data, update, dataPath}) {
 
   const [apiKeyVisible, setApiKeyVisible] = React.useState(false);
   const [lmTest, setLmTest] = React.useState(null);
-
-  // Task presets. State and handlers live at component level — hooks must never
-  // sit inside .map(), and nested arrows in JSX attributes have silently stopped
-  // elements rendering in this file before.
-  const [openPresetId, setOpenPresetId] = React.useState(null);
-  const presetList = getPresetList(data.settings);
-  // First edit materialises the built-ins into settings so they become the
-  // user's own copies. Until then the list is read straight from the constant.
-  const writePresets = (fn) => {
-    const base = ((data.settings||{}).ai_presets || []).length
-      ? JSON.parse(JSON.stringify((data.settings||{}).ai_presets))
-      : JSON.parse(JSON.stringify(DEFAULT_AI_PRESETS));
-    set('ai_presets', fn(base));
-  };
-  const updatePresetField = (id, key, val) => writePresets(list => {
-    const p = list.find(x => x.id === id);
-    if(p) p[key] = val;
-    return list;
-  });
-  const updatePresetParam = (id, key, val) => writePresets(list => {
-    const p = list.find(x => x.id === id);
-    if(p) { if(!p.params) p.params = {}; p.params[key] = val; }
-    return list;
-  });
-  const addPreset = () => {
-    const id = 'preset-' + Date.now();
-    writePresets(list => list.concat([{id, name:'New preset', instructions:'', params:{temperature:0.8, top_p:'', min_p:0.05, repeat_penalty:1.05, max_tokens:2000}}]));
-    setOpenPresetId(id);
-  };
-  const deletePreset = (id) => {
-    if(!confirm('Delete this preset? This cannot be undone.')) return;
-    writePresets(list => list.filter(x => x.id !== id));
-    if((data.settings||{}).ai_active_preset === id) set('ai_active_preset', '');
-    setOpenPresetId(null);
-  };
-  const restorePresets = () => {
-    if(!confirm('Replace all presets with the three built-in ones? Any edits you have made will be lost.')) return;
-    set('ai_presets', JSON.parse(JSON.stringify(DEFAULT_AI_PRESETS)));
-    setOpenPresetId(null);
-  };
-  const togglePreset = (id) => setOpenPresetId(cur => cur === id ? null : id);
   const testLmStudio = async () => {
     const base = ((data.settings||{}).lmstudio_base_url || 'http://localhost:1234/v1').replace(/\/+$/, '');
     setLmTest({state:'testing', msg:'Contacting ' + base + '…'});
@@ -11856,44 +11450,6 @@ function SettingsPage({data, update, dataPath}) {
             The Assistant's token readout turns amber at 75% of this number, leaving room for the conversation and the reply. Raising the window in LM Studio costs VRAM: enable Flash Attention and set K/V cache to Q8_0 to roughly halve that cost.
           </div>
         </React.Fragment>}
-
-        <Field label="Task presets" hint="A preset is a complete system prompt plus sampler values for one kind of output. Pick one from the Preset dropdown in the Assistant. It replaces the built-in house rules; the world, lorebook and character context is still sent underneath. Sampler values only have effect because they are sent in the request — nothing set in LM Studio's own Inference tab reaches the server.">
-          <div style={PRESET_LIST_STYLE}>
-            {presetList.map(p => (
-              <div key={p.id} style={PRESET_ROW_STYLE}>
-                <div style={PRESET_HEAD_STYLE}>
-                  <strong style={PRESET_NAME_STYLE}>{p.name}</strong>
-                  <button className="btn" style={PRESET_BTN_STYLE} onClick={()=>togglePreset(p.id)}>
-                    {openPresetId===p.id?'Close':'Edit'}
-                  </button>
-                  <button className="btn" style={PRESET_BTN_STYLE} onClick={()=>deletePreset(p.id)}>Delete</button>
-                </div>
-                {openPresetId===p.id&&<div style={PRESET_BODY_STYLE}>
-                  <input type="text" value={p.name||''} placeholder="Preset name"
-                    onChange={e=>updatePresetField(p.id,'name',e.target.value)} style={PRESET_INPUT_STYLE}/>
-                  <textarea value={p.instructions||''} placeholder="The complete system prompt for this task."
-                    onChange={e=>updatePresetField(p.id,'instructions',e.target.value)} style={PRESET_TEXTAREA_STYLE}/>
-                  <div style={PRESET_PARAMS_STYLE}>
-                    {PRESET_PARAM_FIELDS.map(f => (
-                      <label key={f.key} style={PRESET_PARAM_LABEL_STYLE} title={f.hint}>
-                        <span style={PRESET_PARAM_NAME_STYLE}>{f.label}</span>
-                        <input type="number" step={f.step} value={(p.params&&p.params[f.key]!==undefined)?p.params[f.key]:''}
-                          onChange={e=>updatePresetParam(p.id,f.key,e.target.value)} style={PRESET_NUM_STYLE}/>
-                      </label>
-                    ))}
-                  </div>
-                  <div style={PRESET_HINT_STYLE}>
-                    A blank sampler is not sent, which is how Top P stays off. Min P and repeat penalty reach LM Studio and OpenRouter only; the other providers drop them rather than erroring.
-                  </div>
-                </div>}
-              </div>
-            ))}
-          </div>
-          <div style={PRESET_ACTIONS_STYLE}>
-            <button className="btn" onClick={addPreset}><i className="ti ti-plus"></i>Add preset</button>
-            <button className="btn" onClick={restorePresets}><i className="ti ti-rotate"></i>Restore built-ins</button>
-          </div>
-        </Field>
       </Section>
 
       <Section title="Appearance" icon="ti-palette">
