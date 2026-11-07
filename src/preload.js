@@ -25,7 +25,11 @@ contextBridge.exposeInMainWorld('lorekeeper', {
   saveLorebookJson: (filename, data) => ipcRenderer.invoke('save-lorebook-json', { filename, data }),
   saveCollectionJson: (filename, data) => ipcRenderer.invoke('save-collection-json', { filename, data }),
   saveNotesFile: (filename, content) => ipcRenderer.invoke('save-notes-file', { filename, content }),
+  // Ingest, slice 1. The first bridge in this file that carries data back INTO the app
+  // rather than out of it; everything above writes and forgets.
+  readNotesFiles: () => ipcRenderer.invoke('read-notes-files'),
   saveTemplateFile: (filename, data) => ipcRenderer.invoke('save-template-file', { filename, data }),
+  saveTimelineJson: (filename, data) => ipcRenderer.invoke('save-timeline-json', { filename, data }),
   savePersonaFile: (filename, data) => ipcRenderer.invoke('save-persona-file', { filename, data }),
   copyImageToFolder: (srcPath, destFolder, filename) => ipcRenderer.invoke('copy-image-to-folder', { srcPath, destFolder, filename }),
   writeImageFromBase64: (opts) => ipcRenderer.invoke('write-image-from-base64', opts),

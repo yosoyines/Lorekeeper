@@ -446,6 +446,96 @@ With all three fixed, a fresh packaged build shows None with an empty repo folde
 
 ## Session 42
 
+**Oct 13-14**
+
+**Both scheduled tasks confirmed in production**, with `LastTaskResult: 0`. Worth writing down why they look different: the 23:00 backup runs `Lorekeeper.exe --backup`, which takes its branch before any window exists, so it is invisible by design and invisible is the success case. The 23:30 extras run goes through `cmd.exe` and shows a console window. The half-hour gap exists so the engine's commit lands on the remote before the script pulls.
+
+**The machine-specific path purge: two reported, eight found.** Ine named the two hint strings. A sweep for `I:` in the renderer turned up six more — a collection hint, the Batch Import instructions, a button labelled *Open I:\Lorekeeper*, a portrait note, the Settings data-path fallback, and the backup repo placeholder, which was her own backup folder offered as an example to whoever received a copy.
+
+**They did not all want the same fix, and that was the only interesting decision.** Five were dropped to a path relative to the install, because the root told the reader nothing: `Saves to: Companions\<folder>\companion.json` is true on every machine. But the gallery's hover shows a **click-to-copy** path, and a copyable path that is not the real path is worse than no path at all. That one is now built from `DATA_ROOT`, fetched once from `get-data-dir` at script load and cached, degrading to a relative path if it somehow has not resolved rather than naming a folder that may not exist.
+
+**The spec was wrong about the source repo being private, and it was wrong in the direction that matters.** `github.com/yosoyines/Lorekeeper` is public and has been since June. The section had called both repos private, which made `.gitignore` read as housekeeping. It is not: the app's data folders sit *inside* that repo's working tree, so those lines are the only thing between a public repo and every character, note and persona on the drive. **A change to that file is a privacy change.**
+
+Two real gaps in it, both found by looking rather than reasoning:
+- **`dist/` was ignored; `dist2/` and `dist3/` were not.** The lock workaround from session 41 had quietly created two untracked unpacked Electron apps, kept out of the repo only by the explicit `git add` list. Now `dist*/`.
+- **`vendor/` was not ignored**, so the 81.5 MB rclone binary was one `git add .` from a public repo.
+
+`git ls-files` confirmed nothing personal has ever been tracked. The separation Ine built — data in the private repo, app in the public one — did exactly what it was for, and the listing is the proof rather than the assumption.
+
+**README rewritten for a public audience.** The old one told a stranger their data would go to AppData (it goes next to the executable, deliberately, so a Windows reinstall cannot take it), answered "where is my data?" with Ine's drive letter, and never mentioned the installer. The feature list was rebuilt from the code rather than from memory, which caught the AI provider list: five, not the three that were about to be written down.
+
+**The light panel in the Palette tool was Chromium's own colour-input popup, and the fix already existed three hundred lines up.** `<input type="color">` opens a browser-level widget that no CSS on the element can reach; `color-scheme` is the only property that gets through. The stylesheet had carried `input[type="date"] { color-scheme: dark; }` for exactly this reason since the date fields were built. **This is the second time in three sessions that a solved problem was re-encountered as if new** — the first was the CSS `zoom` pointer maths, solved in `CropTool` and then written wrong again for the colour picker. The rule is already in the working-method list and was not applied.
+
+**Picker debugging aids removed** now that it works: the `build 7` marker in the heading, the diagnostic readout under the image, and the `diag` state behind it. The marker existed because two rounds were lost to not knowing whether a restart had picked up a new build; Settings showing the app version answers that generally now.
+
+**Timelines have no file of their own.** Asked where they are stored, and the answer was not in the spec. `data.timeline_events` is one flat array for the whole app with a `worldId` on each event, and `data.timeline_lanes` is keyed by world id — both at the **top level** of the data object, not inside the world.
+
+There is no `save-world-json` handler and there never has been. `Worlds\` is created at startup and sits in every scan and backup list, which makes it look like a data folder; it holds nine banner images and no JSON. So a world and its entire timeline exist in exactly two places, and both are the same file. Every other content type survives a corrupted main file with a readable per-item copy. Now documented in the spec and on the roadmap as a decision.
+
+**Ine caught the roadmap carrying its own history**, which is the one thing its header forbids. Three pieces of finished work had gone in over two sessions: a paragraph on how the fresh-install fix went, a status paragraph listing achievements, and a note about what an earlier draft of an entry had claimed. **A rule a document states about itself is the first thing to drift, because the person adding the violation has just read the rule and feels exempt.** The header now carries a table of what belongs where and an explicit line that retrospective asides go in the session log however true they are.
+
+The whole *Working method that keeps paying off* list moved to the spec in the same pass. Twenty-odd accumulated lessons are not "what remains to be done" by any reading, and it had been sitting in the roadmap unchallenged for several sessions.
+
+**Ine also caught two contradictions the documents had been carrying:**
+
+- **Stage 1 was listed as something Stage 4 would want.** Stage 4's own first rule is *build against the repo without touching Lorekeeper* — the phone app reads files out of the backup repository and never imports this renderer, so a module split here buys it nothing. The two stages are independent and the roadmap had claimed otherwise in both directions.
+- **An item was retired from the roadmap because the code had changed.** The paths work was written, compiled and shipped to disk, and that is not the same as done: nobody had looked at it. It went back as a confirmation and came off properly once she had. **The project's own rule — do not write a feature up as working before it has run once — applies to removing a roadmap item as much as to adding a spec entry.**
+
+**Build folders multiplied to four** — `dist`, `dist2`, `dist3` and `release` — at roughly 350-400 MB each, because every lock collision was answered with a new output directory. Three deleted. Worth going back to plain `npm run build` once the lock behaviour settles.
+
+**`gh` was not installed**, so the first release attempt failed on a missing command rather than anything to do with the build. Installed since, not yet authenticated.
+
+## Session 43
+
+**Oct 16-18, verified Oct 24**
+
+**Stage 4 was reframed, and that is the most useful thing in this session.** It had been written as "the phone app, blocked on ingest", which reads as an Android project that cannot be started. It is the other way round: **ingest IS the stage**, it is plain Node in `main.js`, it is testable by editing a file in Notepad, and the phone is an optional thing bolted on afterwards. If ingest does not work the APK would have been pointless; if it does, it is worth having on its own, because it turns the backup from *readable* into *restorable*.
+
+**The comparison with the journaling app, since Ine asked whether it was the same wall.** It is not. That one died on Android giving a local HTML file throwaway storage — a wall that never applied here, because Stage 4 settled on a sideloaded Capacitor APK two sessions earlier for an unrelated reason (runtime Babel on a phone CPU). What *does* transfer is that an APK cannot be built in this container: Java 21 and Gradle are present, but `dl.google.com` is refused by the proxy, so there is no Android SDK. That lands on the last step rather than the first, and the build pattern this project already uses — Claude writes the files, Ine runs one command — covers it.
+
+### Notes ingest
+
+**`read-notes-files` is the first code in Lorekeeper that reads its own output.** Everything else writes files and never looks at them again, which is exactly why a note edited anywhere else was invisible: the file changed, the backup carried the change, and the app never knew.
+
+**The deletion problem, which is the whole reason this took three passes.** A two-way union cannot represent a deletion. Given "the app has line X" and "the file does not", there is no way to tell whether the file deleted X or the app added it, so a union keeps X either way and a line Ine had just deleted came back. **That is not a bug in the merge — it is missing information**, and the missing information is what both sides last agreed on.
+
+So `notes_sync` was added: the text at each moment a note and its file are known to be identical. Recorded on every file write, on every apply, and **free for every note the scan finds already matching**, which means after one scan only the notes in dispute lack one. With it the merge becomes three-way and deletion is expressible. Seven cases verified in node, including the one Ine reported.
+
+**The diff was rebuilt as one list rather than two columns.** A one-line difference in a twenty-line note is genuinely hard to find by reading two blocks side by side, and two-column comparison is the most expensive thing on the page to read. Colour cannot carry the meaning alone — the colourblind theme remaps `--green` and `--red` — so every changed line also carries a `-` or `+`.
+
+**Blank lines are counted separately.** Three of four "changed" lines in a note can be blank, which turns a one-word edit into a four-line rewrite in the summary and renders as empty coloured bars. They now say *blank line* and are counted apart from the real ones.
+
+**Then classification, once a baseline existed to classify against.** A difference is now labelled *Changed on disk* (the ingest case, safe to take), *Changed here* (the file write is simply behind), *Changed in both* (a human looks at it), or *Differs* (no baseline yet). The panel checks on opening the page rather than on a button, because an ingest that runs only when remembered does not run — the case it exists for is a note edited elsewhere, which is precisely the case nobody thinks to check. A bulk **Take all** appears for the unambiguous ones and never includes a both-sides change.
+
+**Verified end to end on 24 October.**
+
+### Four UX corrections, all from Ine, all the same root cause
+
+Worth recording together because the cause is uniform: **every one of these was written by someone who had just finished building the thing being described, and therefore explained the mechanism instead of the problem.**
+
+1. **Merge closed the diff.** `startMerge` called `setOpen(null)`, so editing the merged text meant clicking Compare again to see what the edit was about.
+2. **Undo rendered at the top of the panel** after acting on a row halfway down it. A control that appears somewhere other than where you acted is a control you have to go and find. The row now stays in place and becomes a done strip carrying its own Undo.
+3. **The hints were four sentences where one would do.** In Ine's words: *"hints aren't poetical, hints describe the problem succinctly."* The reasoning is worth keeping — in the code comments, where the next session needs it — not on screen where it is read every time.
+4. **A hint that names a quantity has to count it.** *"A line you removed is still below"* is wrong at two, and wrong in a different way when some lines were added and others deleted. It now reports the real number, and in the no-baseline case counts *one-sided lines* rather than claiming to know which are deletions, because that is precisely what is unknown.
+
+This became a roadmap item — a UI pass over every hint in the app — with those as the three testable failure modes. **Import/Export is the worst offender**, which is where it starts.
+
+### Timelines got a file of their own
+
+The last content type with no independent copy on disk. `Timelines\{world}.json`, carrying the world name and id, a stamp, the lanes and the events.
+
+**One writer, not five.** `TimelinePanel` mutates timeline data in five places — add, edit, delete, reorder, rename a strand — and a save call in each is this project's oldest recurring bug. A single effect watches the world's computed slice instead, so all five land in it and a sixth added later does too.
+
+**Worlds deliberately did not get one.** World metadata is a name, an emoji, a description and some tags: small, visible, quick to retype. A timeline is weeks of dated events across parallel strands and is re-derivable from nothing. The spec says so explicitly, so nobody adds `save-world-json` later as a consistency fix.
+
+**Adding a data folder means changing four lists, and missing one fails silently:** startup folder creation, the restore/scan list, `MIRROR_FOLDERS` in `github-backup.js` (which rclone shares), and **the source repo's `.gitignore`** — the last being the one that matters, since that repo is public and the data folders sit inside its working tree.
+
+### The Babel figures in the spec were stale
+
+It claimed two blocks of roughly 250 KB and 241 KB. Measured with `compile-check.js` against the shipped file: **247 / 273 / 294 KB**. Still far from the ceiling, but the numbers had drifted because they were written once and never re-measured. The spec now says that any figure not produced by that script is a guess.
+
+## Session 44
+
 **Nov 7**
 
 **Not an app session.** No Lorekeeper code changed. The whole run was getting LM Studio into a state where it can actually draft bot assets, after months of the local models sitting unused because their output was not good enough to use. The outcome is three working presets, documented in `LMStudio/lorekeeper-llm-presets.md` in the **lorekeeper-data** repo, beside the synced `config-presets` JSONs.

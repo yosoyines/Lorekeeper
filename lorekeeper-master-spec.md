@@ -1,5 +1,5 @@
 # LOREKEEPER — Master Specification
-**Last updated: October 9, 2026 (session 37)**
+**Last updated: October 30, 2026 (session 46b)**
 
 **This file describes how the app works now.** Three documents, and it matters which one you open:
 
@@ -16,6 +16,7 @@ The split happened in session 37. This file had reached 220 KB, a third of it a 
 ## Working Files
 - Project files at `/mnt/project/` are **no longer synced**. Load `index.html`, `main.js`, `preload.js` and the three documents from the project at the start of a session.
 - Source now also includes `github-backup.js`, `github-ipc.js` (session 37) and `rclone-backup.js` (session 38).
+- `compile-check.js` sits at the repo root (session 45). Earlier versions of this file told the next session to run it while **the file did not exist** — it was written in a session, quoted here, and never saved. It needs a dev-only dependency that is deliberately NOT in `package.json`, because the app loads Babel from a CDN and must keep doing so: `npm install --no-save @babel/standalone@7.23.10`. It refuses to run against a version that does not match the one pinned in `index.html`, since otherwise it checks something the app will never execute.
 - `vendor/rclone/rclone.exe` is **not** in the repo and must be placed by hand before building — see Backup.
 - **Test environment removed (session 35)** — `I:\Test` was deleted once the build was running stably, so `DATA_DIR` is now `I:\Lorekeeper` in dev and next to the exe in production, with no separate test path. Consequence: untested builds now touch live data directly. Hit **Back up now** (Import/Export) before installing a new build, so a bad session is recoverable from the backup repo rather than only from a ZIP.
 - Backup repo working copy at `I:\LorekeeperBackup` (see Backup). Only the optional extras script uses it now; the app uploads over the API and needs no local clone. It is a **separate git repo from the source repo** — `I:\Lorekeeper` is already the source working tree and two repos cannot share one folder.
@@ -101,7 +102,7 @@ I:\Lorekeeper\
 | `onRcloneConnectProgress(cb)` | Progress during sign-in; returns its own unsubscribe function |
 | `openBackupFolder()` | Opens `I:\LorekeeperBackup` in Explorer |
 | `saveTemplateFile(filename, data)` | Write a standalone JSON backup to `Templates\{filename}.json`, independent of the main data file — same reasoning as `saveNotesFile`, added session 17/18 |
-| `saveImage({base64, defaultName})` | Save a binary image via a Save dialog (session 26 image tools) |
+| `saveImage({base64, defaultName, folder?})` | Save a binary image via a Save dialog (session 26 image tools). `folder` (session 45) defaults the dialog into a data subfolder the same way `exportFile` does, and creates it if absent; **omitting it keeps the old Desktop default**, which is what the three image tools (Format Converter, Paste & Save, Crop) still rely on. Added because a SillyTavern card belongs beside the character it came from. |
 | `pasteImage()` | Read an image from the clipboard (session 26) |
 | `getLastgoodInfo()` | Returns metadata about the rolling lastgood backup — see Data Safety Architecture |
 | `restoreLastgood()` | One-click restore from the lastgood backup (session 22) |
@@ -118,7 +119,7 @@ I:\Lorekeeper\
 | `saveCompanionJson(folderName, data)` | Write to `Companions\FolderName\companion.json` (renamed from `character.json` in session 31 to match Saucepan); **strips app-only fields, so this is an export shape and not a complete local backup** — see Auto-Save to Disk for the full strip list and what it means for recovery |
 | `saveLorebookJson(filename, data)` | Write to `Lorebooks\filename.json`; strips app-only fields |
 | `saveCollectionJson(filename, data)` | Write to `Collections\filename.json`; strips app-only fields |
-| `copyImageToFolder(srcPath, destFolder, filename)` | Copy image locally; skips if already in Lorekeeper folder or dest exists; returns `{relPath, base64}` |
+| `copyImageToFolder(srcPath, destFolder, filename)` | Copy image locally; returns `{relPath, base64}`. Skips the copy only when the source is **already inside** the data folder. **It does NOT skip when the destination exists — it overwrites, unconditionally** (read in session 45; this row claimed the opposite for months). Anywhere several items share one flat destination folder, the caller must make the filename unique or one item silently takes over another's picture — which is why persona portraits are prefixed with the persona's name. |
 | `writeImageFromBase64({base64, destFolder, filename})` | Write base64 to image file; checks dest exists first; returns `{relPath}` |
 | `exportBackup({worldId?})` | Create zip — full or per-world; returns `{success, size, path}` |
 | `exportPlatformZip({defaultName, files[], folder?})` | Save dialog -> zip pre-built JSON strings; returns `{success, size, path}`. `folder` (added session 18) defaults to `Worlds\` for the world Export ZIP. |
@@ -175,7 +176,8 @@ I:\Lorekeeper\
 - `temperature_offset_percentage` — default 0
 - `hide_on_owner_profile`, `suppress_companion_profile_banner`, `preserve_existing_chats`
 - `posted_at`, `created_at`, `updated_at`, `voice_catalog_id`, `author_id`, `author_handle`
-- **Local-only, stripped on export (13 fields, identical list in all four export paths):** `world_id`, `status`, `schedule_dates`, `posted_dates`, `collections`, `linked_lorebooks`, `companion_folder`, `site_last_synced_at`, `export_filename`, `lorebook_entry_text`, `lorebook_entry_title`, `voice_catalog_id`, `reworked_at`
+- **Local-only, stripped on export (14 fields, identical list in all four export paths):** `world_id`, `status`, `schedule_dates`, `posted_dates`, `collections`, `linked_lorebooks`, `companion_folder`, `site_last_synced_at`, `export_filename`, `lorebook_entry_text`, `lorebook_entry_title`, `voice_catalog_id`, `reworked_at`, `source_url`
+- `source_url` — **session 45.** The companion's own page on Saucepan, pasted by hand. Edited on the Settings tab under Companions Folder, with a copy button, and shown as a copy row in the sidebar Quick Info. App-only and stripped like the rest, but it **does** travel into a SillyTavern card as V3 `source[]` — see SillyTavern Export. Both import paths preserve it without being told to (`{...existing}` in `updateCharFromJSON`, `Object.assign(existing, …)` in batch import), so a QC re-import does not wipe it.
 - `voice_catalog_id` — Saucepan voice name (session 31). The platform has a voice catalogue but **does not export a voice field**, so this is tracked locally for reference only. Field already existed as a dormant `null`; reused rather than adding a second one.
 - `reworked_at` — ISO stamp set when the character's JSON is exported; removes it from the dashboard Rework queue
 - **App-only:** `status` (draft/ready/posted), `schedule_dates[]`, `posted_dates[]`, `collections[]`, `linked_lorebooks[]`, `world_id`, `companion_folder`, `site_last_synced_at`, `lorebook_entry_text`, `lorebook_entry_title`
@@ -202,8 +204,13 @@ I:\Lorekeeper\
 
 ### Persona
 - `id`, `name`, `pronouns`, `description`
-- `image` — `{ data }` (legacy); `image_relpath` — `Personas\name.ext`
+- `image` — `{ relPath }`; `{ data }` is legacy and base64 is no longer written (see below); `image_relpath` — `Personas\name.ext`
+- `portraits[]` — **session 45.** Up to 10: `{ name, description, relPath, data? }`, drag to reorder, any slot promotable to the main portrait. Deliberately **none** of the character portrait's platform fields — no `image.id`, no `very_sus`, no `gallery_only` — because a persona cannot be exported to or imported from Saucepan, and a field that can never travel anywhere only invites being filled in for nothing.
 - `linked_lorebook` — single lorebook ID
+
+**Every persona image file lands in ONE flat `Personas\` folder**, shared by every persona, and `copyImageToFolder` overwrites without checking. So portrait filenames are prefixed with the persona's name (`Adrian-ref sheet.png`); without that, two personas each adding a `ref1.png` would end up sharing one picture with nothing reporting it.
+
+**`handlePortrait` used to write base64 AND a relPath** — the session-31 bug in miniature. `update()` deep-clones the whole data tree on every keystroke, so a blob in the data file is a cost paid per character typed anywhere in the app. Two personas were holding **3.08 MB** between them while already having working relPaths. Fixed in session 45: the relPath is stored and base64 is kept only as the fallback for a copy that actually failed, where it is the difference between a picture and no picture. Re-setting a portrait replaces `image` wholesale, which is how the two stale blobs were cleared without any migration code.
 
 ### Template (character creation)
 - `id`, `name`, `world_id` (null = global)
@@ -253,7 +260,7 @@ All four content-type detail pages share the same `char-detail` layout: a 260px 
 - **CharDetailPage** — sidebar (portrait, platform image UUID, banner, quick info, tags) + main (11 tabs: Identity, Full Description, Character Card, Formatting, Scenarios, Portraits, Lorebooks, Collections, Settings, Schedule, Lorebook Entry)
 - **LorePage** — sidebar (cover image, image ID, quick info) + main (Chapters, Settings, Export)
 - **CollPage** — sidebar (banner image, quick info) + main (Edit, Export)
-- **PersonaDetailPage** — sidebar (portrait, quick info) + main (Profile)
+- **PersonaDetailPage** — sidebar (portrait, quick info incl. portrait count) + main (Profile, Portraits — second tab added session 45)
 
 ### Navigation helpers (defined in App)
 - `openChar(c, tab?)` — sets selectedChar, sets selectedWorld to the character's world if not already set, navigates to `page='char'`
@@ -281,7 +288,7 @@ All three exist so that opening any item — from the dashboard, quick find, a c
 
 **Collections** — card grid (banner, name, description preview, tags); click opens full-page CollPage
 
-**Gallery** — all world images; hover shows name, dimensions (WxH px), full Windows path (click to copy), extension badge
+**Gallery** — **a derived view, with no upload.** Composed from everything in the world that owns an image: character main images, portrait slots, character banners, lorebook covers, collection banners and the world banner, each read by its relPath. Hover shows name, dimensions (WxH px), full Windows path (click to copy) and an extension badge. The Upload tile was removed in session 46b — see the Base64 section for why a gallery that stores its own images is the wrong shape.
 
 **World Info** — full-width form: banner upload, name + emoji (side by side), short description, tags, lorebook templates, plot archetypes, notes, delete world
 
@@ -467,6 +474,8 @@ A sync:
 
 **Expiry.** A fine-grained token expires on a date chosen when it was made, and the backup stops when it does. GitHub returns the date on every response; the panel warns inside three weeks and turns red after.
 
+The panel cannot warn about the **scheduled** run, which has nobody watching it: a token that lapses unattended produces a failed task and no visible sign. **Decided session 46b: a notification on task failure is enough** — no stamp file for the panel to read, and no second mechanism to keep in sync. The current token runs to 8 October 2027.
+
 ### Why `lorekeeper-data.pretty.json` exists
 `saveData` writes compact single-line JSON. Git cannot diff a single line, so every commit of the data file would store a whole fresh blob rather than a delta. `writePrettyData()` in `main.js` emits a pretty-printed, **recursively key-sorted** copy alongside it.
 
@@ -535,6 +544,17 @@ It is entirely optional. Nothing in Lorekeeper requires it, a fresh install does
 
 > **These per-item files are Saucepan export shapes, not complete backups.** `saveCompanionJson` strips `world_id`, `status`, `schedule_dates`, `posted_dates`, `collections`, `linked_lorebooks`, `companion_folder`, `site_last_synced_at`, `export_filename`, `lorebook_entry_text`, `lorebook_entry_title`, `voice_catalog_id`, `reworked_at` and portrait `relPath` before writing. Restoring from them recovers a character's *content* but not its world membership, collection membership, linked lorebooks or schedule state — as happened in session 16, where that had to be rebuilt by hand. Those fields live only in `lorekeeper-data.json` (and now, via the pretty copy, in the backup repo). Any future two-way sync needs a `local.json` sidecar holding exactly the stripped fields; see Mobile Companion App.
 - Personas -> `Personas\{name}-persona.json` (session 35) — debounced 800ms from `PersonaDetailPage`, same pattern as Notes and Templates. `image.data` base64 is stripped before writing; `image_relpath` is the real reference and the blob would only bloat the backup. Personas are a Saucepan concept but **cannot be exported from Saucepan**, so Lorekeeper holds the only recoverable copy. The pre-existing `.md` files in that folder are manual exports, not backups — markdown is a formatted document and cannot be reimported.
+
+- Timelines -> `Timelines\{world}.json` (session 43) — one file per world, carrying the world name and id, a `saved_at` stamp, that world's lanes and its events.
+
+> **Timeline data lives at the top level of the data object**, not inside the world it belongs to: `data.timeline_events` is one flat array for the whole app with a `worldId` on each event, and `data.timeline_lanes` is an object keyed by world id holding that world's strand names (default `['Main']`). The per-world file is assembled from those two on write.
+>
+> **ONE writer, not one per mutation.** `TimelinePanel` changes timeline data in five places — add, edit, delete, reorder, rename a strand — and a save call in each is this project's oldest recurring bug. Instead a single `useEffect` watches the world's computed slice and writes it debounced, so all five land in it and a sixth added later does too. It skips the render that merely opened the tab, and skips re-renders whose content is unchanged.
+>
+> **Adding a data folder means changing four lists, and missing one fails silently.** The startup folder creation in `main.js`, the restore/scan folder list, `MIRROR_FOLDERS` in `github-backup.js` (which rclone shares), and the **source repo's `.gitignore`** — that last one matters most, because the source repo is public and the data folders sit inside its working tree.
+
+> **Worlds still have NO per-item file, deliberately.** There is no `save-world-json` handler and none is wanted: world metadata is a name, an emoji, a description and some tags — small, visible and quick to retype. A timeline is weeks of dated events across parallel strands and can be re-derived from nothing, which is why it got a file and the world did not. `Worlds\` holds **only banner images** — verified against the real folder, session 42: nine images, no JSON.
+
 - New items auto-get folder/filename from name (sanitized, no trailing underscores); clearable to opt out
 - `updated_at` stamped on every edit
 - Writes happen async (`fs.promises.writeFile`) and are debounced (default 600ms) to avoid disk thrashing during typing
@@ -552,6 +572,63 @@ It is entirely optional. Nothing in Lorekeeper requires it, a fresh install does
 - **The base64 migration is over, and its machinery was removed in session 35j.** `ImageMigrationPanel` is now **Rescan images and nothing else**. Audit base64, Migrate and Clean up leftover are gone — they were one-time tooling for a migration that completed in session 32, and they cost about 14 KB of a Babel block that sits under a hard ceiling. Anything describing four audit buckets (`relpath_ok`, `relpath_broken`, `needs_migration`, `leftover_data`) is describing code that no longer exists.
 - **Rescan survived because it is not migration machinery.** It repairs a lorebook or collection whose `image_relpath` went missing after a restore or a merge, by matching files on disk back to their records. It writes only that one field, and only when it is absent, so it cannot overwrite a working link.
 - **The removed functions are recoverable from git if base64 ever reappears.** The IPC they depended on — `scanLorebooks`, `scanCollections`, `listFolderImages`, `writeImageFromBase64`, `saveDataAllowShrink` — is all still present in `main.js` and `preload.js`, untouched. `saveDataAllowShrink` is what any future bulk shrink must write through; an ordinary save is refused by the Layer 2 guard.
+
+### Base64 — resolved, and the data file went from 29.68 MB to 3.78 MB
+
+The migration out of base64 completed in session 32, and the **write paths that put it back were never fixed with it.** Found in session 45 by measuring the live data file: **23.45 MB of 29.68 MB was base64**, in nine items. Every writer is now corrected and **the data file holds no base64 at all.**
+
+**Measured end state (30 October 2026): 3.78 MB, zero blobs, nothing lost** — every world, lorebook and collection still carries an image reference, and the counts are unchanged at 13 worlds, 76 characters, 31 lorebooks, 12 collections, 6 personas. That is an 87% reduction in the thing `update()` deep-clones on every keystroke.
+
+**The blobs were duplicates, not originals.** Eight of the nine items already had a working `image_relpath` pointing at a real file; the ninth, the Standalones collection, had no relPath but its 3.54 MB of base64 decoded to exactly the 2.66 MB `Collections/standalones.png` that was already on disk. So nothing ever had to be written out — clearing was pure subtraction. **Check that before building a migration**: the expensive version of this job writes blobs to disk, and the cheap version discovers it does not have to.
+
+| Where | Blob found | Writer |
+|---|---|---|
+| Lorebook covers | 15.48 MB | fixed, session 46 |
+| World banners | 4.43 MB | fixed, session 46 |
+| Collection banners | 3.54 MB | fixed, session 46 — **was the same inline closure duplicated twice**, on the clickable banner and on the button under it; consolidated into `handleCollImage` rather than patched in both places |
+| Character portraits | 2.45 MB | fixed, session 46 — one character held all of it |
+| Character banners | 0 | fixed, session 46; latent, had never fired |
+| Personas | was 3.08 MB | fixed, session 45; blobs cleared by re-setting the portraits |
+
+### The second bug, which is not the same as the first
+
+Storing the blob **and** the path was one defect. The other was that the collection and lorebook handlers **gated the copy itself on the auto-save filename**:
+
+```js
+if(col.collection_filename){           // the AUTO-SAVE setting
+  const res = await copyImageToFolder(…);
+  if(res){ …store relPath…; return; }
+}
+setCol(c=>{c.image_data=r.base64;});   // everything with no filename lands here
+```
+
+`collection_filename` decides whether a collection auto-saves its JSON. It has nothing to do with whether an image can be written to disk — it was only being used as a *name* for the file. But with it empty the handler fell straight through and stored base64, writing no file at all. **Three collections had it empty** (Standalones, Events, The Modern Takarabune), so setting a banner on any of them could only ever produce a blob.
+
+**This is why re-uploading the Standalones banner appeared to do nothing.** The code was doing exactly what it was told, every time.
+
+Both handlers now fall back to the item's own sanitised name — `Standalones.png` — which is what the world banner and persona handlers already did. The lorebook handler had the identical gate; latent, because all 31 lorebooks have a filename set, and fixed in the same pass.
+
+**The general rule: never gate an operation on a setting that governs something else.** A field used as a *name* must not decide whether the write happens.
+
+**The last writer was removed rather than fixed (session 46b).** `handleGalleryUpload` on the world Gallery tab pushed `{data: base64}` into `data.gallery[]` with **no copy at all**, so it never wrote a file.
+
+It was deleted, along with its Upload tile and the orphaned `.gallery-upload` CSS, because **the Gallery tab is a view, not a store.** It already composes itself from images that something else owns — character main images, portrait slots, character banners, lorebook covers, collection banners and the world banner — every one read by its relPath. The upload was a redundant fifth source whose images existed nowhere but inside the data file, which is the opposite of what this app is for.
+
+`data.gallery[]` survives in `initData` and one render line so any legacy item still displays; **nothing writes to it.** There were zero such items when it was removed. Deleting the array as well would mean touching `initData`, the `worldGallery` computation, the prop threading, the render, and the backup merge strategy — not worth it for an empty, harmless field.
+
+**This is the single largest performance item in the app.** `update()` runs `structuredClone` over the whole tree on **every keystroke**, so 23 MB of blobs is a cost paid per character typed anywhere — the same mechanism that produced the 190 MB file in session 31, just at a quarter of the scale.
+
+**The shape of the bug was always identical:** `copyImageToFolder` returns `{relPath, base64}`, and the handler stored *both* instead of just the path. The fix was always the same line — keep `relPath`, pass `null` for the blob, and fall back to base64 only when the copy genuinely failed, where it is the only copy of the picture. **Any new image handler must follow that shape**; it is the single most repeated defect in this project's history.
+
+### How it was cleared, and why no tool was built
+
+By hand, in nine steps: open each item, re-pick the image it already pointed at, done. **No migration code, and `saveDataAllowShrink` was never needed.**
+
+That last point is the one worth keeping. A single bulk clear of 23 MB out of 29 MB is a 79% shrink and the Layer 2 guard would have **refused** it, dumping the result into `lorekeeper-data.SUSPICIOUS.json` — exactly the session-32 trap. Clearing item by item is a small shrink each time and passes normally. Confirmed afterwards: `SUSPICIOUS.json` still carried its July timestamp, so not one of the nine saves was refused.
+
+**Re-picking a file that is already inside the data folder is free.** `copyImageToFolder` early-exits when the source is already under `DATA_DIR`, returning the existing relPath without copying. So no duplicate files, no renames, and the folders came out exactly as they went in.
+
+**A panel to automate this was offered and declined, correctly.** At nine items the manual route is faster than building the UI, and the removed session-35j machinery would have cost ~14 KB of Babel block weight to reinstate for a one-time job. Do not re-propose it at this scale; if base64 ever reappears in volume, the IPC it would need is all still present and untouched — `scanLorebooks`, `scanCollections`, `listFolderImages`, `writeImageFromBase64`, `saveDataAllowShrink`.
 
 **Every image consumer must read `*_relpath`, not just the base64 field (session 32 regression).** Clearing the leftover base64 made world and collection images vanish across the app. The relpaths were correct and the files were on disk — the *views* were the problem. Several read the base64 field directly with no relpath fallback, so the base64 had been silently masking a pre-existing gap. Two distinct failures:
 
@@ -685,6 +762,8 @@ Confirmed from real exports at both extremes, not inferred:
 | `buildLoreExport` | `(l)` | 5 call sites |
 | `buildCollExport` | `(c)` | 5 call sites |
 
+A **fourth** pair, `buildSillyTavernV2` / `buildSillyTavernV3`, lives beside them and targets a different platform entirely — see SillyTavern Export. It was put here rather than inline in the UI for exactly the reason this section exists.
+
 **Do not inline a strip list anywhere else.** If Saucepan changes a field, change it in the builder and nowhere else.
 
 ### Why this exists
@@ -752,6 +831,80 @@ Includes (required by Saucepan import validator — session 22c): `lorebooks: c.
 
 ### How to verify an export is actually clean
 Don't assume the strip lists above are exhaustive just because they're documented — diff an actual Lorekeeper export against the corresponding Saucepan export for the same item (`Settings → Export` on the site, vs `Export JSON` in Lorekeeper) and look for: (1) keys only in the Lorekeeper file (these are app-only fields that leaked through), (2) keys with different *names* but the same intent (field-mapping bugs, like `definition`/`description`), (3) keys with different *values* that should logically agree (derived-field bugs, like `collaboration_type`/`access_level`). This is exactly how the session 18 bugs were found — by diffing real exported files rather than re-reading the strip list and assuming it was complete.
+
+---
+
+## SillyTavern Export (session 45)
+
+Exports a character as a **SillyTavern character card** — a PNG carrying the card JSON in a `tEXt` chunk. Lives on the character's **Settings** tab beside Export JSON and Export MD, not in the Tools panel: the tools roll things up out of nothing, and this reads real data.
+
+Renderer-only apart from one `main.js` line (the `saveImage` `folder` parameter). No new IPC, no new dependency.
+
+### Where the code lives
+Everything that does work is in the **plain-JS block**: the two builders, the macro resolver, CRC32, the chunk splicer, the canvas re-encode and the summary counter. Only `SillyTavernExportCard` is in a Babel block. That was not tidiness — the block it would otherwise have grown was already near the split threshold.
+
+### Both specs are written, into one file
+`ccv3` holds V3 (`chara_card_v3` / `3.0`), `chara` holds V2 (`chara_card_v2` / `2.0`), both base64 of UTF-8. A V3-aware reader prefers `ccv3`; anything older falls back to `chara` and sees an ordinary V2 card. Writing both costs about fifteen lines. V3 adds `nickname`, `source[]`, `assets[]`, `creation_date` / `modification_date` and the **required** `group_only_greetings` array — required meaning a strict reader rejects the card without it, even empty.
+
+Existing `chara` / `ccv3` chunks are dropped on the way through. Re-exporting a card that already carried one would otherwise end up with two, and a reader taking the first would see the stale version.
+
+### Field mapping — none of it forced by either spec
+| Saucepan | SillyTavern |
+|---|---|
+| `display_name` / `name` | `name` / `nickname` (V3 resolves `{{char}}` to `nickname`) |
+| `card` | `description` — the system prompt, the bulk of the card |
+| `advanced_prompt` | `system_prompt` |
+| `formatting_instructions` | `post_history_instructions` — injected at depth 0, where formatting rules belong |
+| `example_dialogue` | `mes_example`, verbatim |
+| `starting_scenarios[0]` | `first_mes`; the rest become `alternate_greetings[]` |
+| `short_description` + `full_description` | `creator_notes` — neither is model-visible on Saucepan and SillyTavern has no equivalent surface |
+| `source_url` | V3 `source[]` |
+
+`personality` and `scenario` are left **empty** rather than invented. **Scenario titles have no SillyTavern equivalent** — there is no per-greeting label — so they are listed in `creator_notes` instead of being silently lost.
+
+**Nothing is stamped on the character.** An ST export is not a Saucepan export, so `export_filename`, `site_last_synced_at` and `reworked_at` are all left alone. In particular `export_filename` must not be written, or an ST export would hijack the filename the Saucepan export remembers.
+
+### Macros are resolved, because SillyTavern prints them literally
+This is the substance of the feature. Saucepan resolves pronouns by grammatical role at chat time; SillyTavern has no equivalent and would render `{{their}}` as the word "their". So they are resolved to real words against a pronoun set chosen in the export panel (he/him default).
+
+The resolver keys on the **role**, not the word typed, so every alias works: `{{they}}` / `{{he}}` / `{{she}}` all resolve to the subjective form. Also handled: `{{mfx|male|female|person}}`, `{{cn}}` / `{{yn}}` → `{{char}}` / `{{user}}`, `{{day_of_week}}` → `{{weekday}}`. `{{char}}` and `{{user}}` pass straight through — both platforms have them.
+
+**`{{s?a:b}}` and `{{p?a:b}}` are inverses and getting them backwards is silent.** The first value is used when the prefix matches the chosen set's number: `s?` gives its first value for a singular set, `p?` for a plural one. A resolver that always took the first value would invert every `p?` conditional in the catalogue and read perfectly fine until someone exported a they/them character.
+
+**Unrecognised macros pass through UNCHANGED.** Same rule that stops a linter being built against `MACROS`: it is a reference, not an allowlist.
+
+Three judgment calls, none forced:
+- **Sentence-start capitalisation.** `{{their}} hands shake.` exports as `His hands shake.` Saucepan has the same blind spot and renders it lowercase, but a lowercase sentence opening is a visible defect in every greeting it lands in.
+- **`{{her}}` resolves as objective, `{{his}}` as possessive.** Both are genuinely ambiguous in English and Saucepan's own reference lists each under two headings. The narrow cost: `{{her}}` in a possessive position resolves as if objective.
+- **`_text_` is left alone.** It renders as italics in SillyTavern rather than underline — mildly wrong, where stripping it would lose the emphasis entirely.
+
+Markup that does convert: `~text~` → `~~text~~`, and the alignment (`>>text<<`, `>>text>>`) and spoiler (`>!text!<`) tags lose the tags and keep the text, having no SillyTavern equivalent.
+
+**`stripHighlights` runs over the whole assembled card.** `==marks==` must not reach another platform any more than they reach Saucepan.
+
+### source[] — traceability, and why it needed a field
+V3 `source[]` exists so a card can say where the original lives. Two routes, in order:
+1. **`source_url` if set.** Always wins.
+2. **Derived as `ST_SOURCE_BASE + c.id`**, but *only* when `c.author_id` is non-empty.
+
+That guard matters. A companion created in Lorekeeper gets a locally generated UUID and the site assigns its own on upload, which Lorekeeper never learns unless the companion is later re-imported from a Saucepan export. `author_id` is the tell: imports carry it, locally created records have `''`. Measured against the real catalogue, **48 of 52 published characters** have it, so most get a correct link for free; the other four need the field. Guessing from a local UUID would have produced a confident dead link on every copy of the card.
+
+**`ST_SOURCE_BASE` is `https://saucepan.ai/companion/`** — confirmed in session 45 against a real companion URL *and* against that record's stored `id`, which matched. The pattern alone would not have been enough; the id has to be the platform's.
+
+The panel never omits the link silently — it states the reason (not published, no id, or the id is local) and points at the field.
+
+### Portraits and CHARX
+`assets[]` declares exactly one `icon` named `main` with `uri: 'ccdefault:'`, which means the PNG the card is embedded in. **Extra portraits cannot ride along in a plain PNG** — the spec's `chara-ext-asset_` chunks are explicitly discouraged for new apps, and the supported route is **CHARX**, a zip with `card.json` at the root and images under `assets/images/`. Not built; a sensible third step if the ten-portrait gallery ever needs to travel.
+
+### PNG mechanics, written by hand
+A `tEXt` chunk is length + type + keyword + NUL + data + CRC32, and CRC32 is about fifteen lines — cheaper than adding a dependency to an app whose CDN versions are pinned on purpose. The portrait goes through a canvas before embedding, which both guarantees the output really is a PNG (a `tEXt` chunk spliced into a JPG produces a file nothing reads) and gets AVIF, WebP and JPG decoding for free.
+
+**73 of 76 characters can export a PNG** — the other three have no local portrait file, and the button disables with that stated. A platform image UUID is not enough; the picture has to be on disk.
+
+### Verification status
+Unit-tested against code **extracted from the shipped file**: 77 assertions on macro resolution, conditionals in both directions, markup, the source guards and the PNG round trip, with CRC32 checked against `zlib.crc32` including the empty-input case. End-to-end against the real Ryōta record and his real 1.4 MB portrait: 23 IDAT chunks and 2 pre-existing `tEXt` chunks preserved in order, every CRC validated, image bytes identical, card read back byte-for-byte.
+
+> **Not yet verified: SillyTavern actually importing one.** The canvas re-encode path that AVIF, WebP and JPG portraits take can only run in Electron, and nothing has been dropped into a real SillyTavern install. In the roadmap.
 
 ---
 
@@ -864,7 +1017,7 @@ LM Studio exposes an OpenAI-compatible server, so the branch reuses the same req
 
 Note the CSP header is applied in the main process at window creation, so it needs a full app restart, not a reload.
 
-### Task presets (session 42)
+### Task presets (session 44)
 
 A preset is a complete system prompt plus sampler values aimed at one kind of output. Chosen from a **Preset** dropdown at the top of the Assistant panel; edited in Settings → AI Provider → Task presets. Three ship built in: Character Sheet, Example Dialogue, Intro Scenario.
 
@@ -889,7 +1042,7 @@ Storage: `settings.ai_presets` (array of `{id, name, instructions, params}`) and
 
 Not built, deliberately: auto-filling output into a character field (needs field targeting, a confirm step and an undo path), and per-preset model selection (switching models means an eject and reload, which is slower than picking from the dropdown).
 
-### LM Studio-only settings (session 42)
+### LM Studio-only settings (session 44)
 
 **Extra assistant instructions** (`ai_custom_instructions`) and **Context window** (`ai_context_window`) render only inside the `ai_provider==='lmstudio'` fragment in Settings, and both are now gated on the provider in code as well.
 
@@ -915,7 +1068,7 @@ The panel shows a live `≈N tok` estimate (`chars/4`) that turns amber past 700
 
 **The world's template is injected as a HOUSE FORMAT block.** If a template exists for the current world, its `full_description`, `card` and `formatting_instructions` fields go into the prompt with an instruction to match the structure exactly and replace only placeholder text. Templates already supported these fields and per-world scoping — the only thing missing was the Assistant knowing they existed. Generated text now comes back already shaped to the catalogue's house style.
 
-### Reference hardware (Ine's machine, updated session 42)
+### Reference hardware (Ine's machine, updated session 44)
 RTX 5070 Ti 16 GB, i7-14700KF. **VRAM is the binding constraint, not RAM.** Blackwell needs the CUDA 12.8 runtime — in LM Studio that is the engine listed as "CUDA 12 llama.cpp", and the GGUF runtime *selector* can sit on an older installed version than the newest one present, which looks like a slow model rather than a misconfiguration.
 
 Current models, all community fine-tunes for fiction:
@@ -1011,9 +1164,23 @@ So the Palette tool works in **OKLCH** and converts back to hex only for display
 
 ## Help System
 
-Content lives in `HELP_SECTIONS` in the **plain JS block** — a JSON array of `{title, icon, items[]}`. `HelpPage` only renders it. Item types are `p`, `tip`, `step` (needs an `n`), `warn` (needs an `h`) and `note` (an `h` plus a numbered `s` array). A `step` without an `n` renders an empty numbered circle, which is the easy mistake.
+Content lives in `HELP_SECTIONS` in the **plain JS block** — a JSON array of `{title, icon, items[]}`. `HelpPage` only renders it.
 
-- **20 sections**, rewritten in session 37 for someone who has never seen the app: Dashboard, Characters, Worlds, Timeline, Lorebooks, Collections, Personas, Templates, Lorebook Templates, Relationship Map, Tools panel, Image Tools, Editing conveniences, Import / Export, Backup, Auto-save to disk, Rescan images, Data Safety, Settings, AI assistant.
+Item types, **read out of `renderItem` rather than described from memory** (an earlier version of this paragraph got `note` wrong and the next session's `note` blanked the Help page):
+
+| `t` | Needs |
+|---|---|
+| `p` | `x` |
+| `tip` | `x` |
+| `step` | `x` and `n` — without `n` it renders an empty numbered circle, the easy mistake |
+| `warn` | `x` and `h` |
+| `note` | `h`, **an `x` even if empty**, and `s` as an array of **`{n, x}` objects** — not an array of strings |
+
+`note` is the one with teeth. `renderItem` calls `parseInline(it.x)` unconditionally, so an absent `x` throws on `.length`; and it maps `s` through `HelpStep`, so string entries render blank. Both faults are invisible in a collapse-by-default page until the item is reached.
+
+**A clean render proves more than it looks.** `HelpPage` passes `{sec.items.map(renderItem)}` as children, which JavaScript evaluates **eagerly** — before `HelpSection` decides whether to show anything. So server-rendering `HelpPage` once runs `renderItem` and `parseInline` over every item in every section, collapsed or not. That is the cheapest full check of the array there is, and it is how the bad `note` was caught.
+
+- **21 sections**, rewritten in session 37 for someone who has never seen the app, with **Export to SillyTavern** added in session 45 directly after Characters: Dashboard, Characters, Export to SillyTavern, Worlds, Timeline, Lorebooks, Collections, Personas, Templates, Lorebook Templates, Relationship Map, Tools panel, Image Tools, Editing conveniences, Import / Export, Backup, Auto-save to disk, Rescan images, Data Safety, Settings, AI assistant.
 - Inline help buttons elsewhere: Site Checklist, Batch Import, Lorebook Entry tab, Lorebook Templates manager.
 
 **Count the array, do not read the prose.** Session 32's audit found nine wrong statements here and session 37 found more, all of the same kind: totals stated in words ("11 tabs", "three layers", "15 sections") stay perfectly plausible after the underlying list changes. Every such number in Help should be checked against the array it describes.
@@ -1095,12 +1262,17 @@ The panel was rewritten in session 40 because it listed examples without the rul
 
 **The ceiling is per SCRIPT BLOCK, not per file.** Babel standalone transforms each `text/babel` script separately, so splitting one oversized block into two puts each comfortably under the limit. This was discovered at 490 KB, when the compiler began emitting `[BABEL] Note: The code generator has deoptimised the styling as it exceeds the max of 500KB` — the canary for the silent app-wide click-handler failure described below.
 
-`index.html` now has **two** Babel blocks, split at `CollectionPicker`: roughly 250 KB and 241 KB. Rules:
+**MEASURE THE COMPILED SIZE, NOT THE SOURCE.** The 500 KB limit is on the code Babel's generator *emits*, not on what it reads, and JSX expands by roughly 30% on the way through. A block at 300 KB of source is already near 390 KB out — so reading source sizes against the ceiling gives false comfort by about a third. `compile-check.js` reports both and flags any block over 400 KB compiled; a figure quoted without saying which it is, is not usable.
+
+`index.html` now has **three** Babel blocks, split at `CollectionPicker` and at `NotesBackupPanel`. Current, measured (session 45): **block 1 (plain JS) 270 KB source / 291 KB compiled, 58%; block 2 273 KB / 346 KB, 69%; block 3 158 KB / 206 KB, 41%; block 4 147 KB / 194 KB, 39%.** Rules:
 
 - **The `ReactDOM.createRoot(...).render()` call must stay in the LAST block.**
 - Split only at a top-level declaration boundary.
 - Top-level `function` and `const` declarations in classic scripts share one global scope, so either block can reference the other. Nothing is called until render, so ordering between blocks does not matter.
-- **If either block nears 400 KB, split again.** A third block is free; this scales indefinitely.
+- **If any block passes 400 KB COMPILED, split again.** Another block is free; this scales indefinitely. **Block 2 is now the largest at 346 KB / 69%** and is the next candidate; nothing is required until it passes 400.
+- **The rule above is to split BEFORE a feature lands in a crowded block, not after.** Session 45 got this wrong in a way worth recording: the SillyTavern panel was added to the block that this file already named as needing a split first, taking it to 391 KB, and the session *flagged* that instead of acting on it. Flagging a documented rule is not following it. The split happened the next session, at `NotesBackupPanel`, 50.8% of the way through by source.
+- **Verify a split by counting declarations, not by reading it.** A split is the one edit that can silently blank the app, so check: the same set of top-level declarations before and after, the render call still in the LAST block, no name declared at top level in two blocks (that throws on load), and no top-level executable statement anywhere except that one render call. `compile-check.js` checks the last three; the declaration-set comparison is a one-liner worth running by hand.
+- **Measure, do not estimate.** `node compile-check.js index.html` extracts the blocks from the shipped file, compiles each with the real Babel and prints both sizes. Any figure in this document that was not produced that way is a guess that has since drifted.
 - Do not merge them back. The comment at the top of block 1 says so.
 
 **Consequence for planning:** the Babel ceiling is no longer a reason to adopt a build step. Headroom went from ~11 KB to effectively unlimited. A build step is still worth doing for faster startup, modules and npm packages, but it is no longer urgent.
@@ -1205,13 +1377,18 @@ The renderer handler registers once on mount, so it reads `dataRef`/`dataLoadedR
 **Provenance note:** this was found while investigating a companion that stayed at `ready` after an apparent mark-posted. It was **not** established as the cause of that — the record had no `posted_dates` key at all, and under the pre-session-32 banner logic there was no banner to click on the day in question. Recorded here as an independent defect that was real on its own terms, not as the explanation for that symptom.
 
 ### `parseTimestamp()` — Saucepan date format
-Saucepan exports timestamps like `"2026-06-18 03:01:00.455294 +00:00:00"`, which native `Date()` cannot parse (silently returns `NaN`). This broke every "local newer" comparison in batch import for any item that had ever been touched by a site export. A `parseTimestamp()` helper near the top of `index.html` normalizes the format (space→T, truncate microseconds, fix the `+00:00:00`→`+00:00` offset) before handing off to `Date()`. All `pts`/`parseTs` local helpers throughout the file now alias to this single function — do not reintroduce inline duplicate date parsers.
+Saucepan exports timestamps like `"2026-06-18 03:01:00.455294 +00:00:00"`, which native `Date()` cannot parse (silently returns `NaN`). A `parseTimestamp()` helper near the top of `index.html` normalizes the format before handing off to `Date()`: space→T, truncate microseconds, **strip the whitespace before the offset**, then `+00:00:00`→`+00:00`. All `pts`/`parseTs` local helpers throughout the file alias to this single function — do not reintroduce inline duplicate date parsers.
+
+**The whitespace strip was missing until session 45, and the function returned 0 for the exact format it exists to parse.** `replace(' ', 'T')` swaps only the **first** space, so `"…455294 +00:00:00"` kept the one before the offset and `Date()` refused the whole string. Latent for a long time because Lorekeeper's own records are ISO and parse natively on the first attempt — it only bit on a file downloaded straight from Saucepan, whose timestamp then read as 0, making any local record look newer and **skipping the import as "local newer"**. The protection fired when it should not have, and the only way past it was Force import all. Found by a test asserting the documented behaviour and getting 0.
+
+Verified across the real format with and without the space, without microseconds, with a non-UTC offset (`+03:00:00` lands exactly three hours off UTC), against ISO, and against empty/null/garbage still returning 0.
 
 ---
 
 ## Performance Notes
 - `update(fn)` clones the entire `data` tree before mutating (so React detects the change and undo-safety is preserved). This used `JSON.parse(JSON.stringify(d))` originally, which was slow enough to cause visible lag while typing (e.g. in the Notes textarea) once the character count grew past ~40. Switched to `structuredClone(d)` — same semantics, meaningfully faster, no string round-trip.
 - `saveData` in `main.js` switched from `fs.writeFileSync` (synchronous, blocks the main process) with pretty-printed JSON to `fs.promises.writeFile` (async) with compact JSON (no `null, 2`).
+- **Data file size, measured 30 October 2026: 3.78 MB**, down from 29.68 MB once every base64 blob was out of it. `update()` clones that whole tree per keystroke, so this is the number that governs typing responsiveness app-wide. If it climbs again, look for a new image handler storing a blob before looking anywhere else — see the Base64 section.
 - If typing lag returns as the dataset keeps growing, the next lever is restructuring `update()` to avoid cloning the *entire* tree for small, localized field changes (e.g. per-collection update functions instead of one global clone-and-mutate).
 
 ### Session 31: the 190 MB data file
@@ -1274,6 +1451,18 @@ One number, in one place: `version` in `package.json`. electron-builder names th
 **Bump it before any build intended to leave this machine**, so a copy in someone else's hands can be identified. There are no tags, no changelog file and no release notes: `lorekeeper-sessions.md` is the changelog, and the installer ships as a GitHub Release asset where the version in the filename is the whole story.
 
 Current: **1.2.0** — the first build carrying the bundled rclone binary.
+
+### Dependency audit — decided: leave it, and do NOT force it
+
+`npm audit` reports around a dozen vulnerabilities across `electron`, `electron-builder` and its tree, `tar`, `extract-zip` and `adm-zip`. Recorded here, not in the roadmap, because it is a standing decision rather than a task.
+
+**`npm audit fix` without `--force` is safe and has been run** (30 October 2026). It stayed inside the existing semver ranges and `package.json` is untouched: electron `^29.0.0`, electron-builder `^24.13.0`, adm-zip `^0.5.10`.
+
+**`npm audit fix --force` must not be run.** It installs `electron@45` and `electron-builder@26`, both breaking, across four major versions of Electron. Everything about this build is pinned on purpose, and Electron's binary install already fails silently on this machine and needs a manual zip extraction (below). That is a day lost for no gain.
+
+**Why the gain is no gain:** the reports are almost entirely build tooling, and the ones that are not describe a threat this app does not have. `tar` / `extract-zip` / `adm-zip` advisories are about hostile archives — Lorekeeper only ever extracts a backup ZIP it wrote itself. The Electron advisories matter to an app loading untrusted remote content; this one loads a local file and talks to APIs over HTTPS.
+
+**When to revisit:** whenever Electron is upgraded for its own reasons. Not before, and not because the number is large.
 
 ### Environment gotcha (Ine's machine)
 Electron's post-install binary download fails silently — `node_modules/electron/dist/` ends up containing only `locales/`, and `npx electron` reports "Electron failed to install correctly". Neither `npm install` nor running `install.js` directly produces any error output.
@@ -1364,11 +1553,76 @@ Confirmed working end to end, not merely read in the code. Kept here rather than
 
 **The rclone engine, against the real rclone binary** (9 October 2026) — text uploaded, images and the raw data file excluded, a second run a no-op, a deleted character removed from the destination, and files at the destination that Lorekeeper did not put there left untouched. The connection verifier was tested against a working destination, an unwritable one and a nonexistent remote.
 
+**Notes ingest, end to end** (24 October 2026) — a note edited outside the app is detected, labelled **Changed on disk**, and taking the file updates the note. The three-way merge honours deletions, and a note changed on both sides is shown rather than resolved. **This is the first thing in Lorekeeper that reads its own output**, and the first half of Stage 4.
+
+**The data file holds no base64 at all** (30 October 2026) — 29.68 MB down to **3.78 MB**, verified by reading the live file and scanning every image-bearing field on worlds, characters, portraits, character banners, lorebooks, collections, personas and the gallery. Nothing was lost in the process: every world, lorebook and collection still carries an image reference, and the item counts are unchanged. `SUSPICIOUS.json` kept its July timestamp throughout, so no save was silently refused by the Layer 2 shrink guard.
+
+**A collection with no auto-save filename can store a banner as a file** (30 October 2026) — the case that had been impossible before the gate was removed. Confirmed on Standalones: `image_data` null, `image_relpath` set to `Collections/standalones.png`, platform UUID untouched.
+
+**The SillyTavern card builder, against real data** (30 October 2026) — 77 unit assertions and 20 end-to-end checks, all against code extracted from the shipped `index.html` rather than retyped. Embedding into Ryōta's real 1.4 MB portrait preserved 23 IDAT chunks and 2 unrelated `tEXt` chunks in order, every CRC validated against `zlib.crc32`, the image bytes came out identical and the card read back byte-for-byte. CRC32 was checked against the tool that defines it, empty input included. **What this does NOT cover: SillyTavern importing one, and the canvas re-encode path used by AVIF, WebP and JPG portraits.** Both need Electron and a real install.
+
+**The derived source URL** (30 October 2026) — `https://saucepan.ai/companion/<id>` confirmed against a real companion URL and against that record's stored `id`, which matched. The pattern alone proves nothing; the id has to be the platform's.
+
+**Persona portraits render** (30 October 2026) — the new components were **server-rendered** with the pinned React 18.2.0, not merely compiled: both tabs, an empty persona, a persona at the 10-slot cap, and the character export tab as a regression check. 33 assertions. Compiling catches a parse error; rendering catches a component that compiles and then throws, which is the failure this file is actually prone to.
+
+**Timelines auto-save to their own file** (18 October 2026) — editing a timeline writes `Timelines\{world}.json`. The last content type with no independent copy on disk now has one.
+
+**No machine-specific path in the UI** (14 October 2026) — eight hardcoded `I:\Lorekeeper` sites removed from the renderer. Five hints now show a path relative to the install (`Saves to: Companions\…`), the Batch Import step and the Settings data path read the real folder, and the gallery's click-to-copy image path — the one place where a relative path would be useless — resolves against `DATA_ROOT`, fetched once from `get-data-dir` and cached. Confirmed on screen.
+
 **A fresh install does nothing** (11 October 2026) — a packaged build launched with no configuration shows backup **None** with an empty repo folder, writes no `sync-paths.cmd`, writes no pretty data file and launches no script. Confirmed after the three writers above were fixed. This was the exit condition for the packaging pass.
 
 **The bundled rclone resolves in a packaged build** (11 October 2026) — `resolveRclone()` found the binary under `resources\rclone\` in `dist`, not merely on `PATH` as in dev. This was the last item that could only be tested by packaging.
 
 **Google Drive, end to end** (11 October 2026) — the browser sign-in completed, the remote was saved, and the round-trip check wrote a file to Drive, read it back and matched it. This was the last untested path in the backup system. OneDrive and Dropbox go through the identical rclone flow and are expected to work, but have not been run.
+
+---
+
+## Working Method That Keeps Paying Off
+
+Lessons that cost something to learn, kept here rather than in the roadmap — the roadmap is only what is still to do. Each line is a rule, and most of them exist because ignoring it produced a confident wrong answer. The session that produced each is named where it helps; the full account is in `lorekeeper-sessions.md`.
+
+- **Simulate logic against extracted shipped code before trusting it.** Caught the 4:1 crop exporting at 3.33:1, the cycle head restarting, the `0%` slider snapping back, and a posting path that skipped its own date stamp. Session 37 ran the whole GitHub sync against a stubbed `https` module across eight scenarios before it touched the real repo.
+- **Test the tool's actual behaviour, not its documentation.** rclone's docs would not say whether `sync` deletes unlisted files at the destination. Running it took two minutes and changed the entire design.
+- **A merge with two inputs cannot represent a deletion.** Given "A has this line, B does not", nothing distinguishes *B deleted it* from *A added it*, so a union keeps it and a deleted line comes back. That is missing information, not a bug to code around: the fix is recording what both sides last agreed on. Session 43.
+- **A hint that names a quantity has to count it.** A fixed string saying "a line" is wrong at two and wrong differently when some were added and some deleted. Where the number cannot be known honestly, count what *can* be — and say that instead.
+- **Hints state the problem, not the mechanism.** Explaining why the code behaves as it does reads as justification and is re-read every single time. That reasoning belongs in a code comment.
+- **A control belongs where the action happened.** An Undo rendered at the top of a panel after acting on a row halfway down it is a control that has to be hunted for, at the one moment speed matters.
+- **Adding a data folder means changing four lists**, and a folder missing from any of them fails silently: startup creation, the restore/scan list, `MIRROR_FOLDERS`, and the public repo's `.gitignore`.
+- **Before solving a problem, search this file for whether it has already been solved here.** Twice in three sessions a fixed problem was met as if new: the CSS `zoom` pointer maths, solved in `CropTool` and then written wrong again for the colour picker; and the unstyleable browser popup, solved with `color-scheme: dark` for date inputs and then met again as "the colour picker is in light mode". Both fixes were already in the file, three hundred and a thousand lines away. Searching costs seconds.
+- **An audit that fixes the reported instances is not an audit.** Two hardcoded paths were reported; a sweep found eight. The reported ones are a sample, never the set.
+- **A rule a document states about itself is the first thing to drift.** The roadmap's header says finished work does not go in it; three pieces of finished work went in anyway, over two sessions, each added by someone who had just read that header and felt the exception was warranted. Re-read the rule as a reader, not as its author.
+- **Code changed is not the same as done.** A roadmap item was retired because the fix had been written, compiled and shipped to disk — and nobody had looked at it on screen. *Do not write a feature up as working before it has run once* governs removing an item as much as adding one.
+- **When something writes a file it should not, read the file before reading the code.** `sync-paths.cmd` carries a `SRC=` line holding the writer's own `DATA_DIR`, which identified a packaged build and cleared a suspected dev instance in one command. Two wrong theories had already been built on top of the code before anyone opened the file.
+- **An intermittent symptom is often state created by one run and read by the next.** The fresh-install write appeared on the second launch and not the first, which read as a contaminated test and was in fact the data file being created by run one and seeded from by run two.
+- **An argument written down in a comment has to be applied to the line beneath it.** The renderer correctly refused to seed `backup_provider`, explained exactly why, and then seeded `backup_repo_dir` from the same source on the next line.
+- **Prove a write landed by reading the byte count back off the disk.** A tool reporting success counts for nothing. Session 41 spent two separate detours on files that were reported written and never changed, and in both of them the first suspicion fell on Ine's machine rather than on the measurement.
+- **When the same decision is expressed in two places, read the other one before writing yours.** Session 41's fix for the fresh-install bug contained a fresh bug of its own — a provider value that did not match the gate four hundred lines away which had already got it right.
+- **Two files cannot share an mtime when one was written days after the other.** Identical size *and* identical timestamp across two builds means the measurement is synthetic. Session 41 read `app.asar` as 0 bytes through Electron's `.asar` filesystem shim and deleted build output to fix a problem that did not exist.
+- **Average colour in linear light, never in sRGB.** sRGB values are gamma-encoded, so the mean of the numbers is not the mean of the light. A 5x5 patch across a red and a cyan averages to brown if you skip the decode.
+- **Check a hash function against the tool that defines it.** The blob hashing was verified against `git hash-object`, not against the spec for it. The empty-file case is the one that catches a wrong implementation.
+- **Prove an edit did only what you meant.** After patching `main.js`, stripping the three insertions back out reproduced the original byte for byte.
+- **When a test fails, establish whether the code or the test is wrong before changing either.** Session 39 produced two confident wrong results in a row: a permissions test that meant nothing because the container runs as root, and an absolute path that broke the harness rather than the engine. Both would have made the code worse if the first instinct had been trusted.
+- **A file existing is not a file being valid.** Session 38's first token rescue checked `existsSync` and called that a token. Make the validity test *be* the operation that matters — decrypt it, parse it, run it.
+- **Never delete the only copy of something to prove a theory about it.**
+- **If something cannot be tested, make it test itself.** The cloud sign-in could not be exercised without an account, so the first connection now writes a file, reads it back and removes itself if that fails. Untested is not the same as unverifiable.
+- **A convenience that cannot work on the target platform should say so, not keep trying.**
+- **Log actual values before theorising about platform behaviour.**
+- **When the same logic exists in several places, consolidate rather than fix each copy.** Every "fixed by matching" in this project drifted again within a few sessions — most recently the pointer maths for CSS `zoom`, which was solved in `CropTool` and then written wrong a second time for the colour picker.
+- **Verify on the machine, in bytes.** A `chcp` line added for accented paths broke the sync entirely; it had been reasoned about, never run.
+- **Read the shipped file, not the document describing it.** Session 36 found two things the spec asserted were working that had never been written. Session 37 found a feature described in both the spec and Help that had been *deleted* two sessions earlier.
+- **Count the array, do not read the sentence.** Totals stated in words — "11 tabs", "three layers", "15 sections", "17 tools" — stay plausible long after the underlying list changes. Every one of them that has been checked in this project was wrong. The same applies to sizes: "roughly 22 MB" for the rclone binary was the download zip, and the executable that actually ships is 81.5 MB.
+- **Do not write up a feature as working before it has run once.** Where that is unavoidable, say so in the document, in the place someone will look.
+- **A test fixture that invents the field under test can pass vacuously.** The render check for the collection image handler supplied a made-up `collection_filename`, so it exercised the one branch that worked and never the branch that was broken. It passed, twice, while three real collections could not store a banner at all. **Build the fixture from the real data, or at minimum from the case that is failing.**
+- **Never gate an operation on a setting that governs something else.** The collection and lorebook image handlers gated *writing a file* on the auto-save filename, which was only ever wanted as a name. Empty filename meant no file, silently, forever. A field used as a name must not decide whether the write happens.
+- **Fixing the success path is not fixing the bug.** Session 46 nulled the blob on the branch where the copy succeeded and left intact a branch that could never reach it. The symptom — "I re-uploaded it and nothing changed" — was the user's, not the code's, and the code was behaving exactly as written.
+- **Before writing a migration, check whether the data needs migrating.** Eight of nine blobs were duplicates of files already on disk, and the ninth decoded to a file that was also already there. The job turned out to be subtraction, not conversion.
+- **A write to the person's disk may need sending twice, and the first attempt still reports success.** Seen three times now across sessions 45 and 46: `device_commit_files` returns `written`, the mtime moves, the bytes do not change. The second identical call lands. So the loop is write, read the size back, write again if it did not change — never write once and report done.
+- **A tool reporting a successful write proves nothing; read the byte count back.** Session 45: `device_commit_files` reported `written`, the file's mtime moved, and the content did not change — the old version was still on disk, confirmed by MD5. It took a forced write to land. The size check is what caught it, and it caught it because it was run every time rather than when something felt wrong.
+- **When a write does not land, isolate before retrying.** Writing the same content to a second, throwaway path answered "is writing broken, or is this path broken?" in one call. Retrying blind would have left both questions open.
+- **Render a component, do not just compile it.** Compiling catches a parse error. It does not catch a component that compiles and then throws, or renders nothing — which is this file's characteristic failure. Server-rendering the new components with the pinned React takes one script and caught a truncated test slice that a compile pass called fine.
+- **Flagging a documented rule is not following it.** Session 45 added a feature to the very block this file named as needing a split first, noted that it had done so, and shipped. The note was accurate and useless. If the rule says do X first, do X.
+- **Read the handler before trusting the row that describes it.** `copyImageToFolder` was documented for months as skipping when the destination exists. It overwrites. Persona portraits would have silently shared pictures.
+- **Before any stage, back up.**
 
 ---
 
@@ -1426,6 +1680,7 @@ Worlds/
 Personas/
 Templates/
 Notes/
+Timelines/
 node_modules/
 dist*/
 vendor/

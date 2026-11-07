@@ -175,7 +175,7 @@ const SYNC_CODES = {
 };
 
 // Ensure all standard data folders exist on startup
-['', 'Companions', 'Lorebooks', 'Collections', 'Worlds', 'Personas', 'Templates', 'Notes'].forEach(sub => {
+['', 'Companions', 'Lorebooks', 'Collections', 'Worlds', 'Personas', 'Templates', 'Notes', 'Timelines'].forEach(sub => {
   const p = sub ? path.join(DATA_DIR, sub) : DATA_DIR;
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
 });
@@ -595,11 +595,17 @@ ipcMain.handle('paste-image', async () => {
 });
 
 // Save a binary image file via save dialog — used by image tools
-ipcMain.handle('save-image', async (event, { base64, defaultName }) => {
+ipcMain.handle('save-image', async (event, { base64, defaultName, folder }) => {
   const ext = (defaultName.split('.').pop() || 'jpg').toLowerCase();
   const extMap = { jpg:'JPEG', jpeg:'JPEG', png:'PNG', webp:'WebP', gif:'GIF' };
+  // Default into the relevant data subfolder when the caller knows which one applies —
+  // same parameter and same behaviour as export-file. A character card belongs beside the
+  // character it came from, not on the Desktop. Callers that pass no folder (the image
+  // tools: Format Converter, Paste & Save, Crop) keep the Desktop default unchanged.
+  const baseDir = folder ? path.join(DATA_DIR, folder) : path.join(os.homedir(), 'Desktop');
+  if (folder && !fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
   const { filePath, canceled } = await dialog.showSaveDialog(mainWindow, {
-    defaultPath: path.join(os.homedir(), 'Desktop', defaultName),
+    defaultPath: path.join(baseDir, defaultName),
     filters: [{ name: extMap[ext]||'Image', extensions: [ext] }, { name: 'All Files', extensions: ['*'] }]
   });
   if (canceled || !filePath) return { cancelled: true };
@@ -940,6 +946,70 @@ ipcMain.handle('save-notes-file', async (event, { filename, content: noteContent
   } catch (e) { console.error('save-notes-file:', e); return false; }
 });
 
+// ── Per-world timeline backup ────────────────────────────────────────────
+// Timelines were the last thing in the app with no file of their own. Characters,
+// lorebooks, collections, personas, notes and templates each auto-save beside the
+// main data file; timeline_events and timeline_lanes lived ONLY inside it, so a
+// corrupted lorekeeper-data.json took every dated event with it.
+//
+// That matters more here than for most types because a timeline cannot be rebuilt
+// from anywhere: a character can be re-downloaded from Saucepan, a world is a name
+// and a description, but weeks of dated events across parallel strands exist only
+// where they were typed.
+//
+// Own folder rather than Worlds\, which holds banner images and should go on holding
+// only those.
+ipcMain.handle('save-timeline-json', async (event, { filename, data: timelineData }) => {
+  try {
+    const dir = path.join(DATA_DIR, 'Timelines');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const safeName = String(filename || '').replace(/[\\/:*?"<>|]/g, '_');
+    if (!safeName) return false;
+    const filePath = path.join(dir, safeName + '.json');
+    await fs.promises.writeFile(filePath, JSON.stringify(timelineData, null, 2), 'utf-8');
+    return true;
+  } catch (e) { console.error('save-timeline-json:', e); return false; }
+});
+
+// ── Ingest, slice 1: read the notes files back ───────────────────────────
+// THE FIRST THING IN THIS APP THAT READS ITS OWN OUTPUT.
+//
+// Everything else here writes files out and never looks at them again, which is why
+// a note edited anywhere but in Lorekeeper is invisible to it: the file changes, the
+// backup carries the change, and the app never knows. This handler is the other half.
+//
+// It only reads and reports. Deciding what a difference MEANS - whether the file was
+// edited outside or the app simply has not written yet - needs a record of what was
+// last written, which this slice deliberately does not have. So nothing here merges,
+// overwrites or resolves anything; the renderer shows both versions and the user picks.
+ipcMain.handle('read-notes-files', async () => {
+  try {
+    const dir = path.join(DATA_DIR, 'Notes');
+    if (!fs.existsSync(dir)) return { success: true, files: [] };
+    const names = await fs.promises.readdir(dir);
+    const files = [];
+    for (const n of names) {
+      if (!n.toLowerCase().endsWith('.md')) continue;
+      const fp = path.join(dir, n);
+      try {
+        const st = await fs.promises.stat(fp);
+        if (!st.isFile()) continue;
+        files.push({
+          name: n,
+          base: n.slice(0, -3),
+          content: await fs.promises.readFile(fp, 'utf-8'),
+          size: st.size,
+          mtime: st.mtimeMs
+        });
+      } catch (e) { /* one unreadable file must not lose the rest */ }
+    }
+    return { success: true, files };
+  } catch (e) {
+    console.error('read-notes-files:', e);
+    return { success: false, error: e.message, files: [] };
+  }
+});
+
 // Standalone template backup — same reasoning as Notes: templates only ever lived
 // inside the single big data file with no independent file of their own, the same
 // gap notes had before being fixed. Each template now also auto-saves to its own
@@ -1146,7 +1216,7 @@ ipcMain.handle('export-backup', async (event, { worldId }) => {
     const zip = new AdmZip();
     zip.addFile('lorekeeper-data.json', Buffer.from(JSON.stringify(exportData, null, 2), 'utf-8'));
 
-    const folders = ['Companions', 'Lorebooks', 'Collections', 'Worlds', 'Personas', 'Notes', 'Templates'];
+    const folders = ['Companions', 'Lorebooks', 'Collections', 'Worlds', 'Personas', 'Notes', 'Templates', 'Timelines'];
     if (worldId) {
       exportData.characters.forEach(c => {
         if (c.companion_folder) addDirToZip(zip, path.join(DATA_DIR, 'Companions', c.companion_folder), 'Companions/' + c.companion_folder);

@@ -120,7 +120,11 @@
   .btn { background: transparent; border: 1px solid var(--border2); color: var(--text2); padding: 6px 12px; border-radius: var(--r); cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
   .btn:hover { background: var(--bg3); color: var(--text); }
   .btn.primary { background: var(--accent-dim); border-color: var(--accent2); color: var(--accent); }
-  input[type="date"] { color-scheme: dark; }
+  /* color-scheme is the only thing that reaches a browser-level popup. The date
+     picker needed it first; the colour input opens Chromium's own picker, which no
+     amount of CSS on the input itself can touch, and which rendered as a white panel
+     in the middle of the Palette tool until this covered it too. */
+  input[type="date"], input[type="color"], input[type="time"], input[type="datetime-local"] { color-scheme: dark; }
   .btn.primary:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
   .btn.danger { border-color: rgba(248,113,113,0.3); color: var(--red); }
   .btn.danger:hover { background: rgba(248,113,113,0.1); }
@@ -794,6 +798,65 @@ const HELP_SECTIONS = [
   ]
  },
  {
+  "title": "Export to SillyTavern",
+  "icon": "ti-photo-down",
+  "items": [
+   {
+    "t": "p",
+    "x": "Character tab **Settings**, below Export MD. Turns a character into a SillyTavern character card: a PNG of the portrait with the card data written inside the image file. Drag it into SillyTavern and the character arrives complete."
+   },
+   {
+    "t": "p",
+    "x": "**Export card PNG** is the normal choice. **Export JSON only** gives the same card as a plain file, for a frontend that wants JSON or for checking what was built."
+   },
+   {
+    "t": "p",
+    "x": "Both files are written next to the character, in its companion folder."
+   },
+   {
+    "t": "warn",
+    "h": "Pick the pronouns before exporting",
+    "x": "Saucepan works out pronouns while you chat. SillyTavern cannot, and would print the macro text on screen instead. So they are replaced with real words on the way out, and the dropdown decides which set. Export again with a different setting if it was wrong — nothing is saved, so no harm done."
+   },
+   {
+    "t": "p",
+    "x": "The row of chips counts what will be converted: greetings, pronoun macros, singular/plural conditionals and Saucepan-only markup like centering, spoilers and strikethrough. A chip reading zero means there was nothing of that kind to convert, not that something failed."
+   },
+   {
+    "t": "p",
+    "x": "**Saucepan Link** sits on the same Settings tab, under Companions Folder. It is written into the card so anyone who gets it can find the original. For most posted characters the link is worked out automatically and the field can stay empty — the card tells you which it used, or why it has none."
+   },
+   {
+    "t": "note",
+    "h": "What does not survive the trip:",
+    "x": "",
+    "s": [
+     {
+      "n": 1,
+      "x": "Only the main portrait. A card inside a PNG can carry one image, so the other portrait slots stay here."
+     },
+     {
+      "n": 2,
+      "x": "Scenario titles. SillyTavern has no name for a greeting, so the titles are listed in the card's creator notes rather than thrown away."
+     },
+     {
+      "n": 3,
+      "x": "Everything Saucepan-only: tags, image UUIDs, crops, spicy flags, voice and access level."
+     }
+    ]
+   },
+   {
+    "t": "warn",
+    "h": "Needs a portrait file on disk",
+    "x": "The button stays greyed out if the character has no local image. A portrait UUID from the site is not enough — the picture itself has to be in the companion folder. Use Set Portrait first."
+   },
+   {
+    "t": "tip",
+    "x": "This never touches the character. No dates are stamped, no filename is remembered, and nothing about the Saucepan export changes."
+   }
+  ]
+ },
+ {
   "title": "Worlds",
   "icon": "ti-world",
   "items": [
@@ -939,11 +1002,28 @@ const HELP_SECTIONS = [
    },
    {
     "t": "p",
-    "x": "Each persona has a name, pronouns, description, portrait, and an optional linked lorebook."
+    "x": "Two tabs. **Profile** holds name, pronouns, description and an optional linked lorebook. **Portraits** holds up to ten reference images."
+   },
+   {
+    "t": "p",
+    "x": "**Portraits** — Add several at once, drag to reorder, give each a name and a note. The person-with-a-tick button on a slot makes it the persona's main portrait, the magnifier opens it full size, and the red X removes the slot while leaving the file on disk."
+   },
+   {
+    "t": "p",
+    "x": "These are local reference images and nothing else. Personas cannot be uploaded to or downloaded from Saucepan, so there are no image UUIDs or spicy flags here — those exist on characters only because the site sets them."
+   },
+   {
+    "t": "p",
+    "x": "Images are copied into the Personas folder with the persona's name in front, so two personas adding a file called the same thing cannot overwrite each other."
    },
    {
     "t": "p",
     "x": "The **Export MD** button in the topbar exports a markdown sheet with name, pronouns, description, and linked lorebook name."
+   },
+   {
+    "t": "warn",
+    "h": "Personas exist nowhere else",
+    "x": "Saucepan has personas but will not let you export them, so this app holds the only copy you can recover. Every edit also writes Personas\\name-persona.json on its own, independent of the main data file."
    }
   ]
  },
@@ -1846,6 +1926,119 @@ const COLL_FOLDER_ICON={fontSize:24,color:'var(--teal)',opacity:0.5};
 
 const uuid = () => ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
 
+// ── Line diff, for the notes ingest panel ───────────────────────────────
+// Two blocks of text side by side do not tell you what actually changed - you have
+// to read both and work it out, and a one-line difference in a twenty-line note is
+// easy to miss entirely. This turns them into one ordered list where every line is
+// marked as being in both, only in the app, or only in the file.
+//
+// Classic LCS. Notes are small, so the O(n*m) table is fine, but it is capped so a
+// pathological file cannot freeze the renderer - past the cap the caller falls back
+// to showing the two texts whole.
+const DIFF_LINE_CAP = 1200;
+
+function lineDiff(aText, bText) {
+  const a = String(aText == null ? '' : aText).split('\n');
+  const b = String(bText == null ? '' : bText).split('\n');
+  if (a.length > DIFF_LINE_CAP || b.length > DIFF_LINE_CAP) return null;
+
+  // L[i][j] = length of the longest common subsequence of a[i..] and b[j..]
+  const L = [];
+  for (let i = 0; i <= a.length; i++) L.push(new Uint16Array(b.length + 1));
+  for (let i = a.length - 1; i >= 0; i--) {
+    for (let j = b.length - 1; j >= 0; j--) {
+      L[i][j] = (a[i] === b[j]) ? (L[i + 1][j + 1] + 1) : Math.max(L[i + 1][j], L[i][j + 1]);
+    }
+  }
+
+  const ops = [];
+  let i = 0, j = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { ops.push({t: 'same', line: a[i]}); i++; j++; }
+    else if (L[i + 1][j] >= L[i][j + 1]) { ops.push({t: 'app', line: a[i]}); i++; }
+    else { ops.push({t: 'file', line: b[j]}); j++; }
+  }
+  while (i < a.length) { ops.push({t: 'app', line: a[i]}); i++; }
+  while (j < b.length) { ops.push({t: 'file', line: b[j]}); j++; }
+  return ops;
+}
+
+// The union, in order. Where the two sides changed different places this is simply
+// the right answer; where they changed the SAME place it puts both versions next to
+// each other, which is a sensible starting point for a human but is not a resolution.
+// Nothing applies this without the user seeing and being able to edit it first.
+function mergeLines(ops) {
+  if (!ops) return null;
+  return ops.map(function (o) { return o.line; }).join('\n');
+}
+
+// ── Three-way merge ─────────────────────────────────────────────────────
+// A two-way union CANNOT represent a deletion. Given only "app says X" and "file
+// does not", there is no way to tell whether the file deleted X or the app added it,
+// so a union keeps X either way and a line you deleted comes back. That is not a bug
+// to fix in the merge; it is missing information, and the missing information is what
+// both sides last agreed on.
+//
+// notes_sync holds that: the text at the moment app and file were last identical.
+// With it, deletion becomes expressible - a line in the base and in one side but not
+// the other was deleted by the side that lacks it, and it goes.
+//
+// Modifications arrive as a delete plus an insert, so a line changed on both sides
+// drops out of the base and both new versions are emitted next to each other and
+// counted as a conflict. Nothing picks between them.
+function threeWayMerge(baseText, appText, fileText) {
+  const base = String(baseText == null ? '' : baseText).split('\n');
+  const da = lineDiff(baseText, appText);
+  const df = lineDiff(baseText, fileText);
+  if (!da || !df) return null;
+
+  // Turn a diff against the base into: which base lines survive, and what is inserted
+  // before each base position. Index base.length is "appended at the end".
+  const plan = (ops) => {
+    const keep = new Array(base.length).fill(false);
+    const ins = [];
+    for (let i = 0; i <= base.length; i++) ins.push([]);
+    let bi = 0;
+    ops.forEach(o => {
+      if (o.t === 'same') { keep[bi] = true; bi++; }
+      else if (o.t === 'app') { bi++; }          // in the base, not in this side: deleted
+      else { ins[Math.min(bi, base.length)].push(o.line); }  // not in the base: added
+    });
+    return {keep, ins};
+  };
+
+  const A = plan(da), F = plan(df);
+  const out = [];
+  let conflicts = 0;
+
+  for (let i = 0; i <= base.length; i++) {
+    const ia = A.ins[i], iff = F.ins[i];
+    if (ia.length && iff.length) {
+      const same = ia.length === iff.length && ia.every((l, k) => l === iff[k]);
+      if (same) { ia.forEach(l => out.push(l)); }
+      else { conflicts++; ia.forEach(l => out.push(l)); iff.forEach(l => out.push(l)); }
+    } else if (ia.length) { ia.forEach(l => out.push(l)); }
+    else if (iff.length) { iff.forEach(l => out.push(l)); }
+
+    // A line only survives if NEITHER side dropped it. Deletion wins over "left alone",
+    // which is what makes deleting a line actually delete it.
+    if (i < base.length && A.keep[i] && F.keep[i]) out.push(base[i]);
+  }
+  return {text: out.join('\n'), conflicts: conflicts};
+}
+
+// The filename a note is written to. Mirrors save-notes-file in main.js; kept here in
+// the plain JS block so every block can reach it rather than each growing its own copy.
+function notesFileNameFor(name) {
+  return String(name == null ? '' : name).replace(/[\\/:*?"<>|]/g, '_') + '.md';
+}
+
+function diffCounts(ops) {
+  const c = {same: 0, app: 0, file: 0};
+  (ops || []).forEach(function (o) { c[o.t]++; });
+  return c;
+}
+
 const BS = String.fromCharCode(92);
 
 // Robust timestamp parser. Saucepan exports use a format like
@@ -1859,6 +2052,13 @@ const parseTimestamp = (s) => {
   let norm = String(s).trim();
   norm = norm.replace(' ', 'T');
   norm = norm.replace(/(\.\d{3})\d+/, '$1');
+  // The space BEFORE the offset, which the line above does not reach: replace(' ','T')
+  // swaps only the FIRST space, so "…455294 +00:00:00" kept its second one and Date()
+  // refused the whole string. This function then returned 0 for the exact format it was
+  // written to handle, and batch import read every Saucepan-downloaded file as having no
+  // timestamp — so any local record looked newer and the import was skipped as
+  // "local newer". The protection fired when it should not have.
+  norm = norm.replace(/\s+(?=[+-]\d{2}:)/, '');
   norm = norm.replace(/([+-]\d{2}:\d{2}):\d{2}$/, '$1');
   t = new Date(norm).getTime();
   return isNaN(t) ? 0 : t;
@@ -1951,7 +2151,7 @@ const CHAR_CHECKS = [
 function buildCompanionExport(c, data) {
   const {world_id, status, schedule_dates, posted_dates, collections, linked_lorebooks,
          companion_folder, site_last_synced_at, export_filename, lorebook_entry_text,
-         lorebook_entry_title, voice_catalog_id, reworked_at, ...rest} = c;
+         lorebook_entry_title, voice_catalog_id, reworked_at, source_url, ...rest} = c;
   // Site accepts image references only as {id:"uuid"} — never base64, never a local path.
   const exportImage = rest.image && rest.image.id ? {id: rest.image.id} : null;
   const exportPortraits = (rest.portraits || []).map(p => {
@@ -2001,6 +2201,521 @@ function buildCollExport(c) {
   const ld = LD_OK.includes(c.lorebook_display) ? c.lorebook_display : 'none';
   return stripHighlights({...rest, description: definition || '', lorebooks: c.lorebooks || [], lorebook_display: ld});
 }
+
+// ── SillyTavern export (characters) ──────────────────────────────────────
+// A FOURTH export builder, kept beside the other three rather than inline in the UI.
+// Same reasoning as the consolidation above: a second strip list drifts.
+//
+// Saucepan and SillyTavern are both prompt-assembly formats, so most fields map one to
+// one. Three things do NOT carry across, and are handled here rather than left to
+// degrade quietly in the target app:
+//
+//   1. MACROS. Saucepan resolves pronouns by grammatical role at chat time. SillyTavern
+//      has no equivalent and renders {{their}} as the literal word "their". So they are
+//      resolved to real words on the way out, against a pronoun set chosen at export.
+//   2. MARKUP. Strikethrough, spoiler and alignment are Saucepan's own syntax and would
+//      appear verbatim. Converted where there is an equivalent, dropped where there is not.
+//   3. SCENARIO TITLES. SillyTavern has no per-greeting label, so they are listed in
+//      creator_notes instead of being silently lost.
+//
+// Unknown macros are passed through UNCHANGED. MACROS is a reference, not an allowlist —
+// the same rule that stops a linter being built against it applies here.
+
+// The one place the site's URL shape lives. V3's source[] exists for traceability back
+// to the original, and the spec tells consumers not to edit it, so a wrong pattern here
+// would travel with every copy of the card. Fix it in this constant, nowhere else.
+const ST_SOURCE_BASE = 'https://saucepan.ai/companion/';
+
+// source[] is emitted only when the record's id is genuinely the platform's.
+//
+// A companion created in Lorekeeper gets a locally generated UUID, and the site assigns
+// its own on upload — which Lorekeeper never learns unless the companion is later
+// re-imported from a Saucepan export. author_id is the tell: imports carry it, locally
+// created records have an empty string. Guessing a URL from a local UUID would produce a
+// confident dead link on every card, which is worse than no field at all.
+// An explicit source_url always wins. It is the only thing that can be correct for a
+// companion created in Lorekeeper and posted without ever being re-imported — which,
+// measured against the real Companions folder, is most of them. source_url is app-only
+// and is stripped from the Saucepan export like every other app-only field.
+function stSourceUrls(c) {
+  if (c.source_url && String(c.source_url).trim()) return [String(c.source_url).trim()];
+  const published = c.status === 'posted' || c.access_level === 'public';
+  if (!published || !c.id || !c.author_id) return undefined;
+  return [ST_SOURCE_BASE + c.id];
+}
+
+// Why a card might carry no source[], in words the export panel can show. Returning the
+// reason rather than just omitting the field keeps it from being a silent absence.
+function stSourceReason(c) {
+  if (c.source_url && String(c.source_url).trim()) return null;
+  if (!c.id) return 'no id on this record';
+  if (c.status !== 'posted' && c.access_level !== 'public') return 'not published yet — paste a URL to include one anyway';
+  if (!c.author_id) return "this id was generated here, not by the site, so a derived link would be dead — paste the URL";
+  return null;
+}
+
+// The five canonical roles, plus the two things a conditional needs: whether the set is
+// grammatically plural, and which word {{mfx|male|female|person}} should pick.
+const ST_PRONOUNS = {
+  he:   {sub:'he',   obj:'him',  poss:'his',   poss_p:'his',    ref:'himself',    plural:false, mfx:0, label:'he / him'},
+  she:  {sub:'she',  obj:'her',  poss:'her',   poss_p:'hers',   ref:'herself',    plural:false, mfx:1, label:'she / her'},
+  they: {sub:'they', obj:'them', poss:'their', poss_p:'theirs', ref:'themselves', plural:true,  mfx:2, label:'they / them'}
+};
+
+// Every pronoun word is an alias for one of the five roles, so the resolver keys on the
+// ROLE and not on the word typed.
+//
+// Two words are genuinely ambiguous in English and Saucepan's own reference lists them
+// under both headings: "her" is objective and possessive, "his" is possessive adjective
+// and possessive pronoun. Resolved here as obj and poss respectively, matching which
+// heading each sits under as the canonical alias. The practical consequence is narrow:
+// {{her}} in a possessive position ("{{her}} book") resolves as if objective.
+const ST_ROLE_OF = {
+  sub:'sub', they:'sub', he:'sub', she:'sub',
+  obj:'obj', them:'obj', him:'obj', her:'obj',
+  poss:'poss', their:'poss', his:'poss',
+  poss_p:'poss_p', theirs:'poss_p', hers:'poss_p',
+  ref:'ref', themselves:'ref', himself:'ref', herself:'ref'
+};
+
+// Macros SillyTavern has under a different name. {{char}} and {{user}} are native to
+// both and pass straight through.
+const ST_MACRO_RENAME = {
+  yn: '{{user}}',
+  cn: '{{char}}',
+  day_of_week: '{{weekday}}'
+};
+
+const ST_MACRO_RE = /\{\{([^{}]+)\}\}/g;
+
+function stCap(word) {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+// Capitalise when the macro was written capitalised, OR when it opens a sentence.
+//
+// Saucepan has the same blind spot — {{their}} at the start of a sentence renders
+// lowercase there too — but this export exists to produce readable prose in another app,
+// and a lowercase sentence opening is a visible defect in every greeting it lands in.
+// The trailing strip is for markup and quotes sitting between the punctuation and the
+// macro, so *{{they}} smiled* still counts as a sentence start.
+function stCasePronoun(written, word, full, offset) {
+  if (written[0] !== written[0].toLowerCase()) return stCap(word);
+  const before = String(full).slice(0, offset).replace(/[*_~>!"\x27\[(\s]+$/, '');
+  if (before === '' || /[.!?:]$/.test(before)) return stCap(word);
+  return word;
+}
+
+function stResolveMacros(text, setKey) {
+  if (!text) return text;
+  const P = ST_PRONOUNS[setKey] || ST_PRONOUNS.he;
+  return String(text).replace(ST_MACRO_RE, function (whole, inner, offset, full) {
+    const raw = inner.trim();
+    const low = raw.toLowerCase();
+
+    if (low === 'char' || low === 'user') return '{{' + low + '}}';
+    if (ST_MACRO_RENAME[low]) return ST_MACRO_RENAME[low];
+    if (low === 'time' || low === 'date') return '{{' + low + '}}';
+
+    // {{mfx|male|female|person}} — picks by pronoun set.
+    if (low.indexOf('mfx|') === 0) {
+      const parts = raw.split('|');
+      const pick = parts[1 + P.mfx];
+      return pick !== undefined ? pick : (parts[parts.length - 1] || '');
+    }
+
+    // {{s?a:b}} / {{p?a:b}} and their long forms. THE FIRST VALUE IS THE ONE USED when
+    // the prefix matches the set's number — so s? gives its first value for a singular
+    // set, and p? gives its first value for a plural one. A resolver that always took
+    // the first value would silently invert every p? conditional in the catalogue.
+    const cond = raw.match(/^(singular|plural|s|p)\?([\s\S]*)$/i);
+    if (cond) {
+      const kind = cond[1].toLowerCase();
+      const sep = cond[2].indexOf(':');
+      if (sep !== -1) {
+        const a = cond[2].slice(0, sep);
+        const b = cond[2].slice(sep + 1);
+        const wantsPlural = (kind === 'p' || kind === 'plural');
+        return P.plural === wantsPlural ? a : b;
+      }
+      return whole;
+    }
+
+    const role = ST_ROLE_OF[low];
+    if (role) return stCasePronoun(raw, P[role], full, offset);
+
+    // Unrecognised: leave it exactly as written.
+    return whole;
+  });
+}
+
+// Saucepan markup that SillyTavern does not share. Alignment and spoilers have no
+// equivalent, so the tags come off and the text stays. Underline is deliberately left
+// alone: _text_ renders as italics in SillyTavern, which is mildly wrong, where
+// stripping it would lose the emphasis altogether.
+function stConvertMarkup(text) {
+  if (!text) return text;
+  return String(text)
+    .replace(/>>([\s\S]*?)(?:<<|>>)/g, '$1')
+    .replace(/>!([\s\S]*?)!</g, '$1')
+    .replace(/(^|[^~])~([^~\n]+)~(?!~)/g, '$1~~$2~~');
+}
+
+// One recursive pass applying both conversions to every string in the assembled card.
+// Recursive rather than field-by-field for the same reason stripHighlights is.
+function stConvertStrings(v, setKey) {
+  if (typeof v === 'string') return stConvertMarkup(stResolveMacros(v, setKey));
+  if (Array.isArray(v)) return v.map(function (x) { return stConvertStrings(x, setKey); });
+  if (v && typeof v === 'object') {
+    const out = {};
+    for (const k of Object.keys(v)) out[k] = stConvertStrings(v[k], setKey);
+    return out;
+  }
+  return v;
+}
+
+function stUnixSeconds(v) {
+  const ms = parseTimestamp(v);
+  return ms ? Math.floor(ms / 1000) : 0;
+}
+
+// Builds the card payload — the `data` object both spec versions wrap.
+//
+// Mapping decisions worth knowing, since none of them are forced by either spec:
+//   card                    -> description     (the system prompt; the bulk of the card)
+//   advanced_prompt         -> system_prompt
+//   formatting_instructions -> post_history_instructions  (injected at depth 0, which is
+//                              where formatting rules belong)
+//   short + full description-> creator_notes    (neither is model-visible on Saucepan and
+//                              SillyTavern has no equivalent surface)
+//   name / display_name     -> nickname / name  (display_name labels the card, name is
+//                              what {{char}} resolves to under V3)
+// personality and scenario are left empty rather than invented.
+function stCardData(c, data, opts) {
+  const o = opts || {};
+  const setKey = ST_PRONOUNS[o.pronouns] ? o.pronouns : 'he';
+  const scen = (c.starting_scenarios || []).filter(function (s) { return s && s.message; });
+  const nameOut = c.display_name || c.name || 'Character';
+  const nick = (c.name && c.name !== nameOut) ? c.name : undefined;
+
+  const notes = [];
+  if (c.short_description) notes.push(c.short_description);
+  if (c.full_description) notes.push('', c.full_description);
+  if (scen.length > 1) {
+    notes.push('', 'Greetings, in order:');
+    scen.forEach(function (s, i) {
+      notes.push('  ' + (i === 0 ? 'first' : 'alt ' + i) + ' — ' + (s.title || 'untitled'));
+    });
+  }
+  notes.push('', 'Converted from Saucepan by Lorekeeper. Pronouns resolved to ' + ST_PRONOUNS[setKey].label + '.');
+
+  const payload = {
+    name: nameOut,
+    description: (c.card && c.card.trim() && c.card.trim() !== ' ') ? c.card : '',
+    personality: '',
+    scenario: '',
+    first_mes: scen.length ? scen[0].message : '',
+    mes_example: c.example_dialogue || '',
+    creator_notes: notes.join('\n'),
+    system_prompt: c.advanced_prompt || '',
+    post_history_instructions: c.formatting_instructions || '',
+    alternate_greetings: scen.slice(1).map(function (s) { return s.message; }),
+    tags: (c.tags || []).slice(),
+    creator: c.author_handle || '',
+    character_version: '',
+    extensions: {}
+  };
+
+  // Highlight markers first, over the whole object, so no field can be missed — then the
+  // macro and markup conversion. Both recursive, both order-independent of each other.
+  const cleaned = stConvertStrings(stripHighlights(payload), setKey);
+  if (nick) cleaned.nickname = nick;
+  return cleaned;
+}
+
+// V2 wrapper. Flat V1 fields are mirrored alongside the nested shape for readers that
+// predate V2; the duplication is harmless and costs nothing.
+function buildSillyTavernV2(c, data, opts) {
+  const d = stCardData(c, data, opts);
+  const {nickname, ...v2} = d;
+  return {
+    spec: 'chara_card_v2',
+    spec_version: '2.0',
+    name: v2.name,
+    description: v2.description,
+    personality: v2.personality,
+    scenario: v2.scenario,
+    first_mes: v2.first_mes,
+    mes_example: v2.mes_example,
+    data: v2
+  };
+}
+
+// V3 wrapper. Adds nickname, source, assets, the two timestamps, and the required
+// group_only_greetings array — required means a strict reader rejects the card without
+// it, even empty.
+function buildSillyTavernV3(c, data, opts) {
+  const d = stCardData(c, data, opts);
+  const src = stSourceUrls(c);
+  const v3 = {
+    ...d,
+    group_only_greetings: [],
+    creation_date: stUnixSeconds(c.created_at),
+    modification_date: stUnixSeconds(c.updated_at),
+    // ccdefault: means "the app's default asset for this type", which for an icon is the
+    // PNG the card is embedded in. Extra portraits cannot ride along in a plain PNG —
+    // that needs CHARX, a zip — so exactly the one required main icon is declared.
+    assets: [{type: 'icon', uri: 'ccdefault:', name: 'main', ext: 'png'}]
+  };
+  if (src) v3.source = src;
+  return {
+    spec: 'chara_card_v3',
+    spec_version: '3.0',
+    name: v3.name,
+    description: v3.description,
+    personality: v3.personality,
+    scenario: v3.scenario,
+    first_mes: v3.first_mes,
+    mes_example: v3.mes_example,
+    data: v3
+  };
+}
+
+// Style objects live out here rather than inline, because Babel standalone reliably
+// fails to parse a style={{...}} literal inside a ternary consequent.
+const ST_LABEL_NOTE = {color:'var(--text3)',fontWeight:'normal',textTransform:'none',letterSpacing:0,fontSize:11};
+const ST_SOURCE_INPUT = {width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',fontFamily:'monospace',minWidth:0};
+const ST_WARN_NOTE = {color:'var(--amber)',marginTop:8};
+const ST_OK_NOTE = {color:'var(--green)',marginTop:8};
+
+// ── Persona portraits ────────────────────────────────────────────────────
+// PP_, not ST_ — these belong to the persona portrait grid and have nothing to do with
+// the SillyTavern export that owns the ST_ prefix in this file.
+const PP_TAB_STYLE = {fontSize:12,padding:'5px 10px',cursor:'pointer'};
+const PP_GRID_STYLE = {display:'grid',gridTemplateColumns:'repeat(auto-fill, minmax(150px,1fr))',gap:12,marginTop:8};
+const PP_ADD_STYLE = {aspectRatio:'3/4',width:'100%',flexDirection:'column',gap:6,justifyContent:'center',border:'1.5px dashed var(--border2)'};
+const PP_SLOT_STYLE = {background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',overflow:'hidden',position:'relative',cursor:'grab'};
+const PP_GRIP_STYLE = {position:'absolute',top:6,left:6,zIndex:2,background:'rgba(0,0,0,0.45)',borderRadius:4,padding:'2px 4px',lineHeight:1};
+const PP_IMG_STYLE = {width:'100%',aspectRatio:'3/4',objectFit:'cover',objectPosition:'top',display:'block'};
+const PP_IMG_EMPTY_STYLE = {width:'100%',aspectRatio:'3/4',display:'flex',alignItems:'center',justifyContent:'center'};
+const PP_NAME_STYLE = {width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:12,outline:'none'};
+const PP_DESC_STYLE = {width:'100%',background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'4px 8px',borderRadius:'var(--r)',fontSize:11,outline:'none',marginTop:4};
+const PP_LINK_BTN = {padding:'1px 6px',fontSize:10,gap:4};
+
+// A slot name from the source filename: drop the extension, fall back to a number rather
+// than an empty label. Also used to build the on-disk filename, so it must stay safe for
+// a Windows path.
+function personaPortraitStem(filename, n) {
+  const base = String(filename || '').replace(/[.][^.]+$/, '').replace(/[^a-zA-Z0-9_ -]/g, '').trim();
+  return base || ('Portrait ' + n);
+}
+
+// ── PNG tEXt embedding ───────────────────────────────────────────────────
+// A character card is a PNG carrying the card JSON in a tEXt chunk, base64 of UTF-8.
+// No library: a tEXt chunk is length + type + keyword + NUL + data + CRC32, and CRC32
+// is fifteen lines. Written by hand rather than adding a dependency to an app whose
+// CDN versions are pinned on purpose.
+
+const ST_CRC_TABLE = (function () {
+  const t = new Int32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c;
+  }
+  return t;
+})();
+
+function stCrc32(bytes) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = ST_CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+// Chunked, because String.fromCharCode.apply on a multi-megabyte array overflows the
+// call stack — and a portrait re-encoded as PNG is routinely several MB.
+function stBytesToB64(bytes) {
+  let bin = '';
+  const CH = 0x8000;
+  for (let i = 0; i < bytes.length; i += CH) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  }
+  return btoa(bin);
+}
+
+function stB64ToBytes(b64) {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+function stUtf8ToB64(str) {
+  return stBytesToB64(new TextEncoder().encode(str));
+}
+
+function stTextChunk(keyword, asciiText) {
+  const enc = new TextEncoder();
+  const kw = enc.encode(keyword);
+  const payload = enc.encode(asciiText);
+  const dataLen = kw.length + 1 + payload.length;
+  const out = new Uint8Array(12 + dataLen);
+  const dv = new DataView(out.buffer);
+  dv.setUint32(0, dataLen, false);
+  out.set(enc.encode('tEXt'), 4);
+  out.set(kw, 8);
+  out[8 + kw.length] = 0;
+  out.set(payload, 9 + kw.length);
+  // The CRC covers the type and the data, not the length field.
+  dv.setUint32(8 + dataLen, stCrc32(out.subarray(4, 8 + dataLen)), false);
+  return out;
+}
+
+// Rebuilds the PNG with the new chunks before IEND, dropping any existing chara/ccv3.
+// Dropping matters: re-exporting a card that already carried one would otherwise end up
+// with two, and a reader taking the first would see the stale version.
+function stEmbedInPng(png, chunks) {
+  const dv = new DataView(png.buffer, png.byteOffset, png.byteLength);
+  const dec = new TextDecoder('latin1');
+  const parts = [png.subarray(0, 8)];
+  const drop = ['chara', 'ccv3'];
+  let p = 8;
+  while (p + 8 <= png.length) {
+    const len = dv.getUint32(p, false);
+    const type = dec.decode(png.subarray(p + 4, p + 8));
+    const total = 12 + len;
+    if (type === 'IEND') {
+      chunks.forEach(function (ch) { parts.push(ch); });
+      parts.push(png.subarray(p, p + total));
+      break;
+    }
+    let skip = false;
+    if (type === 'tEXt') {
+      const d = png.subarray(p + 8, p + 8 + len);
+      let z = 0;
+      while (z < d.length && d[z] !== 0) z++;
+      if (drop.indexOf(dec.decode(d.subarray(0, z))) !== -1) skip = true;
+    }
+    if (!skip) parts.push(png.subarray(p, p + total));
+    p += total;
+  }
+  let size = 0;
+  parts.forEach(function (a) { size += a.length; });
+  const out = new Uint8Array(size);
+  let off = 0;
+  parts.forEach(function (a) { out.set(a, off); off += a.length; });
+  return out;
+}
+
+// Re-encode whatever the portrait is as PNG. Going through a canvas means AVIF, WebP and
+// JPG sources all work without a separate decode path, and guarantees the output really
+// is a PNG — a tEXt chunk spliced into a JPG would produce a file nothing can read.
+function stImageToPng(dataUrl) {
+  return new Promise(function (resolve, reject) {
+    const img = new Image();
+    img.onload = function () {
+      try {
+        const cv = document.createElement('canvas');
+        cv.width = img.naturalWidth;
+        cv.height = img.naturalHeight;
+        cv.getContext('2d').drawImage(img, 0, 0);
+        resolve(stB64ToBytes(cv.toDataURL('image/png').split(',')[1]));
+      } catch (e) { reject(e); }
+    };
+    img.onerror = function () { reject(new Error('Could not decode the portrait image.')); };
+    img.src = dataUrl;
+  });
+}
+
+function stSafeName(c) {
+  return (c.display_name || c.name || 'character').replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+// Where a character's exports belong. Mirrors what exportMd already does.
+function stFolderFor(c) {
+  return c.companion_folder ? 'Companions/' + c.companion_folder : 'Companions';
+}
+
+// The JSON card. Nothing is stamped on the character: an ST export is not a Saucepan
+// export, so export_filename, site_last_synced_at and reworked_at are all left alone.
+function exportSillyTavernJson(c, data, opts) {
+  const card = (opts && opts.spec === 'v2') ? buildSillyTavernV2(c, data, opts) : buildSillyTavernV3(c, data, opts);
+  return window.lorekeeper.exportFile({
+    defaultName: stSafeName(c) + '-sillytavern.json',
+    content: JSON.stringify(card, null, 2),
+    folder: stFolderFor(c)
+  });
+}
+
+// The PNG card. Both chunks are written: ccv3 for a V3-aware reader, chara for everything
+// older. A V3 reader prefers ccv3 when both are present, so one file serves both.
+async function exportSillyTavernPng(c, data, opts) {
+  const relPath = (c.image && c.image.relPath) ||
+                  ((c.portraits || []).find(function (p) { return p && p.relPath; }) || {}).relPath;
+  if (!relPath) return {ok: false, error: 'This character has no local portrait file. Set a portrait first — a platform image UUID is not enough, the picture has to be on disk.'};
+
+  let dataUrl;
+  try {
+    dataUrl = await window.lorekeeper.readImagePath(relPath);
+  } catch (e) {
+    return {ok: false, error: 'Could not read the portrait: ' + e.message};
+  }
+  if (!dataUrl) return {ok: false, error: 'Portrait file not found on disk: ' + relPath};
+
+  let png;
+  try {
+    png = await stImageToPng(dataUrl);
+  } catch (e) {
+    return {ok: false, error: e.message};
+  }
+
+  const v3 = buildSillyTavernV3(c, data, opts);
+  const v2 = buildSillyTavernV2(c, data, opts);
+  const withCard = stEmbedInPng(png, [
+    stTextChunk('ccv3', stUtf8ToB64(JSON.stringify(v3))),
+    stTextChunk('chara', stUtf8ToB64(JSON.stringify(v2)))
+  ]);
+
+  const res = await window.lorekeeper.saveImage({
+    base64: stBytesToB64(withCard),
+    defaultName: stSafeName(c) + '-sillytavern.png',
+    folder: stFolderFor(c)
+  });
+  if (res && res.cancelled) return {ok: false, cancelled: true};
+  if (res && res.success) return {ok: true, path: res.path, bytes: withCard.length};
+  return {ok: false, error: (res && res.error) || 'The save failed for an unknown reason.'};
+}
+
+// What the export panel reports before anything is written. Counting the macros that
+// WILL be resolved makes the pronoun choice meaningful rather than a setting nobody
+// understands, and a count is honest where a fixed string would lie as soon as a card
+// changed.
+function stExportSummary(c) {
+  const fields = [c.card, c.example_dialogue, c.advanced_prompt, c.formatting_instructions]
+    .concat((c.starting_scenarios || []).map(function (s) { return s && s.message; }));
+  const text = fields.filter(Boolean).join('\n');
+  let pronouns = 0, conds = 0, markup = 0;
+  let m;
+  ST_MACRO_RE.lastIndex = 0;
+  while ((m = ST_MACRO_RE.exec(text)) !== null) {
+    const low = m[1].trim().toLowerCase();
+    if (ST_ROLE_OF[low]) pronouns++;
+    else if (/^(singular|plural|s|p)\?/.test(low) || low.indexOf('mfx|') === 0) conds++;
+  }
+  const mk = text.match(/>>[\s\S]*?(?:<<|>>)|>![\s\S]*?!<|(^|[^~])~[^~\n]+~(?!~)/g);
+  if (mk) markup = mk.length;
+  const scen = (c.starting_scenarios || []).filter(function (s) { return s && s.message; });
+  return {
+    pronouns: pronouns,
+    conditionals: conds,
+    markup: markup,
+    greetings: scen.length,
+    hasPortrait: !!((c.image && c.image.relPath) || (c.portraits || []).some(function (p) { return p && p.relPath; })),
+    source: stSourceUrls(c),
+    sourceReason: stSourceReason(c)
+  };
+}
+
 
 
 // ── Token estimation ─────────────────────────────────────────────────────
@@ -2269,10 +2984,6 @@ function buildPalette(seedHex, scheme) {
           mk(0.78, seed.C * 0.5, a), mk(0.9, seed.C * 0.25, H)];
 }
 
-// Bumped whenever the colour picker changes, and shown in its heading. Two rounds
-// were lost to not knowing whether a restart had actually picked up a new build.
-const PICKER_BUILD = 7;
-
 // ── Pointer coordinates under CSS zoom ──────────────────────────────────
 // THE APP SETS CSS `zoom` ON <html> FOR THE FONT-SIZE SETTING, AND THAT BREAKS
 // POINTER MATHS. Chromium reports offsetX/offsetY in the UNZOOMED space while
@@ -2363,6 +3074,295 @@ const LORE_ON_STYLE = {fontSize:9,padding:'2px 7px',borderRadius:3,background:'v
 
 const LORE_OFF_STYLE = {fontSize:9,padding:'2px 7px',borderRadius:3,background:'var(--bg3)',color:'var(--text3)',border:'1px solid var(--border)',cursor:'pointer'};
 
+// ---------------------------------------------------------------------------
+// TASK PRESETS (session 44)
+//
+// A preset is a complete system prompt plus sampler values, aimed at one kind of
+// output. Selecting one in the Assistant REPLACES the generic assistant preamble
+// and ASSISTANT_HOUSE_RULES. That is deliberate: a task prompt opening with
+// "output only the prose, no preamble" fights a preamble telling the model to be
+// a concise helpful assistant, and the model splits the difference. The world,
+// lorebook, house-format and character blocks are still appended underneath,
+// which is the entire reason for running the task from inside Lorekeeper rather
+// than pasting the card into LM Studio by hand.
+//
+// On samplers: LM Studio's own presets are client-side only. Nothing set on its
+// Inference tab — temperature, Min P, repeat penalty, the preset system prompt —
+// reaches /v1/chat/completions. Only the Load tab settings (context length, GPU
+// offload, cache quantization, chat template) apply to server requests. So any
+// sampler value has to travel in the request body, which is what params is for.
+//
+// Deleting every preset falls back to these built-ins rather than leaving an
+// empty dropdown. That is a floor, not a bug.
+// ---------------------------------------------------------------------------
+
+const PRESET_PARAM_FIELDS = [
+  {key:'temperature',     label:'Temperature',    step:'0.05', hint:'0.5 for extraction, 0.8-0.9 for prose.'},
+  {key:'top_p',           label:'Top P',          step:'0.05', hint:'Blank = not sent. Leave blank when using Min P.'},
+  {key:'min_p',           label:'Min P',          step:'0.01', hint:'LM Studio and OpenRouter only. 0.05 is a good default.'},
+  {key:'repeat_penalty',  label:'Repeat penalty', step:'0.01', hint:'LM Studio and OpenRouter only. Above 1.1 corrupts repeated macros.'},
+  {key:'max_tokens',      label:'Max tokens',     step:'100',  hint:'Reply length cap. 2000 suits a sheet, 3000 a long scenario.'}
+];
+
+const DEFAULT_AI_PRESETS = [
+  {
+    id: 'builtin-character-sheet',
+    name: 'Character Sheet',
+    params: {temperature:0.5, top_p:'', min_p:0.05, repeat_penalty:1.05, max_tokens:3000},
+    instructions: `You build character sheets for an adult AI companion platform from source material the user supplies - intro scenarios, notes, or drafts.
+
+WHAT TO WRITE
+
+Fill every section the source gives you grounds for. Most sections ask for things the source shows indirectly, and those are yours to write.
+
+Allowed: anything a careful reader would conclude from the source. A character who complains for a week about meetings he is forced to attend fears being trapped in them. A character who confronts two attackers protects people who cannot protect themselves. Write those.
+
+Not allowed: facts the source could not tell you. Names, ages, heights, nationalities, cities, family members, jobs, past events. If the source does not state it, it does not go in the sheet.
+
+The test is whether the source supports it, not whether the source says it outright. A section left blank because the source "did not say so in those words" is a failure. A section filled with a detail the source never implied is also a failure.
+
+Leave a section empty only when nothing in the source bears on it at all. Leave it truly empty - no text, not "Not specified".
+
+Write traits, not quotes. Never paste dialogue from the source into a field. Avoid lines that would be true of any character - every line should be about this one.
+
+FILL WHAT THE SOURCE GIVES
+
+If a detail appears anywhere in the source, it goes in the matching field. A partial detail is still a detail - a surname without a given name is a name.
+
+NO FIELD CONTRADICTS ANOTHER
+
+When the template asks for the same information in more than one place, the answer is identical in both. Check before finishing.
+
+ANYONE NAMED IN THE SOURCE GOES IN CONNECTIONS
+
+Every person the source names or clearly identifies gets a line in Connections with their relationship to {{char}} and what the source shows about it.
+
+PROSE SECTIONS
+
+Sections calling for prose are written as prose, not left as template stubs. If the template opens one with a phrase, continue that sentence. Sections describing how {{char}} thinks or speaks are written as description, not as in-character monologue.
+
+MACROS
+
+The Name field takes the character's name as the source gives it, in full or in part - the literal name, never a macro. Everywhere else, write {{char}}. Other people keep their own names. Never write {{char}} for anyone else.
+{{user}} for the player. {{they}} {{them}} {{their}} {{theirs}} {{themselves}} for {{user}} only, never for {{char}}. {{s?was:were}} for was/were attached to {{user}}.
+{{char}} takes he/him/his unless the source says otherwise.
+
+SETTING
+
+Use the source's setting and its terms. If the setting has its own categories for identity, status, or species, use the source's word, not a real-world equivalent. Identify which category {{char}} belongs to from how the source treats him.
+
+TEMPLATE
+
+Fill the template supplied. Same headings, same order, same formatting. Add nothing, reorder nothing. Output the character card only - not the template's surrounding notes or metadata.
+
+A template heading with a parenthetical description under it is telling you what belongs in that field. A heading with a bare dash and nothing else still needs filling - do not copy the empty dash back.
+
+HOW LINES ARE WRITTEN
+
+Every trait carries the behaviour that shows it. Prefer the source's specific detail over a general version. No adjective stacking. No trait without a consequence.
+
+LENGTH
+
+Hard cap 2,600 tokens, up to 2,900 with special mechanics.
+
+OUTPUT
+
+The filled character card only. Markdown. No preamble, no commentary, no repeated sections, nothing after the closing tag.`
+  },
+  {
+    id: 'builtin-example-dialogue',
+    name: 'Example Dialogue',
+    params: {temperature:0.8, top_p:'', min_p:0.05, repeat_penalty:1.05, max_tokens:2500},
+    instructions: `You write example dialogue sets for AI companion characters on an adult interactive fiction platform. The set teaches a roleplay model how the character sounds across his emotional range.
+
+THE FORMAT IS SHORT
+
+Seven numbered, labelled samples. Each one is 60 to 120 words. That is roughly four to six lines total.
+
+The shape of each sample:
+- one short line of narration setting the situation
+- one to three speeches from {{char}}
+- one short closing line of narration - an action, not a reflection
+
+That is the whole sample. It is not a scene. There is no plot, no arc, no resolution. It illustrates how {{char}} sounds and nothing else.
+
+If a sample runs past 120 words, you are writing a scene. Cut it back.
+
+Label each with the register in capitals. Derive the seven registers from the character sheet - the states this specific character actually enters. The seventh is labelled SIGNATURE and shows his single most distinctive move, the pattern a reader would recognise anywhere.
+
+Separate samples with a line containing only ---
+
+{{user}} IS ALMOST NEVER PRESENT
+
+{{user}} appears in at most two of the seven samples. The other five use colleagues, strangers, or no one.
+
+When {{user}} does appear:
+- no quoted dialogue, ever
+- no face, body, clothing, build, age, or gender
+- no stated thoughts, feelings or motives
+- report what {{user}} said through {{char}}, never as a quoted question
+
+Any physical description of {{user}} is a failure of the whole set.
+
+STAY INSIDE THE SHEET
+
+Every behaviour must be one the sheet supports. If the sheet says he gets quieter when something matters, he does not shout. If the sheet says he does not panic, he does not panic. If the sheet names what he finds contemptible, he does not do that thing.
+
+Do not invent events, relationships, confrontations, violence, or emotional breakdowns. Do not escalate. These are ordinary moments.
+
+Secondary characters behave as the sheet describes them. Do not add attraction, tension, or physical contact the sheet does not establish.
+
+ANGER, VULNERABILITY AND DESIRE STAY IN CHARACTER
+
+A sample showing a difficult emotion shows how THIS character does it, which is usually smaller and quieter than the generic version. An angry withholding man is angry by withholding further. A vulnerable guarded man is vulnerable by saying one true sentence and stopping.
+
+SITUATIONS
+
+Each sample uses a different ordinary situation - different place, different time, different task. No two samples share a setting.
+
+MACROS
+
+Write {{char}} for the character in narration. His real name may appear in dialogue when someone addresses him. Other people keep their own names.
+Write {{user}} for the player. {{they}} {{them}} {{their}} {{theirs}} {{themselves}} for {{user}} only, never for {{char}}. {{s?was:were}} for was/were attached to {{user}}.
+{{char}} takes he/him/his unless the sheet says otherwise.
+
+VOICE
+
+Follow the sheet's communication style exactly - pace, register, vocabulary, what he does instead of answering.
+
+Past tense unless the brief supplies a present-tense style sample.
+
+Follow the sheet's formatting instructions if it supplies any: quotes for speech, italics for thought, plain text for narration.
+
+If the brief includes a STYLE SAMPLE, match its tense, sentence length, and balance of narration to speech. The style sample outranks your defaults.
+
+Specificity does the work. The exact object, the exact number.
+
+Never explain a beat. Never name the emotion - the label already says it. Never summarise personality. Only behaviour.
+
+PROSE BANS
+
+No "something shifted", "a beat passed", "materialize", "unreadable expression", "a mix of X and Y", "practiced movement", "practiced movements", "heart skipped a beat", "a steady presence", "an unspoken understanding", "the air thickened", "his voice dripping with".
+
+OUTPUT
+
+The seven labelled samples only. No preamble, no commentary, no closing remark.`
+  },
+  {
+    id: 'builtin-intro-scenario',
+    name: 'Intro Scenario',
+    params: {temperature:0.9, top_p:'', min_p:0.05, repeat_penalty:1.05, max_tokens:3000},
+    instructions: `You write intro scenarios for AI companion characters on an adult interactive fiction platform.
+
+MACROS - literal strings that must appear in your output
+
+{{char}} is the character's name. Use it in the subject position wherever you would otherwise write the character's actual name. Begin most paragraphs with {{char}}, not with "he". Within a paragraph, "he/him/his" is correct for subsequent references.
+The character's real name may appear in dialogue when another character says it, or when {{char}} introduces himself. Never in narration.
+Other characters are named normally.
+{{char}} is male unless the brief says otherwise.
+
+For the player, write {{user}}. Never "the stranger", "the figure", "the caller", or any other noun.
+For the player's pronouns, write {{they}} {{them}} {{their}} {{theirs}} {{themselves}}. These belong to {{user}} ONLY. Never use them for {{char}}.
+For any past-tense was/were attached to {{user}}, write {{s?was:were}}.
+
+{{their}} means the player's. "{{char}} wiped {{their}} brow" says the character wiped the player's brow. Write "{{char}} wiped his brow".
+
+WHERE {{user}} SITS IN THE SCENE
+
+The brief decides. {{user}} may be present throughout, may arrive at the end, may be alongside {{char}} the whole time - or may not appear at all, with the scene ending at the moment before contact: the phone picked up, the door about to open, the name called.
+
+If {{user}} does appear:
+- rendered only through {{char}}'s senses
+- no quoted dialogue, no stated thoughts or motives
+- no face, body, clothing, age, build or gender
+- {{char}} may infer or misread; that is the only interior access
+
+If {{user}} does not appear, do not invent a stand-in and do not gesture at {{user}} vaguely. End the scene at the threshold.
+
+STYLE SAMPLE
+
+If the brief includes a passage marked STYLE SAMPLE, that passage is the target voice. Match its tense, paragraph length, dialogue rhythm, vocabulary level, and the balance between narration and speech. Do not reuse its content, characters or situations. The style sample overrides any default below that conflicts with it.
+
+VOICE
+
+Short paragraphs. One to four sentences. A single line can be its own paragraph and often should be.
+
+{{char}} has a distinct speech rhythm - follow the character sheet's communication style exactly, including its register, pacing, and emotional range.
+
+Any other characters the sheet or brief supplies are present and occupied with their own business. They reveal the world through how they speak and act in it, never through explanation.
+
+Specificity does the work: the exact object, the exact number, the exact procedure. Concrete over abstract, always. State things flat and let the reader draw the conclusion.
+
+Follow the character sheet's formatting instructions if it supplies any.
+
+Never explain a beat after landing it. No sentence stating what the previous sentence meant. End paragraphs on the object, the action, or the flat statement. Do not name an emotion the prose demonstrated. Never state {{char}}'s personality. Only behaviour.
+
+STRUCTURE
+
+One continuous stretch of time, from first line to last. No jumps, no flashback scenes, no later that evening.
+
+The scene is ordinary - {{char}} doing whatever {{char}} normally does, in the state {{char}} is normally in.
+
+Something small and concrete recurs across the scene: an object, a task, a sound, a phrase. It returns two or three times, and what it means changes.
+
+Each paragraph gives something new. Once a detail is spent, it is spent.
+
+THE LAST LINE
+
+The scene stops at the threshold and not one sentence past it. The phone is picked up, the door starts to open, the name is called, the command lands - stop there, mid-motion.
+
+Do not write {{char}} settling, resigning himself, bracing for what comes next, or reflecting on what just happened. Do not write a sentence beginning "At least" or "With a sigh" or "He leaned back". If the last thing you wrote describes {{char}} waiting, delete it and end on the line before.
+
+LENGTH
+
+Match what the brief asks for. If unspecified, 3,000 to 6,000 characters. Never exceed 7,500.
+
+OUTPUT
+
+Prose only. No headers, no preamble, no notes, no closing remark. Third person limited anchored to {{char}}, past tense unless the style sample is present tense. Never second person.
+
+PROSE BANS
+
+No place as a cathedral, temple, kingdom or sanctuary. No object standing sentinel. No silence that is heavy or charged. No air that thickens. No thing ancient or timeless. No simile that would appear as back cover copy.
+
+No "something shifted", "a beat passed", "materialize", "unreadable expression", "a mix of X and Y", "for the first time in years", "practiced movements", "heart skipped a beat", "steeling himself", "a steady presence", "an unspoken understanding".
+
+INVENT NOTHING
+
+No partner, romance, or named person the character sheet did not supply.`
+  }
+];
+
+// Built-ins are the floor when the user has deleted everything.
+function getPresetList(settings) {
+  settings = settings || {};
+  const list = settings.ai_presets;
+  return (list && list.length) ? list : DEFAULT_AI_PRESETS;
+}
+
+// null means "no preset" - the Assistant's own preamble and house rules apply.
+function getActivePreset(settings) {
+  settings = settings || {};
+  const id = settings.ai_active_preset || '';
+  if (!id) return null;
+  return getPresetList(settings).find(p => p.id === id) || null;
+}
+
+const PRESET_LIST_STYLE = {display:'flex',flexDirection:'column',gap:6};
+const PRESET_ROW_STYLE = {border:'1px solid var(--border)',borderRadius:'var(--r)',background:'var(--bg3)',overflow:'hidden'};
+const PRESET_HEAD_STYLE = {display:'flex',alignItems:'center',gap:8,padding:'7px 10px'};
+const PRESET_NAME_STYLE = {flex:1,fontSize:12,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'};
+const PRESET_BTN_STYLE = {fontSize:11,padding:'3px 9px',flexShrink:0};
+const PRESET_BODY_STYLE = {padding:'0 10px 10px',display:'flex',flexDirection:'column',gap:8};
+const PRESET_INPUT_STYLE = {background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'6px 9px',borderRadius:'var(--r)',fontSize:12,outline:'none',width:'100%',boxSizing:'border-box'};
+const PRESET_TEXTAREA_STYLE = {background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 9px',borderRadius:'var(--r)',fontSize:11,outline:'none',width:'100%',minHeight:200,resize:'vertical',fontFamily:'monospace',lineHeight:1.5,boxSizing:'border-box'};
+const PRESET_PARAMS_STYLE = {display:'flex',flexWrap:'wrap',gap:8};
+const PRESET_PARAM_LABEL_STYLE = {display:'flex',flexDirection:'column',gap:3,minWidth:96,flex:'1 1 96px'};
+const PRESET_PARAM_NAME_STYLE = {fontSize:10,color:'var(--text3)'};
+const PRESET_NUM_STYLE = {background:'var(--bg2)',border:'1px solid var(--border)',color:'var(--text)',padding:'5px 7px',borderRadius:'var(--r)',fontSize:11,outline:'none',width:'100%',boxSizing:'border-box'};
+const PRESET_HINT_STYLE = {fontSize:10,color:'var(--text3)',lineHeight:1.5};
+const PRESET_ACTIONS_STYLE = {display:'flex',gap:8,marginTop:8,flexWrap:'wrap'};
+const PRESET_NOTE_STYLE = {padding:'4px 12px',borderBottom:'1px solid var(--border)',fontSize:9,color:'var(--text3)',flexShrink:0,lineHeight:1.4};
 const CTX_SELECT_STYLE = {flex:1,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',fontSize:10,padding:'2px 4px',borderRadius:3,outline:'none',minWidth:0};
 
 const CTX_OK_STYLE = {fontSize:10,color:'#6ee7b7',flexShrink:0,fontVariantNumeric:'tabular-nums'};
@@ -2956,19 +3956,35 @@ function hasActiveKey(settings) {
 
 // Shared multi-provider AI call helper — used by ClaudePanel chat and ImagePromptTool.
 // Returns {text} on success or {error} on failure. Never throws.
-async function callAI(data, systemPrompt, messages, maxTokens) {
+async function callAI(data, systemPrompt, messages, maxTokens, opts) {
   const settings = data.settings || {};
   const provider = settings.ai_provider || 'anthropic';
+
+  // Sampler values travel in the request body or they do not apply at all.
+  // LM Studio's Inference tab is client-side only and never reaches the server
+  // endpoint, so a preset's temperature has effect only if it is sent here.
+  // Each provider builds its own subset rather than sharing one object: sending
+  // min_p to Anthropic is a 400, not a silent ignore. A blank field means "do
+  // not send", which is how Top P stays off without having to send top_p: 1.
+  const sp = opts || {};
+  const spNum = (v) => (v === undefined || v === null || v === '' || isNaN(Number(v)) ? undefined : Number(v));
+  const spTemp = spNum(sp.temperature);
+  const spTopP = spNum(sp.top_p);
+  const spMinP = spNum(sp.min_p);
+  const spRepeat = spNum(sp.repeat_penalty);
 
   try {
     if (provider === 'anthropic') {
       const apiKey = settings.anthropic_api_key || '';
       const model = settings.claude_model || 'claude-sonnet-4-6';
       if (!apiKey) return { error: 'No Anthropic API key set — add one in Settings.' };
+      const body = { model, max_tokens: maxTokens, system: systemPrompt, messages };
+      if (spTemp !== undefined) body.temperature = spTemp;
+      if (spTopP !== undefined) body.top_p = spTopP;
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'anthropic-version':'2023-06-01', 'x-api-key': apiKey },
-        body: JSON.stringify({ model, max_tokens: maxTokens, system: systemPrompt, messages })
+        body: JSON.stringify(body)
       });
       const resp = await res.json();
       if (resp.error) return { error: resp.error.message || 'Anthropic API error' };
@@ -2980,10 +3996,13 @@ async function callAI(data, systemPrompt, messages, maxTokens) {
       const apiKey = settings.openai_api_key || '';
       const model = settings.openai_model || 'gpt-4o';
       if (!apiKey) return { error: 'No OpenAI API key set — add one in Settings.' };
+      const body = { model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] };
+      if (spTemp !== undefined) body.temperature = spTemp;
+      if (spTopP !== undefined) body.top_p = spTopP;
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
-        body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] })
+        body: JSON.stringify(body)
       });
       const resp = await res.json();
       if (resp.error) return { error: resp.error.message || 'OpenAI API error' };
@@ -2996,10 +4015,13 @@ async function callAI(data, systemPrompt, messages, maxTokens) {
       const model = settings.google_model || 'gemini-2.0-flash';
       if (!apiKey) return { error: 'No Google API key set — add one in Settings.' };
       const contents = messages.map(m => ({ role: m.role==='assistant'?'model':'user', parts:[{text:m.content}] }));
+      const gCfg = { maxOutputTokens: maxTokens };
+      if (spTemp !== undefined) gCfg.temperature = spTemp;
+      if (spTopP !== undefined) gCfg.topP = spTopP;
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ systemInstruction: { parts:[{text:systemPrompt}] }, contents, generationConfig:{maxOutputTokens:maxTokens} })
+        body: JSON.stringify({ systemInstruction: { parts:[{text:systemPrompt}] }, contents, generationConfig: gCfg })
       });
       const resp = await res.json();
       if (resp.error) return { error: resp.error.message || 'Google API error' };
@@ -3010,10 +4032,15 @@ async function callAI(data, systemPrompt, messages, maxTokens) {
     if (provider === 'lmstudio') {
       const baseUrl = (settings.lmstudio_base_url || 'http://localhost:1234/v1').replace(/\/+$/, '');
       const model = settings.lmstudio_model || 'local-model';
+      const body = { model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] };
+      if (spTemp !== undefined) body.temperature = spTemp;
+      if (spTopP !== undefined) body.top_p = spTopP;
+      if (spMinP !== undefined) body.min_p = spMinP;
+      if (spRepeat !== undefined) body.repeat_penalty = spRepeat;
       const res = await fetch(baseUrl + '/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] })
+        body: JSON.stringify(body)
       });
       const resp = await res.json();
       if (resp.error) return { error: (resp.error.message || resp.error) + '' };
@@ -3025,10 +4052,15 @@ async function callAI(data, systemPrompt, messages, maxTokens) {
       const apiKey = settings.openrouter_api_key || '';
       const model = settings.openrouter_model || 'anthropic/claude-sonnet-4-6';
       if (!apiKey) return { error: 'No OpenRouter API key set — add one in Settings.' };
+      const body = { model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] };
+      if (spTemp !== undefined) body.temperature = spTemp;
+      if (spTopP !== undefined) body.top_p = spTopP;
+      if (spMinP !== undefined) body.min_p = spMinP;
+      if (spRepeat !== undefined) body.repetition_penalty = spRepeat;
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + apiKey },
-        body: JSON.stringify({ model, max_tokens: maxTokens, messages: [{role:'system',content:systemPrompt}, ...messages] })
+        body: JSON.stringify(body)
       });
       const resp = await res.json();
       if (resp.error) return { error: resp.error.message || 'OpenRouter API error' };
@@ -3186,14 +4218,16 @@ const TEMPLATE_FIELDS = [
 ];
 </script>
 <script type="text/babel">
-// ── Babel block 1 of 2 ──────────────────────────────────────────────
+// ── Babel block 1 of 3 ──────────────────────────────────────────────
 // The Babel block is SPLIT because Babel standalone transforms each
 // text/babel script separately and deoptimises past ~500 KB per block,
-// at which point click handlers silently stop working app-wide. Two blocks of
-// ~245 KB each sit well under that. Top-level declarations in a classic script
+// at which point click handlers silently stop working app-wide. The limit is on the
+// COMPILED output, which JSX inflates by roughly 30%, so measure what Babel emits and
+// not what it reads — compile-check.js reports both. Three blocks of
+// ~190 KB compiled each sit well under that. Top-level declarations in a classic script
 // share one global scope, so either block can call into the other — nothing runs
 // until ReactDOM.render at the very end.
-// Keep the render call in the LAST block. Rebalance if either nears 400 KB.
+// Keep the render call in the LAST block. Split again if any block passes 400 KB COMPILED.
 
 const { useState, useEffect, useCallback, useRef, useMemo } = React;
 
@@ -3895,7 +4929,7 @@ function App() {
             {page==='batch'&&<BatchImportPage data={data} update={update} importJSON={importJSON} exportAll={exportAll} />}
             {page==='templates'&&<TemplatesPage data={data} update={update} newTemplate={newTemplate} clearNew={()=>setNewTemplate(false)} />}
             {page==='personas'&&!selectedPersona&&<PersonasPage data={data} setSelectedPersona={p=>{setSelectedPersona(p);}} />}
-            {page==='personas'&&selectedPersona&&<PersonaDetailPage persona={selectedPersona} data={data} update={update} onBack={()=>setSelectedPersona(null)} />}
+            {page==='personas'&&selectedPersona&&<PersonaDetailPage persona={selectedPersona} data={data} update={update} onBack={()=>setSelectedPersona(null)} setLightboxSrc={setLightboxSrc} />}
           </div>
           {rightPanel&&<RightPanel tab={rightTab} setTab={setRightTab} data={data} update={update} currentWorld={selectedWorld} currentChar={selectedChar} currentPage={page} setPage={setPage} />}
         </div>
@@ -4662,7 +5696,6 @@ function ImageColourTool() {
   const [radius, setRadius] = React.useState(2);
   const [mark, setMark] = React.useState(null);  // {fx, fy} as fractions, 0..1
   const [err, setErr] = React.useState('');
-  const [diag, setDiag] = React.useState(null);
 
   const S = {box:{background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:12},
     label:{fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:6,display:'block'}};
@@ -4696,7 +5729,7 @@ function ImageColourTool() {
 
   React.useEffect(() => {
     sampleRef.current = null;
-    setPicked(null); setMark(null); setDiag(null); setErr('');
+    setPicked(null); setMark(null); setErr('');
   }, [img.src]);
 
   const pick = (e) => {
@@ -4739,7 +5772,6 @@ function ImageColourTool() {
       if (d[i + 3] < 128) continue;
       R += srgbToLinear(d[i]); G += srgbToLinear(d[i + 1]); B += srgbToLinear(d[i + 2]); n++;
     }
-    setDiag({cw: cv.width, ch: cv.height, rw: pt.w, rh: pt.h, ox: pt.ox, oy: pt.oy, z: pt.z, x: x, y: y, n: n});
     if (!n) { setErr('Nothing to sample there — that area is fully transparent.'); return; }
     R = linearToSrgb(R / n); G = linearToSrgb(G / n); B = linearToSrgb(B / n);
 
@@ -4771,9 +5803,6 @@ function ImageColourTool() {
           border:'2px solid #fff',boxShadow:'0 0 0 2px rgba(0,0,0,0.75)',pointerEvents:'none'}}></span>}
       </div>
       <div style={{fontSize:10,color:'var(--text3)',marginTop:6}}>Click anywhere on the picture to take that colour.</div>
-      {diag && <div style={{fontSize:10,color:'var(--text3)',marginTop:4,fontFamily:'monospace'}}>
-        shown {diag.rw}×{diag.rh} · zoom {diag.z} · at {diag.ox},{diag.oy} → pixel {diag.x},{diag.y} of {diag.cw}×{diag.ch} · {diag.n} read
-      </div>}
       <div style={{display:'flex',gap:6,alignItems:'center',marginTop:8,flexWrap:'wrap'}}>
         <span style={{fontSize:10,color:'var(--text3)'}}>Sample size</span>
         {[0,2,5].map(r => <button key={r} className={'btn' + (radius===r?' primary':'')} style={{fontSize:10,padding:'2px 8px'}}
@@ -4788,7 +5817,7 @@ function ImageColourTool() {
   }
 
   return <div style={S.box}>
-    <label style={S.label}>Pick from image <span style={{opacity:0.5,fontWeight:400}}>· build {PICKER_BUILD}</span></label>
+    <label style={S.label}>Pick from image</label>
     {body}
     {err && <div style={{fontSize:11,color:'var(--amber)',marginTop:6}}>{err}</div>}
     {img.status && <div style={{fontSize:11,color:'var(--amber)',marginTop:6}}>{img.status}</div>}
@@ -5938,6 +6967,35 @@ function TimelinePanel({world, data, update, worldChars, worldLores, setSelected
   const events = sortTimelineEvents(timelineEventsFor(data, world.id));
   const lanes = (data.timeline_lanes && data.timeline_lanes[world.id]) || ['Main'];
 
+  // ONE writer, watching the result, rather than a save call inside each of the five
+  // places that change a timeline. Adding, editing, deleting, reordering and renaming
+  // a strand all land here because they all change this world's slice, and a sixth
+  // mutation added later does too without anyone having to remember. Every "fixed by
+  // matching" in this project drifted again within a few sessions.
+  const tlTimer = React.useRef();
+  const tlLast = React.useRef(null);
+  React.useEffect(() => {
+    if (!window.lorekeeper.saveTimelineJson) return;
+    const payload = JSON.stringify({
+      world: world.name || '',
+      world_id: world.id,
+      saved_at: new Date().toISOString(),
+      lanes: lanes,
+      events: events
+    }, null, 2);
+    // Nothing to write on the render that merely opened the tab, and nothing to write
+    // when a re-render produced identical content.
+    if (tlLast.current === payload) return;
+    const first = tlLast.current === null;
+    tlLast.current = payload;
+    if (first) return;
+    clearTimeout(tlTimer.current);
+    tlTimer.current = setTimeout(() => {
+      window.lorekeeper.saveTimelineJson(world.name || ('world-' + world.id), JSON.parse(payload)).catch(()=>{});
+    }, 800);
+    return () => clearTimeout(tlTimer.current);
+  }, [JSON.stringify(events), JSON.stringify(lanes), world.id, world.name]);
+
   const blank = () => ({label:'', when:'', sort:'', description:'', charIds:[], loreRefs:[], lane:0});
   const startNew = () => { setDraft(blank()); setEditing('new'); };
   const startEdit = (e) => { setDraft({...e, charIds:[...(e.charIds||[])], loreRefs:[...(e.loreRefs||[])]}); setEditing(e.id); };
@@ -6571,11 +7629,26 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
     const world = (scope !== 'character' && currentWorld) ? data.worlds.find(w => w.id === currentWorld.id) : null;
     const parts = [];
 
-    parts.push(`You are a creative writing assistant helping with character and world development for the Saucepan AI companion platform. Be concise and practical. When suggesting text for fields, write it ready to use. Just write the content.`);
-    parts.push(ASSISTANT_HOUSE_RULES);
-    // User-editable additions, appended after the built-in rules so they can override.
+    // A task preset replaces the assistant preamble and the house rules outright.
+    // See the TASK PRESETS note in the plain-JS block: a prompt that opens "output
+    // only the prose, no preamble" fights a preamble telling the model to be a
+    // concise assistant, and the model splits the difference. Everything below
+    // this point — world, lorebook, house format, character — is appended either
+    // way, which is the point of running the task from in here.
+    const taskPreset = getActivePreset(data.settings);
+    if(taskPreset) {
+      parts.push((taskPreset.instructions||'').trim());
+    } else {
+      parts.push(`You are a creative writing assistant helping with character and world development for the Saucepan AI companion platform. Be concise and practical. When suggesting text for fields, write it ready to use. Just write the content.`);
+      parts.push(ASSISTANT_HOUSE_RULES);
+    }
+    // User-editable additions, appended after the built-in rules so they can
+    // override. Gated on the provider because the field only renders under LM
+    // Studio in Settings — applied everywhere it would ride along invisibly on a
+    // cloud call, with no way to see or edit it from that provider's panel.
     const extraRules = (data.settings||{}).ai_custom_instructions;
-    if(extraRules && extraRules.trim()) parts.push('\n## ADDITIONAL INSTRUCTIONS\n' + extraRules.trim());
+    const extraOk = ((data.settings||{}).ai_provider || 'anthropic') === 'lmstudio';
+    if(extraOk && extraRules && extraRules.trim()) parts.push('\n## ADDITIONAL INSTRUCTIONS\n' + extraRules.trim());
 
     if(world) {
       parts.push(`\n## CURRENT WORLD: ${world.name}`);
@@ -6652,6 +7725,15 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
 
   const ctxScope = data.settings?.assistant_context_scope || 'full';
   const setScope = (v) => update(d=>{ if(!d.settings) d.settings={}; d.settings.assistant_context_scope = v; });
+  // Preset selection. Handlers live here rather than inline in JSX — nested
+  // arrows in attributes have silently stopped elements rendering in this file.
+  const presetList = getPresetList(data.settings);
+  const activePresetId = (data.settings||{}).ai_active_preset || '';
+  const activePreset = getActivePreset(data.settings);
+  const onPresetChange = (e) => {
+    const v = e.target.value;
+    update(d=>{ if(!d.settings) d.settings={}; d.settings.ai_active_preset = v; });
+  };
   const pickedChapters = data.settings?.assistant_chapters || [];
   const worldLoreList = currentWorld ? data.lorebooks.filter(l => l.world_id === currentWorld.id) : [];
   const toggleChapter = (key) => update(d=>{
@@ -6667,8 +7749,12 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
   const ctxTokens = estimateTokens(buildSystemPrompt(ctxScope));
   // Threshold follows the configured window instead of a hardcoded 7000 (which
   // assumed 8k forever and stayed green at 7k even on a 32k model).
+  // ai_context_window is an LM Studio setting and only renders there, so the
+  // budget warning is local-only too. On a cloud provider the field is unreachable
+  // and its default of 8192 would paint the readout amber against a 200k window.
+  const ctxIsLocal = ((data.settings||{}).ai_provider || 'anthropic') === 'lmstudio';
   const ctxWindow = Number((data.settings||{}).ai_context_window) || 8192;
-  const ctxLimit = Math.round(ctxWindow * 0.75);
+  const ctxLimit = ctxIsLocal ? Math.round(ctxWindow * 0.75) : Infinity;
 
   const send = async () => {
     if(!input.trim() || loading) return;
@@ -6680,7 +7766,11 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
     setLoading(true);
 
     const systemPrompt = buildSystemPrompt(ctxScope);
-    const result = await callAI(data, systemPrompt, newMessages.map(m => ({role:m.role, content:m.content})), 2000);
+    // A preset's samplers only exist if they are sent — see callAI.
+    const sendPreset = getActivePreset(data.settings);
+    const sendParams = sendPreset ? (sendPreset.params || {}) : {};
+    const sendMaxTokens = Number(sendParams.max_tokens) || 2000;
+    const result = await callAI(data, systemPrompt, newMessages.map(m => ({role:m.role, content:m.content})), sendMaxTokens, sendParams);
     if(result.error) { setError(result.error); setLoading(false); return; }
     setMessages(prev => [...prev, {role:'assistant', content:result.text}]);
     setLoading(false);
@@ -6705,6 +7795,18 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
         <i className="ti ti-key" style={{fontSize:12}}></i>
         No API key set — <span style={{textDecoration:'underline',cursor:'pointer'}} onClick={()=>setPage('settings')}>add in Settings</span>
       </div>}
+      {/* Task preset */}
+      <div style={{padding:'6px 12px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
+        <span style={{fontSize:10,color:'var(--text3)',flexShrink:0}}>Preset</span>
+        <select value={activePresetId} onChange={onPresetChange} style={CTX_SELECT_STYLE}
+          title="A preset replaces the assistant's own instructions with a task prompt and sends its sampler values. World and character context is still included. Edit them in Settings.">
+          <option value="">Assistant (default)</option>
+          {presetList.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+      </div>
+      {activePreset&&<div style={PRESET_NOTE_STYLE}>
+        House rules replaced by <strong>{activePreset.name}</strong>. Context below still applies.
+      </div>}
       {/* Context scope */}
       <div style={{padding:'6px 12px',borderBottom:'1px solid var(--border)',display:'flex',alignItems:'center',gap:6,flexShrink:0}}>
         <span style={{fontSize:10,color:'var(--text3)',flexShrink:0}}>Context</span>
@@ -6713,7 +7815,7 @@ function ClaudePanel({data, update, currentWorld, currentChar, currentPage, setP
           <option value="world">World, no lorebook text</option>
           <option value="full">Everything</option>
         </select>
-        <span style={ctxTokens>ctxLimit?CTX_WARN_STYLE:CTX_OK_STYLE} title={'Estimated system-prompt size against your configured '+ctxWindow.toLocaleString()+'-token window. Turns amber past '+ctxLimit.toLocaleString()+', leaving room for the conversation and the reply.'}>≈{ctxTokens.toLocaleString()} / {(ctxWindow/1000)+'k'}</span>
+        <span style={ctxTokens>ctxLimit?CTX_WARN_STYLE:CTX_OK_STYLE} title={ctxIsLocal?('Estimated system-prompt size against your configured '+ctxWindow.toLocaleString()+'-token window. Turns amber past '+ctxLimit.toLocaleString()+', leaving room for the conversation and the reply.'):'Estimated system-prompt size. The window budget is an LM Studio setting, so no warning threshold applies to this provider.'}>≈{ctxTokens.toLocaleString()}{ctxIsLocal?' / '+(ctxWindow/1000)+'k':''}</span>
       </div>
       {ctxScope==='world'&&worldLoreList.length>0&&<div style={{padding:'0 12px 6px',borderBottom:'1px solid var(--border)',flexShrink:0,maxHeight:150,overflowY:'auto'}}>
         <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}>
@@ -6811,7 +7913,13 @@ function RightPanel({tab,setTab,data,update,currentWorld,currentChar,currentPage
   const saveNotesBackupFile = (filename, content) => {
     clearTimeout(notesFileSaveTimer.current);
     notesFileSaveTimer.current = setTimeout(() => {
-      window.lorekeeper.saveNotesFile(filename, content).catch(()=>{});
+      window.lorekeeper.saveNotesFile(filename, content).then(ok => {
+        // The moment the file is written it holds exactly what the note holds, so this
+        // is the one instant the two are known to agree. Recording it is what lets the
+        // ingest panel later tell a deletion from an addition - without it a merge can
+        // only ever add, and a line deleted anywhere comes back.
+        if (ok) update(d => { if (!d.notes_sync) d.notes_sync = {}; d.notes_sync[notesFileNameFor(filename)] = content; });
+      }).catch(()=>{});
     }, 800);
   };
 
@@ -7512,7 +8620,12 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
   const saveWorldNotesBackup = (val) => {
     clearTimeout(notesFileTimer.current);
     notesFileTimer.current = setTimeout(() => {
-      window.lorekeeper.saveNotesFile(world.name||('world-'+world.id), val).catch(()=>{});
+      const fname = world.name||('world-'+world.id);
+      window.lorekeeper.saveNotesFile(fname, val).then(ok => {
+        // Same reasoning as the notes panel: file written means file equals note, and
+        // that agreement is the baseline a three-way merge needs.
+        if (ok) update(d => { if (!d.notes_sync) d.notes_sync = {}; d.notes_sync[notesFileNameFor(fname)] = val; });
+      }).catch(()=>{});
     }, 800);
   };
   const handleBannerUpload=async()=>{
@@ -7520,7 +8633,12 @@ function WorldDetailPage({world,tab,setTab,worldChars,worldLores,worldColls,worl
     if(!_r) return;
     const safeName=world.name.replace(/[^a-zA-Z0-9_-]/g,'_');
     const res=await window.lorekeeper.copyImageToFolder(_r.srcPath,'Worlds',safeName);
-    if(res){ update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w){w.image=res.base64;w.image_relpath=res.relPath;}}); }
+    // Store the PATH, not the picture. copyImageToFolder returns {relPath, base64} and
+    // this used to keep both, so the whole image went into lorekeeper-data.json as well
+    // as onto disk. update() deep-clones that tree on every keystroke, so a blob there is
+    // a cost paid per character typed anywhere in the app. base64 stays as the fallback
+    // for a copy that actually failed, where it is the only copy of the picture.
+    if(res){ update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w){w.image=null;w.image_relpath=res.relPath;}}); }
     else { update(d=>{const w=d.worlds.find(x=>x.id===world.id);if(w)w.image=_r.base64;}); }
   };
   const handleGalleryUpload=async()=>{const _r=await window.lorekeeper.importImage();if(_r)update(d=>{d.gallery.push({id:uuid(),world_id:world.id,name:'image',data:_r.base64});});};
@@ -7729,7 +8847,7 @@ function CollectionCharPicker({coll,data,update,setSelectedChar}) {
 
 </script>
 <script type="text/babel">
-// ── Babel block 2 of 2 — see block 1 for why this is split ──
+// ── Babel block 2 of 3 — see block 1 for why this is split ──
 function CollectionPicker({charData,data,updChar,update}) {
   const [search,setSearch]=useState('');
   const q=search.toLowerCase();
@@ -7853,10 +8971,24 @@ function LorePage({lorebook,data,update,exportLore,initialTab,importJSON,setModa
   const handleImage=async()=>{
     const r=await window.lorekeeper.importImage({defaultPath:'Lorebooks'});
     if(!r) return;
-    if(lore.lorebook_filename){
-      const res=await window.lorekeeper.copyImageToFolder(r.srcPath,'Lorebooks',lore.lorebook_filename.replace(/\.json$/i,''));
-      if(res){updLore(l=>{l.image_data=res.base64;l.image_relpath=res.relPath;});return;}
-    }
+    // Store the PATH, not the picture. copyImageToFolder returns {relPath, base64} and
+    // this used to keep both, so the whole image went into lorekeeper-data.json as well
+    // as onto disk. update() deep-clones that tree on every keystroke, so a blob there
+    // is a cost paid per character typed anywhere in the app.
+    //
+    // The copy also used to be gated on lorebook_filename, which is the AUTO-SAVE
+    // setting and has nothing to do with whether an image can be written. With it empty
+    // the handler fell through to storing base64 and never wrote a file at all. Latent
+    // here only because every lorebook currently has one set; the identical gate on
+    // collections was live, and three collections could not store a banner as a file
+    // because of it. The filename is only needed as a name on disk, so fall back to the
+    // item's own name — what the world banner and persona handlers already do.
+    const base=lore.lorebook_filename
+      ? lore.lorebook_filename.replace(/\.json$/i,'')
+      : (lore.name||'lorebook').replace(/[^a-zA-Z0-9_-]/g,'_');
+    const res=await window.lorekeeper.copyImageToFolder(r.srcPath,'Lorebooks',base);
+    if(res){updLore(l=>{l.image_data=null;l.image_relpath=res.relPath;});return;}
+    // Only reached when the copy itself failed, where base64 is the only copy.
     updLore(l=>{l.image_data=r.base64;});
   };
 
@@ -8401,13 +9533,34 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
     if(res) updChar(c=>{c.image={...(c.image||{}),data:null,relPath:res.relPath};});
     else updChar(c=>{c.image={...(c.image||{}),data:r.base64};});
   };
+  // Replace the image in one portrait slot. Copies to disk and stores the PATH.
+  //
+  // This used to be an inline onClick doing `c.portraits[i].data=r.base64` with no copy
+  // at all, so swapping a slot's image wrote the whole file into lorekeeper-data.json.
+  // update() deep-clones that tree on every keystroke, so the cost was paid per character
+  // typed anywhere in the app — the session-31 bug, still live on this one button while
+  // the bulk "Add portraits" path beside it did it correctly. One character was holding
+  // 2.45 MB this way.
+  //
+  // A named handler, not a bigger inline closure: a complex nested closure in an onClick
+  // has made an element render as nothing at all in this file before.
+  const replacePortraitImage=async(i)=>{
+    const folder=charData.companion_folder?'Companions/'+charData.companion_folder:'Companions';
+    const r=await window.lorekeeper.importImage({defaultPath:folder});
+    if(!r) return;
+    const res=await window.lorekeeper.copyImageToFolder(r.srcPath,folder);
+    updChar(c=>{
+      c.portraits[i].relPath=res?res.relPath:null;
+      c.portraits[i].data=res?null:r.base64;
+    });
+  };
   const handleBanner=async()=>{
     const folder=charData.companion_folder?'Companions/'+charData.companion_folder:'Companions';
     const r=await window.lorekeeper.importImage({defaultPath:folder});
     if(!r) return;
     const safeName=(charData.name||'banner').replace(/[^a-zA-Z0-9_-]/g,'_')+'-banner';
     const res=await window.lorekeeper.copyImageToFolder(r.srcPath,folder,safeName);
-    if(res) updChar(c=>{c.companion_profile_banner_image={...(c.companion_profile_banner_image||{}),data:res.base64,relPath:res.relPath};});
+    if(res) updChar(c=>{c.companion_profile_banner_image={...(c.companion_profile_banner_image||{}),data:null,relPath:res.relPath};});
     else updChar(c=>{c.companion_profile_banner_image={...(c.companion_profile_banner_image||{}),data:r.base64};});
   };
   const charData=data.characters.find(x=>x.id===char.id)||char;
@@ -8479,6 +9632,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
             <div className="info-row"><span className="label">Lorebooks</span><span className="value">{(charData.linked_lorebooks||[]).length}</span></div>
             <div className="info-row"><span className="label">Collections</span><span className="value">{(charData.collections||[]).length}</span></div>
             <div className="info-row"><span className="label">Last updated</span><span className="value">{charData.updated_at?charData.updated_at.split('T')[0]:'—'}</span></div>
+            <div className="info-row"><span className="label">Saucepan link</span>{charData.source_url?<button className="btn" style={PP_LINK_BTN} onClick={()=>navigator.clipboard.writeText(charData.source_url)} title={charData.source_url}><i className="ti ti-copy" style={{fontSize:11}}></i>copy</button>:<span className="value">—</span>}</div>
           </div>
           <div className="info-card">
             <h4>Tags</h4>
@@ -8584,7 +9738,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                         <button type="button" className={p.gallery_only?'pflag pflag-gal-on':'pflag'} title="Image appears in the gallery only — the LLM will not select it for in-chat display." onClick={()=>updChar(c=>c.portraits[i].gallery_only=!c.portraits[i].gallery_only)}>Gallery only</button>
                       </div>
                       <div style={{display:'flex',gap:4,marginTop:6}}>
-                        <button className="btn" style={{flex:1,justifyContent:'center',padding:'3px',fontSize:11}} onClick={async()=>{const r=await window.lorekeeper.importImage({defaultPath:charData.companion_folder?'Companions/'+charData.companion_folder:'Companions'});if(r)updChar(c=>c.portraits[i].data=r.base64);}}><i className="ti ti-photo"></i></button>
+                        <button className="btn" style={{flex:1,justifyContent:'center',padding:'3px',fontSize:11}} onClick={()=>replacePortraitImage(i)}><i className="ti ti-photo"></i></button>
                         {(p.data||p.relPath)&&<button className="btn" style={{padding:'3px 5px',fontSize:11}} onClick={()=>setLightboxSrc(p.data||p.relPath)} title="View full image"><i className="ti ti-zoom-in" style={{fontSize:12}}></i></button>}
                         <button className="btn danger" style={{padding:'3px 6px',fontSize:11}} onClick={()=>updChar(c=>c.portraits.splice(i,1))}><i className="ti ti-x"></i></button>
                       </div>
@@ -8691,6 +9845,14 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                 <input value={charData.companion_folder||''} onChange={e=>updChar(c=>c.companion_folder=e.target.value||null)} placeholder="e.g. Victor (leave blank to disable auto-save)"/>
                 {charData.companion_folder?<div className="field-hint">{charFolderHint(charData.companion_folder)}</div>:null}
               </div>
+              <div className="field-block">
+                <label>Saucepan Link <span style={ST_LABEL_NOTE}>— this companion's page on the site</span></label>
+                <div style={{display:'flex',gap:6}}>
+                  <input value={charData.source_url||''} onChange={e=>updChar(c=>c.source_url=e.target.value)} placeholder="https://…" style={ST_SOURCE_INPUT}/>
+                  {charData.source_url?<button className="btn" style={{flexShrink:0}} onClick={()=>navigator.clipboard.writeText(charData.source_url)} title="Copy link"><i className="ti ti-copy"></i></button>:null}
+                </div>
+                <div className="field-hint">Local only — stripped from every Saucepan export. Doubles as the source link on a SillyTavern card.</div>
+              </div>
               <div className="field-row">
                 <div className="field-block"><label>Access Level</label><select value={charData.access_level||'private'} onChange={e=>updChar(c=>c.access_level=e.target.value)}><option value="private">Private</option><option value="unlisted">Unlisted</option><option value="public">Public</option></select></div>
                 <div className="field-block"><label>Temperature Offset %</label><input type="number" min="-100" max="100" value={charData.temperature_offset_percentage||0} onChange={e=>updChar(c=>c.temperature_offset_percentage=Number(e.target.value))}/></div>
@@ -8714,7 +9876,7 @@ function CharDetailPage({char,data,update,initialTab,exportChar,importJSON,setMo
                 </div>
               </div>
               <div style={{paddingTop:8,borderTop:'1px solid var(--border)'}}>
-                <CharExportTab charData={charData} data={data} exportChar={exportChar} importJSON={importJSON}/>
+                <CharExportTab charData={charData} data={data} exportChar={exportChar} importJSON={importJSON} updChar={updChar}/>
               </div>
               <div style={{paddingTop:8,borderTop:'1px solid var(--border)'}}>
                 <button className="btn danger" onClick={()=>setModal({type:'confirm-delete-char',char:charData})}><i className="ti ti-trash"></i>Delete Character</button>
@@ -9025,6 +10187,33 @@ function CollPage({coll,data,update,exportColl,initialTab,importJSON,openChar,se
     return ()=>window.removeEventListener('keydown',h);
   },[collFindOpen]);
   const col=(data.collections.find(x=>x.id===coll.id))||coll;
+  // One handler. This was the SAME long inline closure duplicated on the clickable
+  // banner and on the button below it, and both copies stored the image into the data
+  // file as well as onto disk. Consolidated rather than fixed twice — every "fixed by
+  // matching" in this project has drifted again within a few sessions.
+  // Store the PATH, not the picture. copyImageToFolder returns {relPath, base64} and
+  // this used to keep both, so the whole image went into lorekeeper-data.json as well
+  // as onto disk. update() deep-clones that tree on every keystroke, so a blob there is
+  // a cost paid per character typed anywhere in the app. base64 stays as the fallback
+  // for a copy that actually failed, where it is the only copy of the picture.
+  const handleCollImage=async()=>{
+    const r=await window.lorekeeper.importImage({defaultPath:'Collections'});
+    if(!r) return;
+    // The copy used to be gated on collection_filename, which is the AUTO-SAVE setting
+    // and is empty on plenty of collections — three of them here. With it empty the
+    // handler fell straight through to storing base64 and never wrote a file at all, so
+    // setting a banner on such a collection could only ever produce a blob in the data
+    // file. Re-picking the image did not help, because the code was doing what it was
+    // told. The filename is only needed as a name on disk, so fall back to the
+    // collection's own name — the same thing the world banner and persona handlers
+    // already do. Nothing about auto-save belongs in this decision.
+    const base=col.collection_filename
+      ? col.collection_filename.replace(/\.json$/i,'')
+      : (col.name||'collection').replace(/[^a-zA-Z0-9_-]/g,'_');
+    const res=await window.lorekeeper.copyImageToFolder(r.srcPath,'Collections',base);
+    if(res){ setCol(c=>{c.image_data=null;c.image_relpath=res.relPath;}); return; }
+    setCol(c=>{c.image_data=r.base64;});
+  };
   const world=data.worlds.find(w=>w.id===col.world_id);
   const setCol=(fn)=>update(d=>{const c=d.collections.find(x=>x.id===coll.id);if(!c)return;fn(c);c.updated_at=new Date().toISOString();if(c.collection_filename){
     window.lorekeeper.saveCollectionJson(c.collection_filename,{...buildCollExport(c),updated_at:c.updated_at});}});
@@ -9040,14 +10229,14 @@ function CollPage({coll,data,update,exportColl,initialTab,importJSON,openChar,se
       </div>
       <div className="char-detail">
         <div className="char-sidebar">
-          <div className="char-portrait-lg" style={{cursor:'pointer'}} onClick={async()=>{const r=await window.lorekeeper.importImage({defaultPath:'Collections'});if(!r)return;if(col.collection_filename){const res=await window.lorekeeper.copyImageToFolder(r.srcPath,"Collections",col.collection_filename.replace(/\.json$/i,""));if(res){setCol(c=>{c.image_data=res.base64;c.image_relpath=res.relPath;});return;}}setCol(c=>{c.image_data=r.base64;});}}>
+          <div className="char-portrait-lg" style={{cursor:'pointer'}} onClick={handleCollImage}>
             {(col.image_data||col.image_relpath)
               ?<ImgFromPath src={col.image_data||col.image_relpath} alt={col.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>
               :(world&&(world.image||world.image_relpath))?<ImgFromPath src={world.image||world.image_relpath} alt={col.name} style={IMG_COVER}/>
               :<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6}}><i className="ti ti-folders" style={{fontSize:40,color:'var(--teal)',opacity:0.5}}></i><span style={{fontSize:11,color:'var(--text3)'}}>Set cover</span></div>
             }
           </div>
-          <button className="btn" style={{width:'100%',justifyContent:'center'}} onClick={async()=>{const r=await window.lorekeeper.importImage({defaultPath:'Collections'});if(!r)return;if(col.collection_filename){const res=await window.lorekeeper.copyImageToFolder(r.srcPath,"Collections",col.collection_filename.replace(/\.json$/i,""));if(res){setCol(c=>{c.image_data=res.base64;c.image_relpath=res.relPath;});return;}}setCol(c=>{c.image_data=r.base64;});}}>
+          <button className="btn" style={{width:'100%',justifyContent:'center'}} onClick={handleCollImage}>
             <i className="ti ti-upload"></i>{(col.image_data||col.image_relpath)?'Change Image':'Set Image'}
           </button>
           {(col.image_data||col.image_relpath)?<button className="btn danger" style={{width:'100%',justifyContent:'center',fontSize:12}} onClick={()=>setCol(c=>{c.image_data=null;c.image_relpath=null;})}><i className="ti ti-x"></i>Remove Image</button>:null}
@@ -9260,7 +10449,7 @@ function CollExportPanel({coll,data,exportColl,importJSON,update}) {
   );
 }
 
-function CharExportTab({charData, data, exportChar, importJSON}) {
+function CharExportTab({charData, data, exportChar, importJSON, updChar}) {
   const buildMd = () => {
     const c = charData;
     const lines = [];
@@ -9322,6 +10511,63 @@ function CharExportTab({charData, data, exportChar, importJSON}) {
         </div>
         {mdPreview?<pre className="md-preview">{md}</pre>:null}
       </div>
+      <SillyTavernExportCard charData={charData} data={data}/>
+    </div>
+  );
+}
+
+// Export to SillyTavern. Everything that does the work lives in the plain JS block —
+// only the panel is here, because this Babel block is already near the 400 KB mark.
+function SillyTavernExportCard({charData, data}) {
+  const [pronouns, setPronouns] = React.useState('he');
+  const [busy, setBusy] = React.useState(false);
+  const [msg, setMsg] = React.useState(null);
+  const sum = stExportSummary(charData);
+
+  const onPng = async () => {
+    setBusy(true); setMsg(null);
+    const res = await exportSillyTavernPng(charData, data, {pronouns});
+    setBusy(false);
+    if(res.cancelled) return;
+    if(res.ok) setMsg({ok:true, text:'Saved '+Math.round(res.bytes/1024)+' KB to '+res.path});
+    else setMsg({ok:false, text:res.error});
+  };
+  const onJson = () => {
+    setMsg(null);
+    exportSillyTavernJson(charData, data, {pronouns});
+  };
+  const counts = [
+    [sum.greetings+' greeting'+(sum.greetings===1?'':'s'), sum.greetings>0],
+    [sum.pronouns+' pronoun macro'+(sum.pronouns===1?'':'s'), true],
+    [sum.conditionals+' conditional'+(sum.conditionals===1?'':'s'), true],
+    [sum.markup+' markup tag'+(sum.markup===1?'':'s'), true]
+  ];
+
+  return (
+    <div className="export-card">
+      <div className="export-card-title">Export to SillyTavern</div>
+      <p className="export-card-desc">A character card PNG — the portrait with the card data written into it. Saucepan macros are resolved to real words, because SillyTavern would print them literally. Pronoun choice decides which.</p>
+      <div className="export-card-meta">
+        {counts.map(([label,ok])=>(
+          <span key={label} className={"export-field-"+(ok?"ok":"missing")}>{label}</span>
+        ))}
+        <span className={"export-field-"+(sum.hasPortrait?"ok":"missing")}>{sum.hasPortrait?"✓ portrait on disk":"– no portrait file"}</span>
+      </div>
+      <div className="field-block">
+        <label>Pronouns</label>
+        <select value={pronouns} onChange={e=>setPronouns(e.target.value)}>
+          <option value="he">he / him</option>
+          <option value="she">she / her</option>
+          <option value="they">they / them</option>
+        </select>
+      </div>
+      {sum.source?<p className="export-card-desc" style={ST_OK_NOTE}>Source link: {sum.source[0]}</p>:null}
+      {sum.sourceReason?<p className="export-card-desc" style={ST_WARN_NOTE}>No source link: {sum.sourceReason}. Set the Saucepan Link field above.</p>:null}
+      <div className="export-row">
+        <button className="btn primary" onClick={onPng} disabled={busy||!sum.hasPortrait}><i className="ti ti-photo-down"></i>{busy?'Building…':'Export card PNG'}</button>
+        <button className="btn" onClick={onJson}><i className="ti ti-file-code"></i>Export JSON only</button>
+      </div>
+      {msg?<p className="export-card-desc" style={msg.ok?ST_OK_NOTE:ST_WARN_NOTE}>{msg.text}</p>:null}
     </div>
   );
 }
@@ -9610,70 +10856,184 @@ function PersonasPage({data,setSelectedPersona}) {
   );
 }
 
-function PersonaDetailPage({persona,data,update,onBack}) {
+function PersonaDetailPage({persona,data,update,onBack,setLightboxSrc}) {
   const updP=(fn)=>update(d=>{const p=d.personas?.find(x=>x.id===persona.id);if(p)fn(p);});
   const pData=(data.personas||[]).find(x=>x.id===persona.id)||persona;
-  const portRef=React.useRef();
+  const [tab,setTab]=React.useState('profile');
 
   // Personas had no independent file backup — the Personas\ folder existed but nothing
   // ever wrote to it automatically, so a persona only lived inside the main data file.
   // Debounced-write a standalone JSON per persona, same as Notes and Templates.
-  // image.data (base64) is stripped: image_relpath is the real reference, and keeping
-  // the blob would bloat the backup for no recovery value.
+  //
+  // Base64 is stripped from the main image AND from every portrait: relPath is the real
+  // reference, and the blobs would bloat a backup whose whole point is being small enough
+  // to push after every session. relPath is KEPT, unlike a Saucepan export — this file is
+  // the only recoverable copy of a persona, so it has to say where the picture is.
   const personaFileTimer=React.useRef();
   React.useEffect(()=>{
     if(!pData||!pData.id) return;
     clearTimeout(personaFileTimer.current);
     personaFileTimer.current=setTimeout(()=>{
-      const {image,...rest}=pData;
+      const {image,portraits,...rest}=pData;
       const safeImage=image&&image.id?{id:image.id}:null;
-      const payload={...rest,image:safeImage};
+      const safePortraits=(portraits||[]).map(p=>{const {data:_d,...pRest}=p;return pRest;});
+      const payload={...rest,image:safeImage,portraits:safePortraits};
       const safeName=(pData.name||('persona-'+pData.id)).replace(/[^a-zA-Z0-9_-]/g,'_')+'-persona';
       window.lorekeeper.savePersonaFile(safeName,payload).catch(()=>{});
     },800);
     return ()=>clearTimeout(personaFileTimer.current);
   },[pData]);
 
+  // Store the relPath and NOT the base64 when the copy succeeds.
+  //
+  // This used to write both — `p.image={data:res.base64}` alongside `image_relpath` — which
+  // is the session-31 bug in miniature: update() deep-clones the whole data tree on every
+  // keystroke, so a blob in the data file is a cost paid per character typed, anywhere in
+  // the app. Two personas were holding 3.08 MB between them while also having working
+  // relPaths. Base64 is kept only as the fallback for a copy that failed, where it is the
+  // difference between a picture and no picture.
   const handlePortrait=async()=>{
-    const r=await window.lorekeeper.importImage();
+    const r=await window.lorekeeper.importImage({defaultPath:'Personas'});
     if(!r) return;
     const safeName=(pData.name||'persona').replace(/[^a-zA-Z0-9_-]/g,'_');
     const res=await window.lorekeeper.copyImageToFolder(r.srcPath,'Personas',safeName);
-    if(res){ updP(p=>{p.image={data:res.base64};p.image_relpath=res.relPath;}); }
+    if(res){ updP(p=>{p.image={relPath:res.relPath};p.image_relpath=res.relPath;}); }
     else { updP(p=>{p.image={data:r.base64};}); }
   };
+
+  const mainSrc=pData.image?.relPath||pData.image?.data||pData.image_relpath||null;
+  const portraitCount=(pData.portraits||[]).length;
+
   return (
     <div>
       <div className="breadcrumb" onClick={onBack}><i className="ti ti-arrow-left"></i><span>Personas</span><i className="ti ti-chevron-right"></i><span>{pData.name}</span></div>
       <div className="char-detail">
         <div className="char-sidebar">
-          <div className="char-portrait-lg">{pData.image?.data||pData.image_relpath?<ImgFromPath src={pData.image?.data||pData.image_relpath} alt={pData.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<i className="ti ti-masks-theater" style={{fontSize:64,color:'var(--text3)'}}></i>}</div>
+          <div className="char-portrait-lg">{mainSrc?<ImgFromPath src={mainSrc} alt={pData.name} style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<i className="ti ti-masks-theater" style={{fontSize:64,color:'var(--text3)'}}></i>}</div>
           <button className="btn" style={{width:'100%',justifyContent:'center'}} onClick={handlePortrait}><i className="ti ti-camera"></i>Set Portrait</button>
           <div className="info-card">
             <h4>Quick Info</h4>
             <div className="info-row"><span className="label">Pronouns</span><span className="value">{pData.pronouns||'—'}</span></div>
+            <div className="info-row"><span className="label">Portraits</span><span className="value">{portraitCount||'—'}</span></div>
             <div className="info-row"><span className="label">Lorebook</span><span className="value">{pData.linked_lorebook?data.lorebooks.find(l=>l.id===pData.linked_lorebook)?.name||'—':'—'}</span></div>
           </div>
         </div>
         <div className="char-main">
           <div style={{display:'flex',gap:4,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:4}}>
-            <div className="sub-nav-item active" style={{fontSize:12,padding:'5px 10px'}}>Profile</div>
+            <div className={tab==='profile'?'sub-nav-item active':'sub-nav-item'} style={PP_TAB_STYLE} onClick={()=>setTab('profile')}>Profile</div>
+            <div className={tab==='portraits'?'sub-nav-item active':'sub-nav-item'} style={PP_TAB_STYLE} onClick={()=>setTab('portraits')}>Portraits</div>
           </div>
-          <div style={{display:'flex',flexDirection:'column',gap:12}}>
-            <div className="field-row">
-              <div className="field-block"><label>Name</label><input value={pData.name} onChange={e=>updP(p=>p.name=e.target.value)}/></div>
-              <div className="field-block"><label>Pronouns</label><input value={pData.pronouns||''} onChange={e=>updP(p=>p.pronouns=e.target.value)} placeholder="e.g. they/them, she/her"/></div>
-            </div>
-            <div className="field-block"><label>Description</label><textarea value={pData.description||''} onChange={e=>updP(p=>p.description=e.target.value)} style={{minHeight:200}} placeholder="Who is this persona? Appearance, personality, background…"/></div>
-            <div className="field-block">
-              <label>Linked Lorebook</label>
-              <select value={pData.linked_lorebook||''} onChange={e=>updP(p=>p.linked_lorebook=e.target.value||null)}>
-                <option value="">— None —</option>
-                {data.lorebooks.map(l=>{const w=data.worlds.find(x=>x.id===l.world_id); return <option key={l.id} value={l.id}>{w?.emoji?w.emoji+' ':''}{w?.name?w.name+' · ':''}{l.name}</option>;})}
-              </select>
-              <div className="field-hint">Personas can have one lorebook attached — can be from any world.</div>
-            </div>
-          </div>
+          {tab==='portraits'
+            ? <PersonaPortraitsTab pData={pData} updP={updP} setLightboxSrc={setLightboxSrc}/>
+            : <PersonaProfileTab pData={pData} updP={updP} data={data}/>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PersonaProfileTab({pData,updP,data}) {
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:12}}>
+      <div className="field-row">
+        <div className="field-block"><label>Name</label><input value={pData.name} onChange={e=>updP(p=>p.name=e.target.value)}/></div>
+        <div className="field-block"><label>Pronouns</label><input value={pData.pronouns||''} onChange={e=>updP(p=>p.pronouns=e.target.value)} placeholder="e.g. they/them, she/her"/></div>
+      </div>
+      <div className="field-block"><label>Description</label><textarea value={pData.description||''} onChange={e=>updP(p=>p.description=e.target.value)} style={{minHeight:200}} placeholder="Who is this persona? Appearance, personality, background…"/></div>
+      <div className="field-block">
+        <label>Linked Lorebook</label>
+        <select value={pData.linked_lorebook||''} onChange={e=>updP(p=>p.linked_lorebook=e.target.value||null)}>
+          <option value="">— None —</option>
+          {data.lorebooks.map(l=>{const w=data.worlds.find(x=>x.id===l.world_id); return <option key={l.id} value={l.id}>{w?.emoji?w.emoji+' ':''}{w?.name?w.name+' · ':''}{l.name}</option>;})}
+        </select>
+        <div className="field-hint">Personas can have one lorebook attached — can be from any world.</div>
+      </div>
+    </div>
+  );
+}
+
+// Persona portraits. Deliberately simpler than the character version: a persona cannot be
+// exported to or imported from Saucepan, so there is no platform Image ID, no Extra Spicy
+// and no Gallery only — those three exist to match fields the site sets, and a field that
+// can never travel anywhere is a field that only invites being filled in for nothing.
+//
+// Every image is prefixed with the persona's name, because Personas\ is ONE FLAT FOLDER
+// shared by every persona and copy-image-to-folder overwrites without checking. Two
+// personas each adding a "ref1.png" would otherwise silently end up sharing one picture.
+function PersonaPortraitsTab({pData,updP,setLightboxSrc}) {
+  const dragIdx=React.useRef(null);
+  const dragOverIdx=React.useRef(null);
+  const ports=pData.portraits||[];
+  const safeName=(pData.name||'persona').replace(/[^a-zA-Z0-9_-]/g,'_');
+
+  const onDrop=()=>{
+    const from=dragIdx.current,to=dragOverIdx.current;
+    if(from===null||to===null||from===to) return;
+    updP(p=>{const arr=[...(p.portraits||[])];const[item]=arr.splice(from,1);arr.splice(to,0,item);p.portraits=arr;});
+    dragIdx.current=null;dragOverIdx.current=null;
+  };
+
+  const addPortraits=async()=>{
+    const dp=await window.lorekeeper.getDataDir();
+    const imgs=await window.lorekeeper.importImages({defaultPath:dp+'\\Personas'});
+    if(!imgs||!imgs.length) return;
+    const slots=10-ports.length;
+    const toAdd=imgs.slice(0,slots);
+    const copies=await Promise.all(toAdd.map((img,i)=>
+      window.lorekeeper.copyImageToFolder(img.srcPath,'Personas',safeName+'-'+personaPortraitStem(img.name,ports.length+i+1))
+    ));
+    updP(p=>{
+      if(!p.portraits)p.portraits=[];
+      toAdd.forEach((img,idx)=>{
+        const res=copies[idx];
+        p.portraits.push({name:personaPortraitStem(img.name,p.portraits.length+1),description:'',data:res?null:img.base64,relPath:res?res.relPath:null});
+      });
+    });
+  };
+
+  return (
+    <div className="field-block">
+      <label>Portraits ({ports.length}/10)</label>
+      <div className="field-hint">Reference images for this persona. Local only — personas cannot be uploaded to or downloaded from Saucepan, so these never leave this machine.</div>
+      <div style={PP_GRID_STYLE}>
+        {ports.map((p,i)=>(
+          <PersonaPortraitSlot key={i} p={p} i={i} updP={updP} setLightboxSrc={setLightboxSrc}
+            dragIdx={dragIdx} dragOverIdx={dragOverIdx} onDrop={onDrop}/>
+        ))}
+        {ports.length<10?(
+          <button className="btn" style={PP_ADD_STYLE} onClick={addPortraits}>
+            <i className="ti ti-plus" style={{fontSize:24}}></i><span style={{fontSize:11}}>Add portraits</span>
+          </button>
+        ):null}
+      </div>
+    </div>
+  );
+}
+
+function PersonaPortraitSlot({p,i,updP,setLightboxSrc,dragIdx,dragOverIdx,onDrop}) {
+  const src=p.relPath||p.data||null;
+  const setMain=()=>updP(x=>{x.image={relPath:p.relPath||null};if(p.relPath)x.image_relpath=p.relPath;});
+  const remove=()=>updP(x=>{x.portraits.splice(i,1);});
+  const view=()=>{ if(setLightboxSrc) setLightboxSrc(src); };
+  return (
+    <div draggable
+      onDragStart={()=>{dragIdx.current=i;}}
+      onDragOver={e=>{e.preventDefault();dragOverIdx.current=i;}}
+      onDrop={onDrop}
+      style={PP_SLOT_STYLE}>
+      <div style={PP_GRIP_STYLE}>
+        <i className="ti ti-grip-vertical" style={{color:'#fff',fontSize:13,opacity:0.8}}></i>
+      </div>
+      {src
+        ? <ImgFromPath src={src} alt={p.name} style={PP_IMG_STYLE}/>
+        : <div style={PP_IMG_EMPTY_STYLE}><i className="ti ti-masks-theater" style={{fontSize:36,color:'var(--text3)'}}></i></div>}
+      <div style={{padding:'8px'}}>
+        <input value={p.name||''} onChange={e=>updP(x=>x.portraits[i].name=e.target.value)} placeholder="Name" style={PP_NAME_STYLE}/>
+        <input value={p.description||''} onChange={e=>updP(x=>x.portraits[i].description=e.target.value)} placeholder="Note (optional)" style={PP_DESC_STYLE}/>
+        <div style={{display:'flex',gap:4,marginTop:6}}>
+          <button className="btn" style={{flex:1,justifyContent:'center',padding:'3px',fontSize:11}} onClick={setMain} title="Use this as the persona's main portrait"><i className="ti ti-user-check" style={{fontSize:12}}></i></button>
+          {src?<button className="btn" style={{padding:'3px 5px',fontSize:11}} onClick={view} title="View full image"><i className="ti ti-zoom-in" style={{fontSize:12}}></i></button>:null}
+          <button className="btn danger" style={{padding:'3px 6px',fontSize:11}} onClick={remove} title="Remove this slot — the file on disk is left alone"><i className="ti ti-x"></i></button>
         </div>
       </div>
     </div>
@@ -9681,12 +11041,336 @@ function PersonaDetailPage({persona,data,update,onBack}) {
 }
 
 
+// ── Notes ingest, slice 1 ────────────────────────────────────────────────
+// Reads the .md files in Notes\ back and compares them against the notes held in
+// the data file. THIS IS THE FIRST PLACE THE APP LOOKS AT ITS OWN OUTPUT.
+//
+// What it deliberately does NOT do: decide which side is right. Telling "the file
+// was edited somewhere else" from "the app has not written this one yet" needs a
+// record of what was last written to each file, and that record does not exist yet
+// - it is the next slice. Until it does, every difference is a question put to the
+// user with both versions visible, never a merge and never an overwrite.
+//
+// Direction: resolving a row writes BOTH SIDES — the note in the data file and the .md
+// on disk — because this page is the one place that changes a note while the note's own
+// editor is not mounted. An earlier version of this comment claimed app -> file "already
+// happens on every keystroke through saveNotesFile" and skipped the file write on that
+// basis. It does happen on every keystroke, in the Notes panel and the World Info tab,
+// neither of which is open while you are here. See writeNote.
+// One ordered list instead of two blocks side by side. A one-line difference in a
+// twenty-line note is genuinely hard to find by reading two columns, and comparing
+// two columns is the part that costs the most to read.
+//
+// Colour is never the only signal: a colourblind theme remaps --green and --red, so
+// every changed line also carries a - or + marker and the legend spells out what each
+// one means in words.
+function NoteDiffView({app, file}) {
+  const ops = lineDiff(app, file);
+  const pre = {fontSize: 11, fontFamily: 'monospace', background: 'var(--bg3)', padding: 8, borderRadius: 4, whiteSpace: 'pre-wrap', maxHeight: 260, overflowY: 'auto', color: 'var(--text2)', margin: 0};
+
+  if (!ops) {
+    // Past the diff cap. Showing both whole is worse, but it is honest about being worse.
+    return <div style={{marginTop: 8}}>
+      <div style={{fontSize: 11, color: 'var(--amber)', marginBottom: 6}}>Too long to compare line by line.</div>
+      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8}}>
+        <div><div style={{fontSize: 10, color: 'var(--text3)', marginBottom: 4}}>IN THE APP</div><pre style={pre}>{app || '(empty)'}</pre></div>
+        <div><div style={{fontSize: 10, color: 'var(--text3)', marginBottom: 4}}>ON DISK</div><pre style={pre}>{file || '(empty)'}</pre></div>
+      </div>
+    </div>;
+  }
+
+  const c = diffCounts(ops);
+  // Blank lines counted apart. Three of the four "changed" lines in a note can be blank,
+  // which makes a one-word edit read as a four-line rewrite and renders as empty bars.
+  const blank = {app: 0, file: 0};
+  ops.forEach(o => { if (o.t !== 'same' && o.line.trim() === '') blank[o.t]++; });
+  const realApp = c.app - blank.app, realFile = c.file - blank.file;
+  const n = (k, w) => k + ' ' + w + (k === 1 ? '' : 's');
+  const rowStyle = (t) => {
+    if (t === 'app') return {background: 'rgba(248,113,113,0.12)', borderLeft: '2px solid var(--red)', color: 'var(--text2)'};
+    if (t === 'file') return {background: 'rgba(110,231,183,0.12)', borderLeft: '2px solid var(--green)', color: 'var(--text2)'};
+    return {borderLeft: '2px solid transparent', color: 'var(--text3)'};
+  };
+  const mark = {app: '-', file: '+', same: ' '};
+
+  return <div style={{marginTop: 8}}>
+    <div style={{fontSize: 11, color: 'var(--text3)', marginBottom: 6, lineHeight: 1.6}}>
+      {realApp === 0 && realFile === 0 && <span>Only blank lines differ.</span>}
+      {realApp > 0 && <span><span style={{color: 'var(--red)'}}>&minus; {n(realApp, 'line')} only in the app</span>{realFile > 0 ? ', ' : '. '}</span>}
+      {realFile > 0 && <span><span style={{color: 'var(--green)'}}>+ {n(realFile, 'line')} only on disk</span>{'. '}</span>}
+      {(blank.app + blank.file) > 0 && <span>{n(blank.app + blank.file, 'blank line')} differ too. </span>}
+      <span style={{opacity: 0.8}}>Use the file keeps <span style={{color: 'var(--green)'}}>+</span>, drops <span style={{color: 'var(--red)'}}>&minus;</span>.</span>
+    </div>
+    <div style={{background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 4, maxHeight: 300, overflowY: 'auto', padding: '4px 0'}}>
+      {ops.map((o, i) => <div key={i} style={Object.assign({display: 'flex', gap: 8, padding: '1px 8px', fontSize: 11, fontFamily: 'monospace', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word'}, rowStyle(o.t))}>
+        <span style={{opacity: 0.7, flexShrink: 0, width: 8}}>{mark[o.t]}</span>
+        <span style={{flex: 1, minWidth: 0}}>{o.line.trim() === '' ? <em style={{opacity: 0.45, fontStyle: 'italic'}}>blank line</em> : o.line}</span>
+      </div>)}
+    </div>
+  </div>;
+}
+
+function NotesIngestPanel({data, update}) {
+  const [rows, setRows] = React.useState(null);
+  const [busy, setBusy] = React.useState(false);
+  const [err, setErr] = React.useState('');
+  const [open, setOpen] = React.useState(null);
+  const [mergeFn, setMergeFn] = React.useState(null);
+  const [mergeText, setMergeText] = React.useState('');
+  // What the merge actually did, so the hint can state it instead of describing the
+  // general case. A fixed sentence is wrong as soon as the number is not one.
+  const [mergeInfo, setMergeInfo] = React.useState(null);
+
+  // Checked on opening the page, not on pressing a button. An ingest that only runs
+  // when remembered is an ingest that does not run: the case it exists for is a note
+  // edited somewhere else, which is exactly the case you would not think to check for.
+  const didAuto = React.useRef(false);
+  React.useEffect(() => {
+    if (didAuto.current) return;
+    didAuto.current = true;
+    scan();
+  }, []);
+
+  const scan = async () => {
+    // applied is NOT cleared here. Re-checking is something you do while working
+    // through the list, and wiping the only way back out of an overwrite because the
+    // user pressed refresh would be the worst possible moment to lose it.
+    setBusy(true); setErr(''); setOpen(null); setMergeFn(null); setMergeText(''); setMergeInfo(null);
+    try {
+      const r = await window.lorekeeper.readNotesFiles();
+      if (!r || !r.success) { setErr((r && r.error) || 'Could not read the Notes folder.'); setRows([]); setBusy(false); return; }
+
+      // Build the app side first, keyed by the filename each note WOULD be written to.
+      // Going in this direction rather than matching on the file names means a note that
+      // has never been written to disk still appears, which is itself worth seeing.
+      const sync = (data && data.notes_sync) || {};
+      const agreed = {};   // notes whose file already matches: free baselines
+      const want = {};
+      want['_global.md'] = {label: 'Global scratchpad', key: '_global', text: String(data.notes || '')};
+      (data.worlds || []).forEach(w => {
+        want[notesFileNameFor(w.name || ('world-' + w.id))] = {label: w.name || ('World ' + w.id), key: w.id, text: String(w.notes || '')};
+      });
+
+      const byName = {};
+      (r.files || []).forEach(f => { byName[f.name] = f; });
+
+      const out = [];
+      Object.keys(want).forEach(fn => {
+        const w = want[fn];
+        const f = byName[fn];
+        if (!f) {
+          if (w.text.trim()) out.push({fn, label: w.label, key: w.key, state: 'missing', app: w.text, file: ''});
+          return;
+        }
+        if (String(f.content) === w.text) { agreed[fn] = w.text; return; }  // identical: this IS the baseline
+        // WHICH SIDE CHANGED, now that there is a baseline to compare against.
+        // Without one every difference was a question; with one, most are not.
+        const base = sync[fn];
+        let state = 'differs';
+        if (base != null) {
+          const appMoved = w.text !== base, fileMoved = String(f.content) !== base;
+          if (fileMoved && !appMoved) state = 'disk';       // edited elsewhere: the whole point
+          else if (appMoved && !fileMoved) state = 'here';  // app ahead, file write pending or failed
+          else state = 'both';
+        }
+        out.push({fn, label: w.label, key: w.key, state, app: w.text, file: String(f.content), mtime: f.mtime, base});
+      });
+
+      // Files with no matching note at all. A renamed world leaves one of these behind,
+      // and so does a note file written by something that is not this app.
+      (r.files || []).forEach(f => {
+        if (!want[f.name]) out.push({fn: f.name, label: f.base, key: null, state: 'orphan', app: '', file: String(f.content), mtime: f.mtime});
+      });
+
+      out.sort((a, b) => a.label.localeCompare(b.label));
+      // Every note that already matches its file gives a baseline for nothing. After one
+      // scan, only the notes currently in dispute lack one, and resolving each supplies it.
+      const fresh = Object.keys(agreed).filter(k => sync[k] !== agreed[k]);
+      if (fresh.length) update(d => { if (!d.notes_sync) d.notes_sync = {}; fresh.forEach(k => { d.notes_sync[k] = agreed[k]; }); });
+      setRows(out);
+    } catch (e) { setErr(e.message); setRows([]); }
+    setBusy(false);
+  };
+
+  // One place writes the note, whether the text came from the file or from the merge box,
+  // so there is exactly one path that can overwrite a note and exactly one that records
+  // what it overwrote.
+  const writeNote = async (row, text) => {
+    if (row.key === null) return;
+    const before = row.app;
+    if (row.key === '_global') update(d => { d.notes = text; });
+    else update(d => { const w = (d.worlds || []).find(x => x.id === row.key); if (w) w.notes = text; });
+
+    // WRITE THE FILE TOO, and record the baseline only once it is on disk.
+    //
+    // This used to skip the file on the reasoning that "the note's own editor rewrites
+    // the .md on every keystroke". That editor is only mounted on the Notes panel and the
+    // World Info tab — NOT on this page — so after a merge the file kept its old content
+    // while both the note and the baseline moved to the merged text.
+    //
+    // The next scan then saw app == baseline and file != baseline, which is the signature
+    // of "edited elsewhere", and offered to take the file: one click from overwriting the
+    // merge with the very text it had just replaced. Confirmed on The Arcana Society,
+    // where a merged line sat in world.notes and in no file at all, and the row came back
+    // after every restart.
+    //
+    // Gating the baseline on a successful write is what the two debounced editor paths
+    // already did; this third writer was the one that did not. If the write fails the
+    // baseline is left alone, so the next scan reports "app ahead, file write pending or
+    // failed" — which is true — instead of blaming the file.
+    //
+    // Taking the file is the one case that needs no write: the file already holds this
+    // text, and rewriting it would move its timestamp for nothing. That timestamp is one
+    // of the few honest signals of where an edit came from.
+    let wrote = true;
+    if (text !== row.file) {
+      try { wrote = await window.lorekeeper.saveNotesFile(row.fn, text); }
+      catch (e) { wrote = false; }
+    }
+    if (wrote) update(d => { if (!d.notes_sync) d.notes_sync = {}; d.notes_sync[row.fn] = text; });
+    else setErr('Saved to the note, but writing Notes' + BS + row.fn + ' failed — the file still holds the old text.');
+    // The row is not removed. It turns into a done strip IN THE SAME POSITION, carrying
+    // its own Undo. A control that appears somewhere else on the page is a control you
+    // have to go and find after acting, which is the wrong moment to be hunting.
+    setRows(prev => (prev || []).map(r => r.fn === row.fn ? Object.assign({}, r, {done: true, before: before}) : r));
+    setOpen(null); setMergeFn(null); setMergeText(''); setMergeInfo(null);
+  };
+
+  // Undo is in-session only, and says so rather than implying more than it does. The
+  // previous text is held here in memory; leaving the page loses it. It exists because
+  // taking the file is a one-click overwrite of something that may have been the only
+  // copy, and a one-click mistake deserves a one-click way back.
+  const undo = (row) => {
+    if (row.key === '_global') update(d => { d.notes = row.before; });
+    else update(d => { const w = (d.worlds || []).find(x => x.id === row.key); if (w) w.notes = row.before; });
+    setRows(prev => (prev || []).map(r => r.fn === row.fn ? Object.assign({}, r, {done: false, before: undefined}) : r));
+  };
+
+  // Only the unambiguous ones. A note changed on BOTH sides is never swept up in a
+  // bulk action - that is the case a human has to look at.
+  const safe = (rows || []).filter(r => r.state === 'disk' && !r.done);
+  // Safe to call in a loop only because update() is setData(d => ...) - each call sees
+  // the result of the one before it. A closure-reading updater would have the last write
+  // silently clobber the others, which is the quiet kind of data loss.
+  const takeAllSafe = () => { safe.forEach(r => writeNote(r, r.file)); };
+
+  const startMerge = (row) => {
+    if (row.base != null) {
+      const m = threeWayMerge(row.base, row.app, row.file);
+      // The diff stays open. You edit the merge while looking at what changed; closing it
+      // meant clicking Compare again to see the thing the edit is about.
+      if (m) { setMergeText(m.text); setMergeInfo({mode: '3way', conflicts: m.conflicts}); setMergeFn(row.fn); setOpen(row.fn); return; }
+    }
+    // No baseline: the best available is the union, which can add but cannot delete.
+    // The box says so rather than presenting a guess as a merge.
+    const ops = lineDiff(row.app, row.file);
+    // Without a baseline the one-sided lines are the ONLY thing that can be counted. Which
+    // of them are deletions and which are additions is precisely what is unknown, so the
+    // hint counts them and says what to do, rather than claiming to know which is which.
+    const c = ops ? diffCounts(ops) : {app: 0, file: 0};
+    setMergeText(ops ? mergeLines(ops) : (row.file || ''));
+    setMergeInfo({mode: 'union', oneSided: c.app + c.file});
+    setMergeFn(row.fn);
+    setOpen(row.fn);
+  };
+
+  const box = {marginTop: 24, background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--rl)', padding: 16};
+  const hdr = {fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12};
+  const p = {fontSize: 12, color: 'var(--text3)', marginBottom: 10, lineHeight: 1.6};
+  const code = {background: 'var(--bg3)', padding: '1px 5px', borderRadius: 3, fontFamily: 'monospace'};
+  const pre = {fontSize: 11, fontFamily: 'monospace', background: 'var(--bg3)', padding: 8, borderRadius: 4, whiteSpace: 'pre-wrap', maxHeight: 220, overflowY: 'auto', color: 'var(--text2)', margin: 0};
+
+  const stateNote = {
+    disk: 'Edited outside the app; your note is untouched. Taking the file is safe.',
+    here: 'The note is ahead of its file. The file catches up next time you type in it.',
+    both: 'Both changed since they last agreed. Merge, or pick one.',
+    differs: 'No record of what these last agreed on, so which side changed is unknown.',
+    orphan: 'Nothing in the app writes to this file — usually a renamed world. Read it before deleting it.',
+    missing: 'Has text, no file yet. One is written the next time you edit the note.'
+  };
+  const stateLabel = {disk: 'Changed on disk', here: 'Changed here', both: 'Changed in both', differs: 'Differs', missing: 'No file yet', orphan: 'No matching note'};
+  const stateColor = {disk: 'var(--green)', here: 'var(--text3)', both: 'var(--amber)', differs: 'var(--amber)', missing: 'var(--text3)', orphan: 'var(--text3)'};
+
+  return (
+    <div style={box}>
+      <div style={hdr}>Notes — check for outside edits</div>
+      <p style={p}>
+        Finds notes edited outside Lorekeeper — on another machine, or in a text editor. Nothing is overwritten without you choosing it.
+      </p>
+      <div style={{display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap'}}>
+        <button className="btn" style={{fontSize: 12}} disabled={busy} onClick={scan}>
+          <i className="ti ti-refresh"></i>{busy ? 'Checking…' : 'Check again'}
+        </button>
+        {safe.length > 1 && <button className="btn primary" style={{fontSize: 12}} onClick={takeAllSafe}>
+          <i className="ti ti-download"></i>Take all {safe.length} disk changes
+        </button>}
+      </div>
+
+      {err && <div style={{marginTop: 10, fontSize: 12, color: 'var(--red)'}}>{err}</div>}
+
+      {rows && rows.length === 0 && !err &&
+        <div style={{marginTop: 10, fontSize: 12, color: 'var(--green)'}}>Every note matches its file. Nothing has been edited outside the app.</div>}
+
+      {rows && rows.length > 0 && <div style={{marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8}}>
+        {rows.map(r => r.done
+          ? <div key={r.fn} style={{border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg3)'}}>
+              <i className="ti ti-check" style={{color: 'var(--green)', fontSize: 14}}></i>
+              <span style={{fontSize: 13, color: 'var(--text2)'}}><strong style={{color: 'var(--text)'}}>{r.label}</strong> updated</span>
+              <span style={{fontSize: 11, color: 'var(--text3)', marginLeft: 'auto'}}>Undo is lost when you leave this page</span>
+              <button className="btn" style={{fontSize: 11, padding: '2px 10px'}} onClick={() => undo(r)}>Undo</button>
+            </div>
+          : <div key={r.fn} style={{border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 10}}>
+          <div style={{display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap'}}>
+            <span style={{fontSize: 13, color: 'var(--text)', fontWeight: 600}}>{r.label}</span>
+            <span style={{fontSize: 10, color: stateColor[r.state], border: '1px solid ' + stateColor[r.state], borderRadius: 3, padding: '1px 5px'}}>{stateLabel[r.state]}</span>
+            <span style={{fontSize: 10, color: 'var(--text3)', fontFamily: 'monospace'}}>{r.fn}</span>
+            <button className="btn" style={{fontSize: 11, padding: '2px 8px', marginLeft: 'auto'}}
+              onClick={() => setOpen(open === r.fn ? null : r.fn)}>{open === r.fn ? 'Hide' : 'Compare'}</button>
+            {r.state !== 'orphan' && r.file !== '' && <React.Fragment>
+              <button className="btn" style={{fontSize: 11, padding: '2px 8px'}} onClick={() => startMerge(r)}>Merge</button>
+              <button className="btn" style={{fontSize: 11, padding: '2px 8px'}} onClick={() => writeNote(r, r.file)}>Use the file</button>
+            </React.Fragment>}
+          </div>
+          {stateNote[r.state] && <div style={{fontSize: 11, color: r.state === 'both' ? 'var(--amber)' : 'var(--text3)', marginTop: 6, lineHeight: 1.5}}>{stateNote[r.state]}</div>}
+          {open === r.fn && <NoteDiffView app={r.app} file={r.file}/>}
+          {mergeFn === r.fn && <div style={{marginTop: 8}}>
+            <div style={{fontSize: 10, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em'}}>Merged — edit, then save</div>
+            {mergeInfo && mergeInfo.mode === '3way' && (mergeInfo.conflicts > 0
+              ? <div style={{fontSize: 11, color: 'var(--amber)', marginBottom: 6, lineHeight: 1.5}}>
+                  {mergeInfo.conflicts === 1 ? '1 line was changed on both sides and appears twice' : mergeInfo.conflicts + ' lines were changed on both sides and appear twice'} — delete the version you do not want.
+                </div>
+              : <div style={{fontSize: 11, color: 'var(--text3)', marginBottom: 6, lineHeight: 1.5}}>
+                  Merged cleanly, deletions included. Nothing to resolve.
+                </div>)}
+            {mergeInfo && mergeInfo.mode === 'union' && <div style={{fontSize: 11, color: 'var(--amber)', marginBottom: 6, lineHeight: 1.5}}>
+              <strong>First merge for this note — deletions not detected.</strong>{' '}
+              {mergeInfo.oneSided === 1 ? '1 line appears in only one version' : mergeInfo.oneSided + ' lines appear in only one version'}; any you deleted are still below, so remove those by hand. Later merges handle it.
+            </div>}
+            <textarea value={mergeText} onChange={e => setMergeText(e.target.value)} spellCheck={false}
+              style={{width: '100%', minHeight: 220, background: 'var(--bg3)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 4, padding: 8, fontSize: 12, fontFamily: 'monospace', lineHeight: 1.6, resize: 'vertical'}}/>
+            <div style={{display: 'flex', gap: 8, marginTop: 8}}>
+              <button className="btn primary" style={{fontSize: 11, padding: '3px 10px'}} onClick={() => writeNote(r, mergeText)}>Save to the note</button>
+              <button className="btn" style={{fontSize: 11, padding: '3px 10px'}} onClick={() => { setMergeFn(null); setMergeText(''); }}>Cancel</button>
+            </div>
+          </div>}
+        </div>)}
+      </div>}
+    </div>
+  );
+}
+
+</script>
+<script type="text/babel">
+// ── Babel block 3 of 3 — see block 1 for why this is split ──
+// Split from block 2 in session 45, when the SillyTavern export panel took it to
+// 391 KB compiled (78% of the ceiling). The rule is to split BEFORE a feature lands
+// in a block that is already near 400 KB, not after.
 function NotesBackupPanel({data}) {
   return (
     <div style={{marginTop:24,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:16}}>
-      <div style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:12}}>Notes & Templates Backups</div>
+      <div style={{fontSize:11,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:12}}>Notes, Templates & Timelines Backups</div>
       <p style={{fontSize:12,color:'var(--text3)',marginBottom:8,lineHeight:1.6}}>
-        Notes and templates have no other independent backup — unlike characters, lorebooks, and collections, they only live inside the main data file. To protect against that, every world's notes (and the global scratchpad) auto-save as plain text files in <code style={{background:'var(--bg3)',padding:'1px 5px',borderRadius:3,fontFamily:'monospace'}}>Notes\</code>, and every template auto-saves as a JSON file in <code style={{background:'var(--bg3)',padding:'1px 5px',borderRadius:3,fontFamily:'monospace'}}>Templates\</code>, independent of the main save. If the main data file is ever lost, these can be recovered from there.
+        Notes, templates and timelines have no other independent backup — unlike characters, lorebooks, and collections, they only live inside the main data file. To protect against that, every world's notes (and the global scratchpad) auto-save as plain text files in <code style={{background:'var(--bg3)',padding:'1px 5px',borderRadius:3,fontFamily:'monospace'}}>Notes\</code>, every template auto-saves as a JSON file in <code style={{background:'var(--bg3)',padding:'1px 5px',borderRadius:3,fontFamily:'monospace'}}>Templates\</code>, and each world's timeline auto-saves to <code style={{background:'var(--bg3)',padding:'1px 5px',borderRadius:3,fontFamily:'monospace'}}>Timelines\</code>, independent of the main save. If the main data file is ever lost, these can be recovered from there.
       </p>
       <div style={{display:'flex',gap:8}}>
         <button className="btn" style={{fontSize:12}} onClick={()=>window.lorekeeper.openFolder('Notes')}>
@@ -9694,6 +11378,9 @@ function NotesBackupPanel({data}) {
         </button>
         <button className="btn" style={{fontSize:12}} onClick={()=>window.lorekeeper.openFolder('Templates')}>
           <i className="ti ti-folder-open"></i>Open Templates folder
+        </button>
+        <button className="btn" style={{fontSize:12}} onClick={()=>window.lorekeeper.openFolder('Timelines')}>
+          <i className="ti ti-folder-open"></i>Open Timelines folder
         </button>
       </div>
     </div>
@@ -10410,6 +12097,7 @@ function BatchImportPage({data,update,importJSON,exportAll}) {
 
       <ImageMigrationPanel data={data} update={update}/>
       <NotesBackupPanel data={data}/>
+      <NotesIngestPanel data={data} update={update}/>
       <GitSyncPanel data={data}/>
       {mergePlan&&<MergePreviewModal plan={mergePlan.plan} onConfirm={confirmMerge} onCancel={()=>setMergePlan(null)}/>}
     </div>
@@ -11250,6 +12938,47 @@ function SettingsPage({data, update, dataPath}) {
 
   const [apiKeyVisible, setApiKeyVisible] = React.useState(false);
   const [lmTest, setLmTest] = React.useState(null);
+
+  // Task presets. State and handlers live at component level — hooks must never
+  // sit inside .map(), and nested arrows in JSX attributes have silently stopped
+  // elements rendering in this file before.
+  const [openPresetId, setOpenPresetId] = React.useState(null);
+  const presetList = getPresetList(data.settings);
+  // First edit materialises the built-ins into settings so they become the
+  // user's own copies. Until then the list is read straight from the constant.
+  const writePresets = (fn) => {
+    const base = ((data.settings||{}).ai_presets || []).length
+      ? JSON.parse(JSON.stringify((data.settings||{}).ai_presets))
+      : JSON.parse(JSON.stringify(DEFAULT_AI_PRESETS));
+    set('ai_presets', fn(base));
+  };
+  const updatePresetField = (id, key, val) => writePresets(list => {
+    const p = list.find(x => x.id === id);
+    if(p) p[key] = val;
+    return list;
+  });
+  const updatePresetParam = (id, key, val) => writePresets(list => {
+    const p = list.find(x => x.id === id);
+    if(p) { if(!p.params) p.params = {}; p.params[key] = val; }
+    return list;
+  });
+  const addPreset = () => {
+    const id = 'preset-' + Date.now();
+    writePresets(list => list.concat([{id, name:'New preset', instructions:'', params:{temperature:0.8, top_p:'', min_p:0.05, repeat_penalty:1.05, max_tokens:2000}}]));
+    setOpenPresetId(id);
+  };
+  const deletePreset = (id) => {
+    if(!confirm('Delete this preset? This cannot be undone.')) return;
+    writePresets(list => list.filter(x => x.id !== id));
+    if((data.settings||{}).ai_active_preset === id) set('ai_active_preset', '');
+    setOpenPresetId(null);
+  };
+  const restorePresets = () => {
+    if(!confirm('Replace all presets with the three built-in ones? Any edits you have made will be lost.')) return;
+    set('ai_presets', JSON.parse(JSON.stringify(DEFAULT_AI_PRESETS)));
+    setOpenPresetId(null);
+  };
+  const togglePreset = (id) => setOpenPresetId(cur => cur === id ? null : id);
   const testLmStudio = async () => {
     const base = ((data.settings||{}).lmstudio_base_url || 'http://localhost:1234/v1').replace(/\/+$/, '');
     setLmTest({state:'testing', msg:'Contacting ' + base + '…'});
@@ -11450,6 +13179,44 @@ function SettingsPage({data, update, dataPath}) {
             The Assistant's token readout turns amber at 75% of this number, leaving room for the conversation and the reply. Raising the window in LM Studio costs VRAM: enable Flash Attention and set K/V cache to Q8_0 to roughly halve that cost.
           </div>
         </React.Fragment>}
+
+        <Field label="Task presets" hint="A preset is a complete system prompt plus sampler values for one kind of output. Pick one from the Preset dropdown in the Assistant. It replaces the built-in house rules; the world, lorebook and character context is still sent underneath. Sampler values only have effect because they are sent in the request — nothing set in LM Studio's own Inference tab reaches the server.">
+          <div style={PRESET_LIST_STYLE}>
+            {presetList.map(p => (
+              <div key={p.id} style={PRESET_ROW_STYLE}>
+                <div style={PRESET_HEAD_STYLE}>
+                  <strong style={PRESET_NAME_STYLE}>{p.name}</strong>
+                  <button className="btn" style={PRESET_BTN_STYLE} onClick={()=>togglePreset(p.id)}>
+                    {openPresetId===p.id?'Close':'Edit'}
+                  </button>
+                  <button className="btn" style={PRESET_BTN_STYLE} onClick={()=>deletePreset(p.id)}>Delete</button>
+                </div>
+                {openPresetId===p.id&&<div style={PRESET_BODY_STYLE}>
+                  <input type="text" value={p.name||''} placeholder="Preset name"
+                    onChange={e=>updatePresetField(p.id,'name',e.target.value)} style={PRESET_INPUT_STYLE}/>
+                  <textarea value={p.instructions||''} placeholder="The complete system prompt for this task."
+                    onChange={e=>updatePresetField(p.id,'instructions',e.target.value)} style={PRESET_TEXTAREA_STYLE}/>
+                  <div style={PRESET_PARAMS_STYLE}>
+                    {PRESET_PARAM_FIELDS.map(f => (
+                      <label key={f.key} style={PRESET_PARAM_LABEL_STYLE} title={f.hint}>
+                        <span style={PRESET_PARAM_NAME_STYLE}>{f.label}</span>
+                        <input type="number" step={f.step} value={(p.params&&p.params[f.key]!==undefined)?p.params[f.key]:''}
+                          onChange={e=>updatePresetParam(p.id,f.key,e.target.value)} style={PRESET_NUM_STYLE}/>
+                      </label>
+                    ))}
+                  </div>
+                  <div style={PRESET_HINT_STYLE}>
+                    A blank sampler is not sent, which is how Top P stays off. Min P and repeat penalty reach LM Studio and OpenRouter only; the other providers drop them rather than erroring.
+                  </div>
+                </div>}
+              </div>
+            ))}
+          </div>
+          <div style={PRESET_ACTIONS_STYLE}>
+            <button className="btn" onClick={addPreset}><i className="ti ti-plus"></i>Add preset</button>
+            <button className="btn" onClick={restorePresets}><i className="ti ti-rotate"></i>Restore built-ins</button>
+          </div>
+        </Field>
       </Section>
 
       <Section title="Appearance" icon="ti-palette">
