@@ -6266,7 +6266,6 @@ function EditorFontPreview() {
     <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:'var(--rl)',padding:12}}>
       <textarea className="editor-text" value={txt} onChange={e=>setTxt(e.target.value)}
         style={{width:'100%',minHeight:90,background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'10px 12px',borderRadius:'var(--r)',outline:'none',resize:'vertical',boxSizing:'border-box'}}/>
-      <div style={{fontSize:10,color:'var(--text3)',marginTop:6}}>This is the real editing font at the selected size. Editing here changes nothing.</div>
     </div>
   );
 }
@@ -11293,7 +11292,7 @@ function NotesIngestPanel({data, update}) {
     <div style={box}>
       <div style={hdr}>Notes — check for outside edits</div>
       <p style={p}>
-        Finds notes edited outside Lorekeeper — on another machine, or in a text editor. Nothing is overwritten without you choosing it.
+        Compares the notes on disk against the ones in Lorekeeper. You pick which version to keep for each difference.
       </p>
       <div style={{display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap'}}>
         <button className="btn" style={{fontSize: 12}} disabled={busy} onClick={scan}>
@@ -11622,7 +11621,7 @@ function ImageMigrationPanel({data, update}) {
         </button>
       </div>
       <p style={pStyle}>
-        Scans the Lorebooks and Collections folders and reconnects any image whose link went missing. Only fills in a blank link — it never replaces one that already works, and touches nothing else.
+        Scans the Lorebooks and Collections folders and reconnects any image whose link went missing.
       </p>
       {resultNode}
     </div>
@@ -13053,7 +13052,7 @@ function SettingsPage({data, update, dataPath}) {
         </Field>
 
         {(settings.ai_provider||'anthropic')==='anthropic'&&<React.Fragment>
-          <Field label="Anthropic API Key" hint="Get yours at console.anthropic.com. Stored locally in your data file — never sent anywhere except the Anthropic API.">
+          <Field label="Anthropic API Key" hint="From console.anthropic.com. Stored in your local data file.">
             <div style={{display:'flex',gap:8}}>
               <div style={{flex:1,position:'relative'}}>
                 <input type={apiKeyVisible?'text':'password'} value={settings.anthropic_api_key||''} onChange={e=>set('anthropic_api_key',e.target.value)} placeholder="sk-ant-..."
@@ -13079,7 +13078,7 @@ function SettingsPage({data, update, dataPath}) {
         </React.Fragment>}
 
         {settings.ai_provider==='openai'&&<React.Fragment>
-          <Field label="OpenAI API Key" hint="Get yours at platform.openai.com. Stored locally in your data file.">
+          <Field label="OpenAI API Key" hint="From platform.openai.com. Stored in your local data file.">
             <div style={{display:'flex',gap:8}}>
               <div style={{flex:1,position:'relative'}}>
                 <input type={apiKeyVisible?'text':'password'} value={settings.openai_api_key||''} onChange={e=>set('openai_api_key',e.target.value)} placeholder="sk-..."
@@ -13105,7 +13104,7 @@ function SettingsPage({data, update, dataPath}) {
         </React.Fragment>}
 
         {settings.ai_provider==='google'&&<React.Fragment>
-          <Field label="Google API Key" hint="Get yours at aistudio.google.com. Stored locally in your data file.">
+          <Field label="Google API Key" hint="From aistudio.google.com. Stored in your local data file.">
             <div style={{display:'flex',gap:8}}>
               <div style={{flex:1,position:'relative'}}>
                 <input type={apiKeyVisible?'text':'password'} value={settings.google_api_key||''} onChange={e=>set('google_api_key',e.target.value)} placeholder="AIza..."
@@ -13130,7 +13129,7 @@ function SettingsPage({data, update, dataPath}) {
         </React.Fragment>}
 
         {settings.ai_provider==='openrouter'&&<React.Fragment>
-          <Field label="OpenRouter API Key" hint="Get yours at openrouter.ai. One key gives access to many underlying models. Stored locally in your data file.">
+          <Field label="OpenRouter API Key" hint="From openrouter.ai. One key reaches many models. Stored in your local data file.">
             <div style={{display:'flex',gap:8}}>
               <div style={{flex:1,position:'relative'}}>
                 <input type={apiKeyVisible?'text':'password'} value={settings.openrouter_api_key||''} onChange={e=>set('openrouter_api_key',e.target.value)} placeholder="sk-or-..."
@@ -13145,31 +13144,31 @@ function SettingsPage({data, update, dataPath}) {
             </div>
             {settings.openrouter_api_key&&<div style={{fontSize:11,color:'#6ee7b7',marginTop:6}}>✓ API key is set</div>}
           </Field>
-          <Field label="Model" hint="Any OpenRouter model slug, e.g. anthropic/claude-sonnet-4-6, openai/gpt-4o, google/gemini-2.0-flash, meta-llama/llama-3.3-70b-instruct.">
+          <Field label="Model" hint="Any model slug, e.g. anthropic/claude-sonnet-4-6 or meta-llama/llama-3.3-70b-instruct.">
             <input type="text" value={settings.openrouter_model||'anthropic/claude-sonnet-4-6'} onChange={e=>set('openrouter_model',e.target.value)} placeholder="anthropic/claude-sonnet-4-6"
               style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',fontFamily:'monospace',boxSizing:'border-box'}}/>
           </Field>
         </React.Fragment>}
 
         {settings.ai_provider==='lmstudio'&&<React.Fragment>
-          <Field label="Server URL" hint="LM Studio → Developer tab → start the server. Default port is 1234. No API key is needed.">
+          <Field label="Server URL" hint="LM Studio → Developer tab → Start server. Default port 1234, no key.">
             <input type="text" value={settings.lmstudio_base_url||''} onChange={e=>set('lmstudio_base_url',e.target.value)} placeholder="http://localhost:1234/v1"
               style={{width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',fontFamily:'monospace',boxSizing:'border-box'}}/>
           </Field>
-          <Field label="Model" hint="Every model currently loaded in LM Studio. Load more than one to switch between them from here without leaving Lorekeeper.">
+          <Field label="Model" hint="Models currently loaded in LM Studio. Load several to switch between them here.">
             <LmModelPicker models={lmModels} value={settings.lmstudio_model||''} onPick={v=>set('lmstudio_model',v)} onRefresh={testLmStudio}/>
           </Field>
           <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
             <button className="btn" onClick={testLmStudio}><i className="ti ti-plug-connected"></i>Test connection</button>
             {lmTest&&<span style={lmTest.state==='ok'?LM_OK_STYLE:lmTest.state==='warn'?LM_WARN_STYLE:LM_ERR_STYLE}>{lmTest.msg}</span>}
           </div>
-          <Field label="Context window" hint="Set this to the context length the model is actually loaded with, not what it theoretically supports. In LM Studio check with 'lms ps' — it silently reduces the window if it thinks the requested size will not fit.">
+          <Field label="Context window" hint="The context length the model is loaded with, not its maximum. Check with 'lms ps' — LM Studio reduces it silently if it will not fit.">
             <input type="number" min="1024" step="1024" value={settings.ai_context_window||8192}
               onChange={e=>set('ai_context_window',parseInt(e.target.value)||8192)}
               style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',width:'100%'}}/>
           </Field>
           <div style={{fontSize:11,color:'var(--text3)',marginTop:10,lineHeight:1.6}}>
-            The Assistant's token readout turns amber at 75% of this number, leaving room for the conversation and the reply. Raising the window in LM Studio costs VRAM: enable Flash Attention and set K/V cache to Q8_0 to roughly halve that cost.
+            The Assistant's token readout turns amber at 75% of this.
           </div>
         </React.Fragment>}
 
@@ -13217,7 +13216,7 @@ function SettingsPage({data, update, dataPath}) {
       </Section>
 
       <Section title="Appearance" icon="ti-palette">
-        <Field label="Menu Font Size" hint="Scales menus, labels, buttons and headings. Editable text is set separately below and is not affected by this.">
+        <Field label="Menu Font Size" hint="Menus, labels, buttons and headings. Editable text is set below.">
           <div style={{display:'flex',gap:6}}>
             {[['small','Small'],['normal','Normal'],['large','Large'],['xlarge','X-Large']].map(([v,l])=>(
               <button key={v} className={`btn${(settings.font_size||'normal')===v?' primary':''}`}
@@ -13225,7 +13224,7 @@ function SettingsPage({data, update, dataPath}) {
             ))}
           </div>
         </Field>
-        <Field label="Editing Font Size" hint="Applies to every field you write in — descriptions, character cards, lorebook entries, intros and notes. Type in the preview to try it.">
+        <Field label="Editing Font Size" hint="Every field you type in: descriptions, cards, lorebook entries, intros, notes.">
           <div style={{display:'flex',gap:6}}>
             {EDITOR_FS_OPTS.map(([v,l])=>(
               <button key={v} className={`btn${(settings.editor_font_size||'15')===v?' primary':''}`}
@@ -13235,10 +13234,10 @@ function SettingsPage({data, update, dataPath}) {
           <div style={{fontSize:10,fontWeight:600,color:'var(--text3)',textTransform:'uppercase',letterSpacing:'0.05em',margin:'12px 0 6px'}}>Preview</div>
           <EditorFontPreview/>
         </Field>
-        <Field label="Theme" hint="Pick an accent color to generate a matching dark and light theme. Preview before applying.">
+        <Field label="Theme" hint="Generates a matching dark and light theme from one accent color.">
           <ThemeGenerator settings={settings} update={update}/>
         </Field>
-        <Field label="Colorblind Mode" hint="Adjusted color palettes for common colorblindness types. Changes red/green or blue/yellow pairs to distinguishable alternatives.">
+        <Field label="Colorblind Mode" hint="Replaces red/green or blue/yellow pairs with distinguishable alternatives.">
           <div style={{display:'flex',flexDirection:'column',gap:8}}>
             <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
               {[['','Off'],['rg','Red-Green'],['by','Blue-Yellow']].map(([val,label])=>(
@@ -13275,9 +13274,9 @@ function SettingsPage({data, update, dataPath}) {
 
       <Section title="Backup" icon="ti-cloud-upload">
         <div style={{fontSize:12,color:'var(--text3)',lineHeight:1.6,marginBottom:14}}>
-          Lorekeeper's own data is backed up from wherever it lives — that path is shown under Data and is not configured here. This section is only about where a copy of it goes. With no backup configured nothing is copied anywhere, and the pretty-printed data file written on close is skipped too.
+          Where a copy of your data goes. The source path is under Data.
         </div>
-        <Field label="Where backups go" hint="Git on its own is the default and is all most setups need. The extra destination is opt-in: it is never filled in for you, and nothing leaves this machine by that route unless you choose it here.">
+        <Field label="Where backups go">
           <select value={settings.backup_provider||'none'} onChange={e=>setBackupPath('backup_provider',e.target.value)}
             style={{background:'var(--bg3)',border:'1px solid var(--border)',color:'var(--text)',padding:'7px 10px',borderRadius:'var(--r)',fontSize:12,outline:'none',width:'100%'}}>
             <option value="none">None — nothing is backed up</option>
@@ -13287,32 +13286,32 @@ function SettingsPage({data, update, dataPath}) {
             {(settings.backup_provider||'none')==='github'&&<option value="github">Sync script (retired)</option>}
           </select>
           {(settings.backup_provider||'none')==='none'&&<div style={{fontSize:11,color:'var(--text3)',marginTop:6,lineHeight:1.5}}>
-            Nothing is being backed up. No files are copied, nothing is uploaded, and the pretty-printed data file written on close is skipped as well.
+            Nothing is backed up, and the pretty-printed data file is not written.
           </div>}
           {(settings.backup_provider||'none')==='github-api'&&<div style={{fontSize:11,color:'var(--text3)',marginTop:6,lineHeight:1.5}}>
-            Lorekeeper uploads to GitHub itself. No git installation, no folder to prepare, nothing to run in a terminal — just a token and a repository.
+            Uploads directly. Needs a token and a repository.
           </div>}
           {(settings.backup_provider||'none')==='folder'&&<div style={{fontSize:11,color:'var(--text3)',marginTop:6,lineHeight:1.5}}>
-            The text files are copied into a folder of your choosing. Useful when another program already keeps that folder in sync, or when it sits on a second drive or a network share.
+            Copies the text files to a folder you choose.
           </div>}
           {(settings.backup_provider||'none')==='github'&&<div style={{fontSize:11,color:'var(--amber)',marginTop:6,lineHeight:1.5}}>
-            This is the retired route. It needs git installed, a repository cloned by hand, a saved credential and a script file placed in the backup folder — none of which a new install has. Switch to GitHub above: it backs up to the same repository with none of that setup. This option disappears once you change it.
+            Retired. It needs git, a hand-cloned repository, a saved credential and a script file. GitHub above reaches the same repository with none of that.
           </div>}
         </Field>
         {(settings.backup_provider||'none')==='rclone'&&<div style={{fontSize:11,color:'var(--text3)',marginTop:6,lineHeight:1.5}}>
           Lorekeeper uploads through rclone, which ships with it. You sign in to the service in your own browser; the sign-in stays with rclone and Lorekeeper never sees it.
         </div>}
-        {(settings.backup_provider||'none')==='rclone'&&<Field label="Cloud account" hint="Only the folder named below is ever written to or tidied up. Anything else on the account is left alone.">
+        {(settings.backup_provider||'none')==='rclone'&&<Field label="Cloud account" hint="Only the folder named below is written to.">
           <RcloneSetup settings={settings} setBackupPath={setBackupPath}/>
         </Field>}
-        {(settings.backup_provider||'none')==='github-api'&&<Field label="GitHub account" hint="A fine-grained token scoped to your backup repository, with Contents set to Read and write. That is the whole permission it needs — it cannot reach anything else in your account.">
+        {(settings.backup_provider||'none')==='github-api'&&<Field label="GitHub account" hint="A fine-grained token for the backup repository, with Contents set to Read and write.">
           <GitHubSetup settings={settings} setBackupPath={setBackupPath}/>
         </Field>}
-        {(settings.backup_provider||'none')==='github'&&<Field label="Backup repo folder" hint="Used only by the retired sync-script route. The git repo the text data is mirrored into.">
+        {(settings.backup_provider||'none')==='github'&&<Field label="Backup repo folder" hint="The git repo the text data is mirrored into. Retired route only.">
           <input type="text" value={settings.backup_repo_dir||''} onChange={e=>setBackupPath('backup_repo_dir',e.target.value)}
             placeholder="Path to the backup repo clone" style={BK_INPUT}/>
         </Field>}
-        {(settings.backup_provider||'none')==='folder'&&<Field label="Folder to copy into" hint="A folder another program already keeps in sync — a Drive, OneDrive or Dropbox client folder — or simply another drive or a network share. Plain files, restorable by copying them back.">
+        {(settings.backup_provider||'none')==='folder'&&<Field label="Folder to copy into" hint="A folder another program keeps in sync — Drive, OneDrive, Dropbox — or another drive or network share.">
           <input type="text" value={settings.backup_cloud_dir||''} onChange={e=>setBackupPath('backup_cloud_dir',e.target.value)}
             placeholder="D:\Backups\Lorekeeper" style={BK_INPUT}/>
           <div style={{fontSize:11,color:'var(--text3)',marginTop:6,lineHeight:1.5}}>
@@ -13320,7 +13319,7 @@ function SettingsPage({data, update, dataPath}) {
           </div>
         </Field>}
         <div style={{fontSize:11,color:'var(--text3)',lineHeight:1.6,marginTop:4}}>
-          Back up now, the status readout and the staleness warning are on the Import / Export page.
+          Back up now and the status readout are on the Import / Export page.
         </div>
         <div style={{fontSize:11,color:'var(--text3)',lineHeight:1.6,marginTop:8}}>
           The backup script can cover folders belonging to other programs as well. Those are deliberately not configured here — Lorekeeper has no business knowing about software it does not use, and they should not appear in a copy of the app given to anyone else. They live in <code style={{background:'var(--bg3)',padding:'1px 4px',borderRadius:3}}>sync-extras.cmd</code> in the backup folder, which Lorekeeper never reads or writes.
