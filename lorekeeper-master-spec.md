@@ -1235,6 +1235,8 @@ Saucepan offers three copy formats per image — markdown, an `<img>` tag, and a
 
 The panel was rewritten in session 40 because it listed examples without the rules. `MACROS` groups now carry an optional `note` (the rule) and `tip` (the recommendation), and the panel renders them above the chips.
 
+**The Pronouns `note` and the long-alias footer were removed in session 47.** The note explained the alias system — canonical names, which forms alias which — and the footer listed `{{user_name}}`, `{{poss_p}}` and the rest. Both are facts about the macro engine rather than guidance for the person typing, and nobody types the long forms by hand. The `tip` stays: it says what to do (prefer the they-forms) rather than how the resolver works. **The alias rule itself is unchanged and still governs — `MACROS` is a reference, never an allowlist.** It lives here, which is where a future session should read it, not on screen where it is read every time.
+
 **If a macro linter is ever built**, it can only check *shape*, never names: a conditional with one value instead of two, an empty or unclosed `{{`, or an uppercase-with-spaces leftover like `{{CHARACTER NAME}}` from a lorebook template. Anything that is a plausible single word inside braces must be left alone.
 
 ---

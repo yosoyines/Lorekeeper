@@ -1916,7 +1916,6 @@ const MACROS = [
   {group:'User', items:[['{{user}}',"User's name"],['{{yn}}','Short alias']]},
   {group:'Companion', items:[['{{char}}',"Companion's name"],['{{cn}}','Short alias']]},
   {group:'Pronouns',
-   note:'Write whichever form comes to mind — it resolves by grammatical role, not by the word you typed. The canonical names are {{sub}} {{obj}} {{poss}} {{poss_p}} {{ref}}; the they-forms below are aliases for them, and the gendered forms work the same way.',
    tip:'Prefer the they-forms. If a macro ever fails to resolve it falls back to the literal word, and "their" is still right for anyone — "his" is wrong for half your readers.',
    items:[['{{they}}','Subjective — he / she / they'],['{{them}}','Objective — him / her / them'],['{{their}}','Possessive — his / her / their'],['{{theirs}}','Poss. pronoun — his / hers / theirs'],['{{themselves}}','Reflexive — himself / herself / themselves']]},
   {group:'Gender word', items:[['{{mfx|male|female|person}}','Picks by pronoun']]},
@@ -5152,9 +5151,7 @@ function MacroReference() {
           </div>
         ))}
         <div style={{fontSize:10,color:'var(--text3)',marginTop:2,borderTop:'1px solid var(--border)',paddingTop:8,lineHeight:1.6}}>
-          {'Click any macro to copy. Longer aliases, all equivalent to the short ones above: {{user_name}} {{your_name}} · {{companion_name}} {{character}} · {{sub}} {{obj}} {{poss}} {{poss_p}} {{ref}} · {{singular?a:b}}'}
-          <br/>
-          {'This is a reference, not the complete set — Saucepan accepts more than is listed here.'}
+          Click any macro to copy.
         </div>
       </div>}
     </div>
