@@ -1264,7 +1264,7 @@ const HELP_SECTIONS = [
    },
    {
     "t": "p",
-    "x": "**Highlighting (Ctrl+Shift+H).** Select text and mark it. Highlights are stored in the text itself as `==double equals==`, so they survive saving, travel with per-item files, and can be searched for. They are **stripped from every export**, so a highlight never reaches Saucepan — they are reading marks, not content. The button clears every highlight in a field after confirming, and clearing marks never changes the text itself."
+    "x": "**Highlighting (Ctrl+Shift+H).** Select text and mark it — exactly what you selected, whether that is a phrase or several paragraphs. Select any part of a mark and press again to remove it. The eraser button clears every mark in the field after confirming. Marks are stored in the text as `==double equals==`, so they survive saving, travel with per-item files and can be searched for, but they are **stripped from every export** — a mark never reaches Saucepan. Marking and clearing never change the words themselves."
    },
    {
     "t": "p",
@@ -3591,47 +3591,55 @@ function countHighlights(text) {
 
 // Wrap or unwrap the selected range, and the same action does both.
 //
-// Multi-line selections are the main case — the point is marking a SECTION to reread,
-// not a phrase. The first version required the whole selection to fit the single-line
-// pattern, so any selection crossing a newline silently did nothing, which was the
-// worst possible failure: it looked like a broken button.
+// The selection is marked exactly as dragged, never rounded out to whole lines. An
+// earlier version did expand to line boundaries so that a part-line drag would still
+// mark something, but the prose in these fields is soft-wrapped: a paragraph is one
+// long line, so marking a phrase marked the whole paragraph.
 //
-// Each line is wrapped separately rather than spanning the marks across newlines. That
-// keeps the single-line pattern intact everywhere else (the mirror, renderMd and
-// stripHighlights all stay simple), and it survives editing — adding a paragraph in the
+// A selection spanning several lines is split at the newlines and each piece wrapped
+// on its own, so no marker ever spans a newline. That keeps the single-line pattern
+// (HL_RE) intact everywhere else, and it survives editing — adding a paragraph in the
 // middle of a marked section cannot orphan an opening marker from its closing one.
+//
+// Touching an existing mark unmarks it: selecting any part of one, or dragging across
+// several, removes those markers rather than nesting new ones inside them.
 function toggleHighlight(text, start, end) {
   if (start === end) return null;
-  // Expand to whole lines so a part-line drag still marks something sensible.
-  let a = text.lastIndexOf('\n', start - 1) + 1;
-  let b = text.indexOf('\n', end);
-  if (b === -1) b = text.length;
-  const block = text.slice(a, b);
-  const lines = block.split('\n');
-  const marked = (ln) => { const t = ln.trim(); return t.length > 4 && t.startsWith('==') && t.endsWith('=='); };
-  const nonEmpty = lines.filter(ln => ln.trim().length > 0);
-  if (nonEmpty.length === 0) return null;
-  // If every non-empty line is already marked, this is an unhighlight.
-  const allMarked = nonEmpty.every(marked);
-  const out = lines.map(ln => {
-    if (ln.trim().length === 0) return ln;
-    if (allMarked) {
-      const lead = ln.slice(0, ln.length - ln.trimStart().length);
-      const trail = ln.slice(ln.trimEnd().length);
-      return lead + ln.trim().slice(2, -2) + trail;
-    }
-    if (marked(ln)) return ln; // leave already-marked lines alone when marking
-    const lead = ln.slice(0, ln.length - ln.trimStart().length);
-    const trail = ln.slice(ln.trimEnd().length);
-    const core = ln.trim();
-    // A line containing '=' cannot be wrapped without confusing the pattern; skip it
-    // rather than producing something that will not round-trip.
-    if (core.indexOf('=') !== -1) return ln;
-    return lead + '==' + core + '==' + trail;
+  // A drag usually grabs the spaces on one side or both. A marker sitting against a
+  // space does not match HL_RE, so trim the selection before anything else.
+  while (start < end && /\s/.test(text.charAt(start))) start++;
+  while (end > start && /\s/.test(text.charAt(end - 1))) end--;
+  if (start === end) return null;
+
+  // Overlapping an existing mark means unmark, not nest.
+  const runs = [];
+  HL_RE.lastIndex = 0;
+  let m;
+  while ((m = HL_RE.exec(text)) !== null) runs.push({a: m.index, b: m.index + m[0].length, inner: m[1]});
+  const touched = runs.filter(r => r.a < end && r.b > start);
+  if (touched.length) {
+    let out = '', prev = 0;
+    for (const r of touched) { out += text.slice(prev, r.a) + r.inner; prev = r.b; }
+    out += text.slice(prev);
+    const first = touched[0], last = touched[touched.length - 1];
+    return {text: out, start: first.a, end: last.b - touched.length * 4};
+  }
+
+  // Otherwise wrap each line's share of the selection separately.
+  const sel = text.slice(start, end);
+  let body = '';
+  sel.split('\n').forEach((piece, i) => {
+    if (i) body += '\n';
+    const lead = piece.slice(0, piece.length - piece.trimStart().length);
+    const trail = piece.slice(piece.trimEnd().length);
+    const core = piece.trim();
+    // A piece that already contains '=' cannot be wrapped without confusing the
+    // pattern, so it is left alone rather than written in a form that will not
+    // round-trip.
+    body += (core.length === 0 || core.indexOf('=') !== -1) ? piece : lead + '==' + core + '==' + trail;
   });
-  const newBlock = out.join('\n');
-  if (newBlock === block) return null;
-  return {text: text.slice(0, a) + newBlock + text.slice(b), start: a, end: a + newBlock.length};
+  if (body === sel) return null;
+  return {text: text.slice(0, start) + body + text.slice(end), start: start, end: start + body.length};
 }
 
 function renderMd(text) {
