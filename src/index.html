@@ -5058,6 +5058,19 @@ function MdField({value, onChange, style, placeholder, monospace}) {
     mir.style.borderStyle = 'solid';
     mir.style.borderColor = 'transparent';
     ta.style.background = 'transparent';
+    // Once the textarea is long enough to scroll, the browser takes the scrollbar's
+    // width out of its text column. The mirror has no scrollbar, so its column stays
+    // full width, fits one more word per line, and wraps later. Every band below that
+    // point is then painted a line too high and offset to the right, and the error
+    // grows the further down the field you look. clientWidth is the textarea's real
+    // text column with the scrollbar already deducted.
+    const bw = (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0);
+    const pw = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    const w = ta.clientWidth + (cs.boxSizing === 'border-box' ? bw : -pw);
+    if(w > 0 && mir.style.width !== w + 'px'){
+      mir.style.right = 'auto';
+      mir.style.width = w + 'px';
+    }
     syncScroll();
   });
 
